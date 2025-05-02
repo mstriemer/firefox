@@ -263,6 +263,26 @@ Preferences.addSetting({
   },
 });
 Preferences.addSetting({
+  id: "linkPreviewEnabled",
+  pref: "browser.ml.linkPreview.enabled",
+});
+Preferences.addSetting({
+  id: "linkPreviewShift",
+  pref: "browser.ml.linkPreview.shift",
+});
+Preferences.addSetting({
+  id: "linkPreviewShiftAlt",
+  pref: "browser.ml.linkPreview.shiftAlt",
+});
+Preferences.addSetting({
+  id: "linkPreviewLongPress",
+  pref: "browser.ml.linkPreview.longPress",
+});
+Preferences.addSetting({
+  id: "linkPreviewKeyPoints",
+  pref: "browser.ml.linkPreview.keyPoints",
+});
+Preferences.addSetting({
   id: "alwaysUnderlineLinks",
   pref: "layout.css.always_underline_links",
 });
@@ -328,6 +348,30 @@ let SETTINGS_CONFIG = {
       {
         id: "useFullKeyboardNavigation",
         l10nId: "browsing-use-full-keyboard-navigation",
+      },
+      {
+        id: "linkPreviewEnabled",
+        l10nId: "link-preview-settings-enable",
+        subcategory: "link-preview",
+        items: [
+          {
+            id: "linkPreviewShift",
+            l10nId: "link-preview-settings-shift",
+          },
+          {
+            id: "linkPreviewShiftAlt",
+            l10nId: "link-preview-settings-shift-alt",
+          },
+          {
+            id: "linkPreviewLongPress",
+            l10nId: "link-preview-settings-long-press",
+          },
+          {
+            id: "linkPreviewKeyPoints",
+            l10nId: "link-preview-settings-key-points",
+            supportPage: "link-preview",
+          },
+        ],
       },
       {
         id: "alwaysUnderlineLinks",
