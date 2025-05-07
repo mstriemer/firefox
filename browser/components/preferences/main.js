@@ -177,6 +177,13 @@ Preferences.addAll([
 
   // Media
   { id: "media.hardwaremediakeys.enabled", type: "bool" },
+
+  // AI Link Preview
+  { id: "browser.ml.linkPreview.enabled", type: "bool" },
+  { id: "browser.ml.linkPreview.shift", type: "bool" },
+  { id: "browser.ml.linkPreview.shiftAlt", type: "bool" },
+  { id: "browser.ml.linkPreview.longPress", type: "bool" },
+  { id: "browser.ml.linkPreview.keyPoints", type: "bool" },
 ]);
 
 if (AppConstants.HAVE_SHELL_SERVICE) {

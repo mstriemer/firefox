@@ -25,6 +25,7 @@ export class SettingGroup extends MozLitElement {
     return html`<setting-control
       .setting=${setting}
       .config=${item}
+      .getSetting=${this.getSetting}
     ></setting-control>`;
   }
 
@@ -51,6 +52,44 @@ export class SettingGroup extends MozLitElement {
     }
     if (item.subcategory) {
       result.dataset.subcategory = item.subcategory;
+    }
+    if (item.items) {
+      let fragment = document.createDocumentFragment();
+      fragment.append(result);
+      result = fragment;
+
+      let container = document.createXULElement("vbox");
+      container.classList.add("indent");
+      result.append(container);
+
+      let childElements = [];
+
+      for (let childItem of item.items) {
+        let itemResult = this.xulItemTemplate(childItem, true);
+        if (itemResult) {
+          if (itemResult instanceof DocumentFragment) {
+            for (let itemItem of itemResult.children) {
+              childElements.push(itemItem);
+            }
+          } else {
+            childElements.push(itemResult);
+          }
+          container.append(itemResult);
+        }
+      }
+
+      function setChildDisabledStates() {
+        for (let childElement of childElements) {
+          let childCheckbox =
+            childElement.localName == "checkbox"
+              ? childElement
+              : childElement.querySelector("checkbox");
+          childCheckbox.disabled = !checkbox.checked;
+        }
+      }
+      setChildDisabledStates();
+
+      setting.on("change", setChildDisabledStates);
     }
     return result;
   }

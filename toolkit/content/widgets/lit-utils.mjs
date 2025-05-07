@@ -245,7 +245,7 @@ export class MozBaseInputElement extends MozLitElement {
     name: { type: String },
     value: { type: String },
     iconSrc: { type: String },
-    disabled: { type: Boolean, reflect: true },
+    disabled: { type: Boolean },
     description: { type: String, fluent: true },
     supportPage: { type: String, attribute: "support-page" },
     accessKey: { type: String, mapped: true, fluent: true },
@@ -269,6 +269,11 @@ export class MozBaseInputElement extends MozLitElement {
     this.#updateInternalState(this.description, "description");
     this.#updateInternalState(this.supportPage, "support-link");
     this.#updateInternalState(this.label, "label");
+
+    this.toggleAttribute(
+      "isdisabled",
+      !!(this.disabled || this.parentDisabled)
+    );
 
     let activatedProperty = this.constructor.activatedProperty;
     if (

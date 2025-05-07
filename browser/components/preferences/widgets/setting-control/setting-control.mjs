@@ -12,6 +12,7 @@ export class SettingControl extends MozLitElement {
     setting: { type: Object },
     config: { type: Object },
     value: {},
+    parentDisabled: { type: Boolean },
   };
 
   static queries = {
@@ -48,6 +49,13 @@ export class SettingControl extends MozLitElement {
 
   render() {
     let { config } = this;
+    let itemArgs =
+      config.items
+        ?.map(i => ({
+          config: i,
+          setting: this.getSetting(i.id),
+        }))
+        .filter(i => i.setting.visible) || [];
     switch (config.control) {
       case "checkbox":
       default:
@@ -57,9 +65,19 @@ export class SettingControl extends MozLitElement {
           .iconSrc=${config.iconSrc}
           .checked=${this.value}
           .supportPage=${this.config.supportPage}
+          .parentDisabled=${this.parentDisabled}
           data-subcategory=${ifDefined(this.config.subcategory)}
           @change=${this.onChange}
-        ></moz-checkbox>`;
+          >${itemArgs.map(
+            opts =>
+              html`<setting-control
+                .config=${opts.config}
+                .setting=${opts.setting}
+                .getSetting=${this.getSetting}
+                slot="nested"
+              ></setting-control>`
+          )}</moz-checkbox
+        >`;
     }
   }
 }
