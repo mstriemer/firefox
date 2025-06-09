@@ -498,3 +498,132 @@ customElements.define("tokens-table", TokensTable);
 export const Default = () => {
   return html`<tables-page></tables-page>`;
 };
+
+Default.storyName = "Overview";
+
+const createTokenTableStory = tableName => {
+  const tokens = storybookTables[tableName];
+  return () => html`
+    <link rel="stylesheet" href=${styles} />
+    <div class="page-wrapper">
+      <tokens-table
+        name=${tableName}
+        surface="brand"
+        .tokens=${tokens}
+      ></tokens-table>
+    </div>
+  `;
+};
+
+/*
+// Bug 1971131 - Exported Stories for Token Categories
+// These generate individual Storybook pages under Docs → Tokens Table
+// Each one renders a <tokens-table> for a specific token category.
+
+//
+// Usage: storyName is set to match the category key,
+// allowing direct linking and sidebar navigation.
+//
+
+// Listed Categories:
+attention-dot
+background-color
+border-color
+border-radius
+border-width
+border
+font-size
+font-weight
+icon-fill
+icon-stroke
+min-height
+opacity
+padding
+size
+text-color
+margin
+color
+outline
+icon-color
+icon-size
+input-space
+link
+page-main
+space
+box-shadow
+*/
+
+export const AttentionDot = createTokenTableStory("attention-dot");
+AttentionDot.storyName = "Attention Dot";
+
+export const BackgroundColor = createTokenTableStory("background-color");
+BackgroundColor.storyName = "Background Color";
+
+export const BorderColor = createTokenTableStory("border-color");
+BorderColor.storyName = "Border Color";
+
+export const BorderRadius = createTokenTableStory("border-radius");
+BorderRadius.storyName = "Border Radius";
+
+export const BorderWidth = createTokenTableStory("border-width");
+BorderWidth.storyName = "Border Width";
+
+export const Border = createTokenTableStory("border");
+Border.storyName = "Border";
+
+export const FontSize = createTokenTableStory("font-size");
+FontSize.storyName = "Font Size";
+
+export const FontWeight = createTokenTableStory("font-weight");
+FontWeight.storyName = "Font Weight";
+
+export const IconFill = createTokenTableStory("icon-fill");
+IconFill.storyName = "Icon Fill";
+
+export const IconStroke = createTokenTableStory("icon-stroke");
+IconStroke.storyName = "Icon Stroke";
+
+export const MinHeight = createTokenTableStory("min-height");
+MinHeight.storyName = "Min Height";
+
+export const Opacity = createTokenTableStory("opacity");
+Opacity.storyName = "Opacity";
+
+export const Padding = createTokenTableStory("padding");
+Padding.storyName = "Padding";
+
+export const Size = createTokenTableStory("size");
+Size.storyName = "Size";
+
+export const TextColor = createTokenTableStory("text-color");
+TextColor.storyName = "Text Color";
+
+export const Margin = createTokenTableStory("margin");
+Margin.storyName = "Margin";
+
+export const Color = createTokenTableStory("color");
+Color.storyName = "Color";
+
+export const Outline = createTokenTableStory("outline");
+Outline.storyName = "Outline";
+
+export const IconColor = createTokenTableStory("icon-color");
+IconColor.storyName = "Icon Color";
+
+export const IconSize = createTokenTableStory("icon-size");
+IconSize.storyName = "Icon Size";
+
+export const InputSpace = createTokenTableStory("input-space");
+InputSpace.storyName = "Input Space";
+
+export const Link = createTokenTableStory("link");
+Link.storyName = "Link";
+
+export const PageMain = createTokenTableStory("page-main");
+PageMain.storyName = "Page Main";
+
+export const Space = createTokenTableStory("space");
+Space.storyName = "Space";
+
+export const BoxShadow = createTokenTableStory("box-shadow");
+BoxShadow.storyName = "Box Shadow";
