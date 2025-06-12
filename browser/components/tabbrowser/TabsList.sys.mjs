@@ -139,9 +139,6 @@ class TabsListBase {
           this._tabClose(event.target);
         }
         break;
-      case "command":
-        this.#handleCommand(event);
-        break;
       case "dragstart":
         this._onDragStart(event);
         break;
@@ -166,31 +163,7 @@ class TabsListBase {
   /**
    * @param {XULCommandEvent} event
    */
-  #handleCommand(event) {
-    if (event.target.classList.contains("all-tabs-mute-button")) {
-      getTabFromRow(event.target)?.toggleMuteAudio();
-    } else if (event.target.classList.contains("all-tabs-close-button")) {
-      const tab = getTabFromRow(event.target);
-      if (tab) {
-        this.gBrowser.removeTab(
-          tab,
-          lazy.TabMetrics.userTriggeredContext(
-            lazy.TabMetrics.METRIC_SOURCE.TAB_OVERFLOW_MENU
-          )
-        );
-      }
-    } else {
-      const rowVariant = getRowVariant(event.target);
-      if (rowVariant == ROW_VARIANT_TAB) {
-        const tab = getTabFromRow(event.target);
-        if (tab) {
-          this._selectTab(tab);
-        }
-      } else if (rowVariant == ROW_VARIANT_TAB_GROUP) {
-        getTabGroupFromRow(event.target)?.select();
-      }
-    }
-  }
+  #handleCommand(event) {}
 
   _selectTab(tab) {
     if (this.gBrowser.selectedTab != tab) {
@@ -245,7 +218,7 @@ class TabsListBase {
 
   _cleanupDOM() {
     this.containerNode
-      .querySelectorAll(":scope toolbaritem")
+      .querySelectorAll(":scope div")
       .forEach(node => node.remove());
     this.tabToElement = new Map();
   }
@@ -468,7 +441,7 @@ export class TabsPanel extends TabsListBase {
   _populate(event) {
     super._populate(event);
 
-    // The loading throbber can't be set until the toolbarbutton is rendered,
+    // The loading throbber can't be set until the button is rendered,
     // so set the image attributes again now that the elements are in the DOM.
     for (let row of this.rows) {
       // Ensure this isn't a group label
@@ -499,36 +472,19 @@ export class TabsPanel extends TabsListBase {
    */
   _createRow(tab) {
     let { doc } = this;
-    let row = doc.createXULElement("toolbaritem");
+    let row = doc.createElement("div");
     row.setAttribute("class", "all-tabs-item");
     if (this.className) {
       row.classList.add(this.className);
     }
-    row.setAttribute("context", "tabContextMenu");
-    row.setAttribute("row-variant", ROW_VARIANT_TAB);
-
-    /**
-     * Setting a new property `XulToolbarItem._tab` on the row elements
-     * for internal use by this module only.
-     * @see getTabFromRow
-     */
-    row._tab = tab;
+    row.tab = tab;
+    row.addEventListener("click", this);
     this.tabToElement.set(tab, row);
 
-    let button = doc.createXULElement("toolbarbutton");
-    button.setAttribute(
-      "class",
-      "all-tabs-button subviewbutton subviewbutton-iconic"
-    );
-    button.setAttribute("flex", "1");
-    button.setAttribute("crop", "end");
-
-    /**
-     * Setting a new property `MozToolbarbutton.tab` on the buttons
-     * to support tab context menu integration.
-     * @see TabContextMenu.updateContextMenu
-     */
+    let button = doc.createElement("moz-button");
+    button.setAttribute("class", "all-tabs-button");
     button.tab = tab;
+    button.type = "ghost";
 
     if (tab.userContextId) {
       tab.classList.forEach(property => {
@@ -545,23 +501,26 @@ export class TabsPanel extends TabsListBase {
 
     row.appendChild(button);
 
-    let muteButton = doc.createXULElement("toolbarbutton");
+    let muteButton = doc.createElement("moz-button");
     muteButton.classList.add(
       "all-tabs-mute-button",
-      "all-tabs-secondary-button",
-      "subviewbutton"
+      "all-tabs-secondary-button"
     );
     muteButton.setAttribute("closemenu", "none");
+    muteButton.tab = tab;
+    muteButton.type = "ghost icon";
+    muteButton.iconSrc = "chrome://global/skin/media/audio-muted.svg";
     row.appendChild(muteButton);
 
     if (!tab.pinned) {
-      let closeButton = doc.createXULElement("toolbarbutton");
+      let closeButton = doc.createElement("moz-button");
       closeButton.classList.add(
         "all-tabs-close-button",
-        "all-tabs-secondary-button",
-        "subviewbutton"
+        "all-tabs-secondary-button"
       );
+      closeButton.type = "ghost icon";
       closeButton.setAttribute("closemenu", "none");
+      closeButton.iconSrc = "resource://content-accessible/close-12.svg";
       doc.l10n.setAttributes(closeButton, "tabbrowser-manager-close-tab");
       row.appendChild(closeButton);
     }
@@ -573,11 +532,11 @@ export class TabsPanel extends TabsListBase {
 
   /**
    * @param {MozTabbrowserTabGroup} group
-   * @returns {XULElement}
+   * @returns {HTMLElement}
    */
   _createGroupRow(group) {
     let { doc } = this;
-    let row = doc.createXULElement("toolbaritem");
+    let row = doc.createElement("div");
     row.setAttribute("class", "all-tabs-item all-tabs-group-item");
     row.setAttribute("row-variant", ROW_VARIANT_TAB_GROUP);
     row.setAttribute("tab-group-id", group.id);
@@ -600,18 +559,15 @@ export class TabsPanel extends TabsListBase {
       "--tab-group-color-pale",
       `var(--tab-group-color-${group.color}-pale)`
     );
-
-    let button = doc.createXULElement("toolbarbutton");
+    row.addEventListener("click", this);
+    let button = doc.createElement("moz-button");
     button.setAttribute("context", "open-tab-group-context-menu");
     button.classList.add(
       "all-tabs-button",
       "all-tabs-group-button",
-      "subviewbutton",
-      "subviewbutton-iconic",
       group.collapsed ? "tab-group-icon-collapsed" : "tab-group-icon"
     );
-    button.setAttribute("flex", "1");
-    button.setAttribute("crop", "end");
+    button.type = "ghost";
 
     let setName = tabGroupName => {
       doc.l10n.setAttributes(
@@ -648,7 +604,7 @@ export class TabsPanel extends TabsListBase {
       busy,
       label: tab.label,
       tooltiptext,
-      image: !busy && tab.getAttribute("image"),
+      iconsrc: !busy && tab.getAttribute("image"),
       iconloadingprincipal: tab.getAttribute("iconloadingprincipal"),
     });
 
@@ -711,7 +667,7 @@ export class TabsPanel extends TabsListBase {
    * @returns {XulToolbarItem|undefined}
    */
   _getTargetRowFromEvent(event) {
-    return event.target.closest("toolbaritem");
+    return event.target.closest("div");
   }
 
   /**
@@ -899,7 +855,19 @@ export class TabsPanel extends TabsListBase {
    * @param {MouseEvent} event
    */
   _onClick(event) {
-    if (event.button == 1) {
+    if (event.target.classList.contains("all-tabs-mute-button")) {
+      getTabFromRow(event.target)?.toggleMuteAudio();
+    } else if (event.target.classList.contains("all-tabs-close-button")) {
+      const tab = getTabFromRow(event.target);
+      if (tab) {
+        this.gBrowser.removeTab(
+          tab,
+          lazy.TabMetrics.userTriggeredContext(
+            lazy.TabMetrics.METRIC_SOURCE.TAB_OVERFLOW_MENU
+          )
+        );
+      }
+    } else if (event.button == 1) {
       const row = this._getTargetRowFromEvent(event);
       if (!row) {
         return;

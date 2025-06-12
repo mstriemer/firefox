@@ -1836,6 +1836,21 @@ toolbar:not(#TabsToolbar) #firefox-view-button {
 .all-tabs-item {
   border-radius: var(--arrowpanel-menuitem-border-radius);
   margin-inline: var(--arrowpanel-menuitem-margin-inline);
+  display: flex;
+
+  > moz-button {
+    margin: 0;
+    flex-grow: 0;
+    flex-shrink: 0;
+
+    &:first-of-type {
+      flex-grow: 1;
+      &::part(button) {
+        font-weight: normal;
+        justify-content: start;
+      }
+    }
+  }
 
   &.grouped {
     /* Indent further by the size of a favicon and the favicon's end margin. */
