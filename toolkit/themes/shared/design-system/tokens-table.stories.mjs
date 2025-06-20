@@ -7,14 +7,25 @@ import {
   LitElement,
   classMap,
 } from "chrome://global/content/vendor/lit.all.mjs";
-import { storybookTables, variableLookupTable } from "./tokens-storybook.mjs";
+import * as stories from "./tokens-storybook.mjs";
 import styles from "./tokens-table.css";
+
+let { storybookTables, variableLookupTable } = stories;
+
+window.stories = stories;
+console.log(Object.keys(stories));
 
 export default {
   title: "Docs/Tokens Table",
   parameters: {
     options: {
       showPanel: false,
+    },
+  },
+  argTypes: {
+    section: {
+      options: Object.keys(storybookTables).sort(),
+      control: { type: "select" },
     },
   },
 };
@@ -67,6 +78,7 @@ class TablesPage extends LitElement {
     surface: { type: String, state: true },
     tokensData: { type: Object, state: true },
     filteredTokens: { type: Object, state: true },
+    section: { type: String },
   };
 
   constructor() {
@@ -140,6 +152,13 @@ class TablesPage extends LitElement {
     this.handleSearch();
   }
 
+  get sectionTokens() {
+    if (this.section) {
+      return { [this.section]: storybookTables[this.section] };
+    }
+    return null;
+  }
+
   render() {
     if (!this.tokensData) {
       return "";
@@ -187,18 +206,18 @@ class TablesPage extends LitElement {
           </fieldset>
         </div>
         <div class="tables-wrapper">
-          ${Object.entries(this.filteredTokens ?? this.tokensData).map(
-            ([tableName, tableEntries]) => {
-              return html`
-                <tokens-table
-                  name=${tableName}
-                  surface=${this.surface}
-                  .tokens=${tableEntries}
-                >
-                </tokens-table>
-              `;
-            }
-          )}
+          ${Object.entries(
+            this.sectionTokens ?? this.filteredTokens ?? this.tokensData
+          ).map(([tableName, tableEntries]) => {
+            return html`
+              <tokens-table
+                name=${tableName}
+                surface=${this.surface}
+                .tokens=${tableEntries}
+              >
+              </tokens-table>
+            `;
+          })}
         </div>
       </div>
     `;
@@ -495,11 +514,12 @@ class TokensTable extends LitElement {
 }
 customElements.define("tokens-table", TokensTable);
 
-export const Default = () => {
-  return html`<tables-page></tables-page>`;
+export const Overview = ({ section }) => {
+  return html`<tables-page .section=${section}></tables-page>`;
 };
-
-Default.storyName = "Overview";
+Overview.args = {
+  section: null,
+};
 
 const createTokenTableStory = tableName => {
   const tokens = storybookTables[tableName];
@@ -553,77 +573,47 @@ space
 box-shadow
 */
 
-export const AttentionDot = createTokenTableStory("attention-dot");
-AttentionDot.storyName = "Attention Dot";
-
-export const BackgroundColor = createTokenTableStory("background-color");
-BackgroundColor.storyName = "Background Color";
-
-export const BorderColor = createTokenTableStory("border-color");
-BorderColor.storyName = "Border Color";
-
-export const BorderRadius = createTokenTableStory("border-radius");
-BorderRadius.storyName = "Border Radius";
-
-export const BorderWidth = createTokenTableStory("border-width");
-BorderWidth.storyName = "Border Width";
-
-export const Border = createTokenTableStory("border");
-Border.storyName = "Border";
-
-export const FontSize = createTokenTableStory("font-size");
-FontSize.storyName = "Font Size";
-
-export const FontWeight = createTokenTableStory("font-weight");
-FontWeight.storyName = "Font Weight";
-
-export const IconFill = createTokenTableStory("icon-fill");
-IconFill.storyName = "Icon Fill";
-
-export const IconStroke = createTokenTableStory("icon-stroke");
-IconStroke.storyName = "Icon Stroke";
-
-export const MinHeight = createTokenTableStory("min-height");
-MinHeight.storyName = "Min Height";
-
-export const Opacity = createTokenTableStory("opacity");
-Opacity.storyName = "Opacity";
-
-export const Padding = createTokenTableStory("padding");
-Padding.storyName = "Padding";
-
-export const Size = createTokenTableStory("size");
-Size.storyName = "Size";
-
-export const TextColor = createTokenTableStory("text-color");
-TextColor.storyName = "Text Color";
-
-export const Margin = createTokenTableStory("margin");
-Margin.storyName = "Margin";
-
-export const Color = createTokenTableStory("color");
-Color.storyName = "Color";
-
-export const Outline = createTokenTableStory("outline");
-Outline.storyName = "Outline";
-
-export const IconColor = createTokenTableStory("icon-color");
-IconColor.storyName = "Icon Color";
-
-export const IconSize = createTokenTableStory("icon-size");
-IconSize.storyName = "Icon Size";
-
-export const InputSpace = createTokenTableStory("input-space");
-InputSpace.storyName = "Input Space";
-
-export const Link = createTokenTableStory("link");
-Link.storyName = "Link";
-
-export const PageMain = createTokenTableStory("page-main");
-PageMain.storyName = "Page Main";
-
-export const Space = createTokenTableStory("space");
-Space.storyName = "Space";
-
-export const BoxShadow = createTokenTableStory("box-shadow");
-BoxShadow.storyName = "Box Shadow";
+const {
+  AttentionDot,
+  BackgroundColor,
+  Border,
+  BoxShadow,
+  Button,
+  Checkbox,
+  Color,
+  FocusOutline,
+  FontSize,
+  FontWeight,
+  Icon,
+  InputText,
+  InputSpace,
+  Link,
+  OutlineColor,
+  Page,
+  Size,
+  Space,
+  TableRow,
+  Text,
+} = stories;
+export {
+  AttentionDot,
+  BackgroundColor,
+  Border,
+  BoxShadow,
+  Button,
+  Checkbox,
+  Color,
+  FocusOutline,
+  FontSize,
+  FontWeight,
+  Icon,
+  InputText,
+  InputSpace,
+  Link,
+  OutlineColor,
+  Page,
+  Size,
+  Space,
+  TableRow,
+  Text,
+};

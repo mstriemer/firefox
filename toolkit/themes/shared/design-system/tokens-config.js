@@ -428,9 +428,41 @@ function storybookJSFormat(args) {
   let storybookTables = formatTokensTablesData(parsedData);
 
   return `${customFileHeader({ platform: "storybook" })}
-  export const storybookTables = ${JSON.stringify(storybookTables)};
 
-  export const variableLookupTable = ${JSON.stringify(variableLookupTable)};
+  import styles from "./tokens-table.css";
+  import { html } from "chrome://global/content/vendor/lit.all.mjs";
+
+  const storybookTables = ${JSON.stringify(storybookTables)};
+
+  const variableLookupTable = ${JSON.stringify(variableLookupTable)};
+
+  const createTokenTableStory = tableName => {
+    const tokens = storybookTables[tableName];
+    return () => html\`
+      <link rel="stylesheet" href=\${styles} />
+      <div class="page-wrapper">
+        <tokens-table
+          name=\${tableName}
+          surface="brand"
+          .tokens=\${tokens}
+        ></tokens-table>
+      </div>
+    \`;
+  };
+
+${Object.keys(TOKEN_SECTIONS)
+  .map(
+    section => `
+  export const ${section.replaceAll(/[ -]+/g, "")} =
+    createTokenTableStory(${JSON.stringify(
+      section.replaceAll(/[ -]+/g, "-").toLowerCase()
+    )});
+  ${section.replaceAll(/[ -]+/g, "")}.storyName = ${JSON.stringify(section)};
+`
+  )
+  .join("\n")}
+
+  export { storybookTables, variableLookupTable };
   `;
 }
 
