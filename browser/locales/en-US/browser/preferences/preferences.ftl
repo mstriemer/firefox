@@ -306,6 +306,8 @@ preferences-web-appearance-override-warning3 =
 preferences-web-appearance-footer = Manage { -brand-short-name } themes in <a data-l10n-name="themes-link">Extensions & Themes</a>
 
 preferences-contrast-control-header = Contrast Control
+preferences-contrast-control-radio-group =
+    .label = Override colors
 
 preferences-contrast-control-description = Websites have a variety of foreground and background colors. Configure { -brand-short-name } to use the same colors across websites for improved readability.
 

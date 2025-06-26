@@ -74,6 +74,10 @@ export class SelectControlBaseElement extends MozLitElement {
     return this.#value;
   }
 
+  get hasValue() {
+    return this.value === 0 || !!this.value;
+  }
+
   set focusedIndex(newIndex) {
     if (this.#focusedIndex !== newIndex) {
       this.#focusedIndex = newIndex;
@@ -360,7 +364,7 @@ export const SelectControlItemMixin = superClass =>
 
       this.#controller = hostElement;
       this.role = this.#controller.type == "radio" ? "radio" : "option";
-      if (this.#controller.value) {
+      if (this.#controller.hasValue) {
         this.checked = this.value === this.#controller.value;
       }
     }
@@ -371,7 +375,7 @@ export const SelectControlItemMixin = superClass =>
       if (
         changedProperties.has("checked") &&
         this.checked &&
-        this.#controller.value &&
+        this.#controller.hasValue &&
         this.value !== this.#controller.value
       ) {
         this.#controller.value = this.value;
@@ -381,7 +385,7 @@ export const SelectControlItemMixin = superClass =>
       if (
         changedProperties.has("checked") &&
         !this.checked &&
-        this.#controller.value &&
+        this.#controller.hasValue &&
         this.value === this.#controller.value
       ) {
         this.#controller.value = "";
@@ -395,7 +399,7 @@ export const SelectControlItemMixin = superClass =>
         }
 
         // Update items via focus manager parent for proper keyboard nav behavior.
-        if (this.checked || !this.#controller.value) {
+        if (this.checked || !this.#controller.hasValue) {
           if (this.controller.checkedIndex != this.position) {
             this.#controller.syncFocusState();
           } else {

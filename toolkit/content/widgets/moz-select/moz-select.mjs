@@ -26,6 +26,7 @@ import { MozBaseInputElement, MozLitElement } from "../lit-utils.mjs";
  *     default slot. Do not set directly, these will be overridden by <moz-option> children.
  */
 export default class MozSelect extends MozBaseInputElement {
+  static childElementName = "moz-option";
   static properties = {
     options: { type: Array, state: true },
   };

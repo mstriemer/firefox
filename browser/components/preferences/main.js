@@ -416,6 +416,14 @@ Preferences.addSetting({
   // TODO: Make this dependant on the zoomText setting explicitly.
   visible: () => Preferences.getSetting("zoomText").value,
 });
+Preferences.addSetting({
+  id: "contrastControlSettings",
+  pref: "browser.display.document_color_use",
+});
+Preferences.addSetting({
+  id: "manageColorsDialog",
+  get: () => true,
+});
 
 let SETTINGS_CONFIG = {
   zoom: {
@@ -426,6 +434,7 @@ let SETTINGS_CONFIG = {
         id: "defaultZoom",
         l10nId: "preferences-default-zoom-label",
         control: "moz-select",
+        optionControl: "moz-option",
       },
       {
         id: "zoomText",
@@ -435,6 +444,42 @@ let SETTINGS_CONFIG = {
         id: "zoomWarning",
         l10nId: "preferences-text-zoom-override-warning",
         control: "moz-message-bar",
+      },
+    ],
+  },
+  contrast: {
+    items: [
+      {
+        id: "contrastControlSettings",
+        control: "moz-radio-group",
+        optionControl: "moz-radio",
+        l10nId: "preferences-contrast-control-radio-group",
+        options: [
+          {
+            value: 0,
+            l10nId: "preferences-contrast-control-use-platform-settings",
+          },
+          {
+            value: 1,
+            l10nId: "preferences-contrast-control-off",
+          },
+          {
+            value: 2,
+            l10nId: "preferences-contrast-control-custom",
+            items: [
+              {
+                id: "manageColorsDialog",
+                l10nId: "preferences-colors-manage-button",
+                control: "dialog-button",
+                controlAttrs: {
+                  dialog:
+                    "chrome://browser/content/preferences/dialogs/colors.xhtml",
+                  features: "resizable=no",
+                },
+              },
+            ],
+          },
+        ],
       },
     ],
   },
@@ -664,6 +709,7 @@ var gMainPane = {
     gMainPane.initTranslations();
 
     initSettingGroup("zoom");
+    initSettingGroup("contrast");
     initSettingGroup("browsing");
 
     if (AppConstants.platform == "win") {
