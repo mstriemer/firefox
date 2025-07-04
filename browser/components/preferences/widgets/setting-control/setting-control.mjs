@@ -139,11 +139,11 @@ export class SettingControl extends MozLitElement {
   willUpdate(changedProperties) {
     if (changedProperties.has("setting")) {
       if (this.#lastSetting) {
-        this.#lastSetting.off("change", this.setValue);
+        this.#lastSetting.off("change", this.onSettingChange);
       }
       this.#lastSetting = this.setting;
       this.setValue();
-      this.setting.on("change", this.setValue);
+      this.setting.on("change", this.onSettingChange);
     }
   }
 
@@ -183,9 +183,15 @@ export class SettingControl extends MozLitElement {
     return this.setting.value;
   }
 
-  setValue = () => {
-    this.value = this.setting.value;
-  };
+  setValue() {
+    let value = this.setting.value;
+    // TODO: Being sync or async is sus
+    if (value?.then) {
+      value.then(v => (this.value = v));
+    } else {
+      this.value = value;
+    }
+  }
 
   controlValue(el) {
     if (el.constructor.activatedProperty) {
@@ -193,6 +199,11 @@ export class SettingControl extends MozLitElement {
     }
     return el.value;
   }
+
+  onSettingChange = () => {
+    this.setValue();
+    this.dispatchEvent(new CustomEvent("setting-change", { bubbles: true }));
+  };
 
   // Called by our parent when our input changed.
   onChange(el) {

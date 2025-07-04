@@ -13,6 +13,7 @@
    */
   --heading-font-size-xxlarge: var(--font-size-xlarge);
   --heading-font-size-xlarge: var(--font-size-large);
+  --select-max-width: 20rem;
   user-select: text;
 }
 

@@ -730,9 +730,13 @@ const Preferences = (window.Preferences = (function () {
     }
 
     userChange(val) {
+      let prevVal = this.value;
       this.value = val;
       if (this.config.onUserChange) {
         this.config.onUserChange(val);
+      }
+      if (prevVal != this.value) {
+        this.onChange();
       }
     }
   }

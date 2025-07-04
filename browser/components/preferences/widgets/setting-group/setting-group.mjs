@@ -21,6 +21,26 @@ export class SettingGroup extends MozLitElement {
     return this;
   }
 
+  connectedCallback() {
+    super.connectedCallback();
+    this.addEventListener("setting-change", this);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.removeEventListener("setting-change", this);
+  }
+
+  handleEvent(e) {
+    if (e.type == "setting-change") {
+      // When a setting changes, it could affect visibility or layout. Run
+      // through the render process to make any changes.
+      // FIXME: This is actually a workaround for the zoom text warning not
+      // being dependent on the zoom text only setting.
+      this.requestUpdate();
+    }
+  }
+
   async getUpdateComplete() {
     let result = await super.getUpdateComplete();
     await Promise.all([...this.controlEls].map(el => el.updateComplete));
@@ -56,6 +76,7 @@ export class SettingGroup extends MozLitElement {
     }
     return html`<moz-fieldset
       data-l10n-id=${ifDefined(this.config.l10nId)}
+      .headingLevel=${this.config.headingLevel}
       @change=${this.onChange}
       >${this.config.items.map(item => this.itemTemplate(item))}</moz-fieldset
     >`;
