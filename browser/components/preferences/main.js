@@ -376,7 +376,7 @@ const ZoomHelpers = new (class ZoomHelpers {
       handleCompletion: resolvers.resolve,
       handleError: resolvers.reject,
     });
-    await resolvers.promise;
+    return resolvers.promise;
   }
 
   async getDefaultZoom() {
@@ -399,9 +399,9 @@ const ZoomHelpers = new (class ZoomHelpers {
 // TODO: This likely isn't recording telemetry.
 Preferences.addSetting({
   id: "defaultZoom",
-  asyncSet: async val =>
+  set: async val =>
     ZoomHelpers.setDefaultZoom(parseFloat((val / 100).toFixed(2))),
-  asyncGet: async () => Math.round((await ZoomHelpers.getDefaultZoom()) * 100),
+  get: async () => Math.round((await ZoomHelpers.getDefaultZoom()) * 100),
   getControlConfig: addOnce(() => ({
     options: ZoomHelpers.zoomValues.map(a => {
       let value = Math.round(a * 100);

@@ -16,6 +16,8 @@ const Preferences = (window.Preferences = (function () {
     DeferredTask: "resource://gre/modules/DeferredTask.sys.mjs",
   });
 
+  const AsyncFunction = async function () {}.constructor;
+
   function getElementsByAttribute(name, value) {
     // If we needed to defend against arbitrary values, we would escape
     // double quotes (") and escape characters (\) in them, i.e.:
@@ -689,6 +691,8 @@ const Preferences = (window.Preferences = (function () {
       super();
       this.id = id;
       this.config = config;
+      this.asyncGet = config.get?.constructor == AsyncFunction;
+      this.asyncSet = config.set?.constructor == AsyncFunction;
       this.pref = config.pref && Preferences.get(config.pref);
       if (this.pref) {
         this.pref.on("change", this.onChange);
@@ -700,7 +704,7 @@ const Preferences = (window.Preferences = (function () {
     };
 
     get value() {
-      if (this.config.asyncGet) {
+      if (this.asyncGet) {
         throw new Error(
           "This setting's get function is async, use getAsyncValue() instead."
         );
@@ -713,14 +717,14 @@ const Preferences = (window.Preferences = (function () {
     }
 
     async getAsyncValue() {
-      if (!this.config.asyncGet) {
+      if (!this.asyncGet) {
         throw new Error("Setting does not implement asyncGet");
       }
-      return this.config.asyncGet(this.pref?.value);
+      return this.config.get(this.pref?.value);
     }
 
     async getValue() {
-      if (this.config.asyncGet) {
+      if (this.asyncGet) {
         return this.getAsyncValue();
       }
       return this.value;
@@ -733,15 +737,16 @@ const Preferences = (window.Preferences = (function () {
         this.pref.value = newVal;
       } else {
         // FIXME: omg review where all the emits happen
-        this.onChange(newVal);
+        this.onChange();
       }
     }
 
     async setAsyncValue(val) {
-      if (!this.config.asyncSet) {
+      if (!this.asyncSet) {
         throw new Error("Setting does not implement asyncSet");
       }
-      this.value = await this.config.asyncSet(val);
+      await this.config.set(val);
+      this.onChange();
     }
 
     get locked() {
@@ -761,7 +766,7 @@ const Preferences = (window.Preferences = (function () {
 
     userChange(val) {
       // TODO: Could we check if {get,set}.constructor == AsyncFunction?
-      if (this.config.asyncGet || this.config.asyncSet) {
+      if (this.asyncGet || this.asyncSet) {
         this.asyncUserChange(val);
         return;
       }
@@ -771,21 +776,16 @@ const Preferences = (window.Preferences = (function () {
         // FIXME: Should we call if the value didn't change?
         this.config.onUserChange(val);
       }
-      if (prevVal != this.value) {
-        // FIXME: Is this emitting two change events if we have a pref? When
-        // pref emits change we will also emit a change.
-        this.onChange();
-      }
     }
 
     async asyncUserChange(val) {
       let prevVal;
-      if (this.config.asyncGet) {
+      if (this.asyncGet) {
         prevVal = await this.getAsyncValue();
       } else {
         prevVal = this.value;
       }
-      if (this.config.asyncSet) {
+      if (this.asyncSet) {
         await this.setAsyncValue(val);
       } else {
         this.value = val;
@@ -793,7 +793,6 @@ const Preferences = (window.Preferences = (function () {
       if (this.config.onUserChange) {
         this.config.onUserChange(val);
       }
-      // FIXME: Do we need to call onChange here? set value should have done it...
     }
   }
 
