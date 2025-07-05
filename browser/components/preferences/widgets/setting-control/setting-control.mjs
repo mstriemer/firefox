@@ -180,18 +180,9 @@ export class SettingControl extends MozLitElement {
     return props;
   }
 
-  getValue() {
-    return this.setting.value;
-  }
-
-  setValue() {
-    let value = this.setting.value;
-    // TODO: Being sync or async is sus
-    if (value?.then) {
-      value.then(v => (this.value = v));
-    } else {
-      this.value = value;
-    }
+  async setValue() {
+    // FIXME: Should we do this sync if we can?
+    this.value = await this.setting.getValue();
   }
 
   controlValue(el) {

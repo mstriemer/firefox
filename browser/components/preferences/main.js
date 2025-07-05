@@ -360,17 +360,23 @@ const ZoomHelpers = new (class ZoomHelpers {
   ZoomUI = this.win.ZoomUI;
   ZoomManager = this.win.ZoomManager;
 
-  setDefaultZoom(newZoom) {
+  async setDefaultZoom(newZoom) {
     let cps2 = Cc["@mozilla.org/content-pref/service;1"].getService(
       Ci.nsIContentPrefService2
     );
     let nonPrivateLoadContext = Cu.createLoadContext();
+    let resolvers = Promise.withResolvers();
     /* Because our setGlobal function takes in a browsing context, and
      * because we want to keep this property consistent across both private
      * and non-private contexts, we crate a non-private context and use that
      * to set the property, regardless of our actual context.
      */
-    cps2.setGlobal(this.FullZoom.name, newZoom, nonPrivateLoadContext);
+    cps2.setGlobal(this.FullZoom.name, newZoom, nonPrivateLoadContext, {
+      handleResult: resolvers.resolve,
+      handleCompletion: resolvers.resolve,
+      handleError: resolvers.reject,
+    });
+    await resolvers.promise;
   }
 
   async getDefaultZoom() {
@@ -393,8 +399,9 @@ const ZoomHelpers = new (class ZoomHelpers {
 // TODO: This likely isn't recording telemetry.
 Preferences.addSetting({
   id: "defaultZoom",
-  set: val => ZoomHelpers.setDefaultZoom(parseFloat((val / 100).toFixed(2))),
-  get: async () => Math.round((await ZoomHelpers.getDefaultZoom()) * 100),
+  asyncSet: async val =>
+    ZoomHelpers.setDefaultZoom(parseFloat((val / 100).toFixed(2))),
+  asyncGet: async () => Math.round((await ZoomHelpers.getDefaultZoom()) * 100),
   getControlConfig: addOnce(() => ({
     options: ZoomHelpers.zoomValues.map(a => {
       let value = Math.round(a * 100);

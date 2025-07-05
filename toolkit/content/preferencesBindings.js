@@ -700,6 +700,11 @@ const Preferences = (window.Preferences = (function () {
     };
 
     get value() {
+      if (this.config.asyncGet) {
+        throw new Error(
+          "This setting's get function is async, use getAsyncValue() instead."
+        );
+      }
       let prefVal = this.pref?.value;
       if (this.config.get) {
         return this.config.get(prefVal);
@@ -707,11 +712,36 @@ const Preferences = (window.Preferences = (function () {
       return prefVal;
     }
 
+    async getAsyncValue() {
+      if (!this.config.asyncGet) {
+        throw new Error("Setting does not implement asyncGet");
+      }
+      return this.config.asyncGet(this.pref?.value);
+    }
+
+    async getValue() {
+      if (this.config.asyncGet) {
+        return this.getAsyncValue();
+      }
+      return this.value;
+    }
+
     set value(val) {
       let newVal = this.config.set ? this.config.set(val) : val;
       if (this.pref) {
+        // We'll catch the Preference's change event and re-emit it later.
         this.pref.value = newVal;
+      } else {
+        // FIXME: omg review where all the emits happen
+        this.onChange(newVal);
       }
+    }
+
+    async setAsyncValue(val) {
+      if (!this.config.asyncSet) {
+        throw new Error("Setting does not implement asyncSet");
+      }
+      this.value = await this.config.asyncSet(val);
     }
 
     get locked() {
@@ -730,14 +760,40 @@ const Preferences = (window.Preferences = (function () {
     }
 
     userChange(val) {
+      // TODO: Could we check if {get,set}.constructor == AsyncFunction?
+      if (this.config.asyncGet || this.config.asyncSet) {
+        this.asyncUserChange(val);
+        return;
+      }
       let prevVal = this.value;
       this.value = val;
       if (this.config.onUserChange) {
+        // FIXME: Should we call if the value didn't change?
         this.config.onUserChange(val);
       }
       if (prevVal != this.value) {
+        // FIXME: Is this emitting two change events if we have a pref? When
+        // pref emits change we will also emit a change.
         this.onChange();
       }
+    }
+
+    async asyncUserChange(val) {
+      let prevVal;
+      if (this.config.asyncGet) {
+        prevVal = await this.getAsyncValue();
+      } else {
+        prevVal = this.value;
+      }
+      if (this.config.asyncSet) {
+        await this.setAsyncValue(val);
+      } else {
+        this.value = val;
+      }
+      if (this.config.onUserChange) {
+        this.config.onUserChange(val);
+      }
+      // FIXME: Do we need to call onChange here? set value should have done it...
     }
   }
 
