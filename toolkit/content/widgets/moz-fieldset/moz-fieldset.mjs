@@ -5,6 +5,18 @@
 import { html, ifDefined } from "../vendor/lit.all.mjs";
 import { MozLitElement } from "../lit-utils.mjs";
 
+// Functions to wrap a string in a heading.
+// HEADING_LEVEL_TEMPLATES[3]("foo") == html`<h3>foo</h3>`
+const HEADING_LEVEL_TEMPLATES = [
+  null,
+  label => html`<h1>${label}</h1>`,
+  label => html`<h2>${label}</h2>`,
+  label => html`<h3>${label}</h3>`,
+  label => html`<h4>${label}</h4>`,
+  label => html`<h5>${label}</h5>`,
+  label => html`<h6>${label}</h6>`,
+];
+
 /**
  * Fieldset wrapper to lay out form inputs consistently.
  *
@@ -20,7 +32,13 @@ export default class MozFieldset extends MozLitElement {
     supportPage: { type: String, attribute: "support-page" },
     ariaLabel: { type: String, fluent: true, mapped: true },
     ariaOrientation: { type: String, mapped: true },
+    headingLevel: { type: Number },
   };
+
+  constructor() {
+    super();
+    this.headingLevel = -1;
+  }
 
   descriptionTemplate() {
     if (this.description) {
@@ -44,7 +62,9 @@ export default class MozFieldset extends MozLitElement {
   }
 
   legendTemplate() {
-    return html`<legend part="label">${this.label}</legend>`;
+    let label =
+      HEADING_LEVEL_TEMPLATES[this.headingLevel]?.(this.label) || this.label;
+    return html`<legend part="label">${label}</legend>`;
   }
 
   render() {
