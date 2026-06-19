@@ -60,6 +60,7 @@ export class MozVisualPickerItem extends SelectControlItemMixin(MozLitElement) {
     description: { type: String, fluent: true },
     ariaLabel: { type: String, fluent: true, mapped: true },
     imageSrc: { type: String },
+    labelPosition: { type: String, reflect: true },
   };
 
   static queries = {
@@ -67,6 +68,11 @@ export class MozVisualPickerItem extends SelectControlItemMixin(MozLitElement) {
     labelEl: ".label",
     descriptionEl: ".description",
   };
+
+  constructor() {
+    super();
+    this.labelPosition = "inside";
+  }
 
   click() {
     this.itemEl.click();
@@ -123,8 +129,32 @@ export class MozVisualPickerItem extends SelectControlItemMixin(MozLitElement) {
     }
   }
 
+  labelOnlyTemplate() {
+    if (!this.label) {
+      return nothing;
+    }
+    if (this.labelPosition == "outside") {
+      return html`<label class="label" for="picker-item">${this.label}</label>`;
+    }
+    return html`<p class="label">${this.label}</p>`;
+  }
+
+  labelTemplate() {
+    return html`<div class="text-content">
+      ${this.label
+        ? html`<label class="label" for="picker-item">${this.label}</label>`
+        : nothing}
+      ${this.description
+        ? html`<p class="description">${this.description}</p>`
+        : nothing}
+    </div>`;
+  }
+
   contentTemplate() {
-    if (!this.imageSrc && !this.label && !this.description) {
+    if (
+      !this.imageSrc &&
+      (this.labelPosition == "outside" || (!this.label && !this.description))
+    ) {
       return html`<slot></slot>`;
     }
 
@@ -132,12 +162,7 @@ export class MozVisualPickerItem extends SelectControlItemMixin(MozLitElement) {
       ${this.imageSrc
         ? html`<img src=${this.imageSrc} role="presentation" part="image" />`
         : nothing}
-      <div class="text-content">
-        ${this.label ? html`<p class="label">${this.label}</p>` : nothing}
-        ${this.description
-          ? html`<p class="description">${this.description}</p>`
-          : nothing}
-      </div>
+      ${this.labelPosition != "outside" ? this.labelTemplate() : nothing}
     `;
   }
 
@@ -147,7 +172,8 @@ export class MozVisualPickerItem extends SelectControlItemMixin(MozLitElement) {
         rel="stylesheet"
         href="chrome://global/content/elements/moz-visual-picker-item.css"
       />
-      <div
+      <button
+        id="picker-item"
         class=${classMap({
           "picker-item": true,
           "image-item": this.imageSrc && this.label,
@@ -165,7 +191,8 @@ export class MozVisualPickerItem extends SelectControlItemMixin(MozLitElement) {
         @slotchange=${this.handleSlotchange}
       >
         ${this.contentTemplate()}
-      </div>
+      </button>
+      ${this.labelPosition == "outside" ? this.labelTemplate() : nothing}
     `;
   }
 }

@@ -32,6 +32,7 @@ export class MozSegmentedControl extends SelectControlBaseElement {
   constructor() {
     super();
     this.type = "radio";
+    this.setAttribute("exportparts", "inputs");
   }
 
   connectedCallback() {

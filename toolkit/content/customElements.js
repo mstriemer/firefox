@@ -872,6 +872,10 @@
         "moz-reorderable-list",
         "chrome://global/content/elements/moz-reorderable-list.mjs",
       ],
+      [
+        "moz-segmented-control",
+        "chrome://global/content/elements/moz-segmented-control.mjs",
+      ],
       ["moz-select", "chrome://global/content/elements/moz-select.mjs"],
       [
         "moz-support-link",
@@ -887,10 +891,7 @@
         "moz-visual-picker-item",
         "chrome://global/content/elements/moz-visual-picker.mjs",
       ],
-      [
-        "moz-segmented-control",
-        "chrome://global/content/elements/moz-segmented-control.mjs",
-      ],
+      ["theme-picker", "chrome://global/content/elements/theme-picker.mjs"],
     ];
     document.addEventListener(
       "DOMContentLoaded",

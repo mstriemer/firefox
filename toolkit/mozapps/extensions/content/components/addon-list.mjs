@@ -496,6 +496,14 @@ export class AddonList extends HTMLElement {
     for (let i = 0; i < sectionedAddons.length; i++) {
       this.sections[i].node = this.renderSection(sectionedAddons[i], i);
       frag.appendChild(this.sections[i].node);
+      if (this.type == "theme" && i == 0) {
+        let themePickerCard = document.createElement("moz-card");
+        themePickerCard.classList.add("theme-picker-card");
+        themePickerCard.heading = "Firefox themes";
+        themePickerCard.headingLevel = 2;
+        themePickerCard.appendChild(document.createElement("theme-picker"));
+        frag.appendChild(themePickerCard);
+      }
     }
 
     // Add the "empty list message" elements (but omit it in the list view

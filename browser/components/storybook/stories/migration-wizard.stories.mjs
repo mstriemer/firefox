@@ -11,10 +11,6 @@ import { MigrationWizardConstants } from "chrome://browser/content/migration/mig
 // Imported for side-effects.
 import "toolkit-widgets/named-deck.js";
 
-window.MozXULElement.insertFTLIfNeeded(
-  "locales-preview/migrationWizardChromeWindows.ftl"
-);
-
 export default {
   title: "Domain-specific UI Widgets/Migration Wizard",
   component: "migration-wizard",

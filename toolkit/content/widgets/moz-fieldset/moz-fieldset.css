@@ -6,7 +6,7 @@
 
 :host {
   --fieldset-gap-row: var(--space-small);
-  --fieldset-gap-column: var(--space-medium);
+  --fieldset-gap-column: var(--moz-fieldset-gap-column, var(--space-medium));
   display: block;
 }
 

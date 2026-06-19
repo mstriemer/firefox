@@ -26,6 +26,10 @@ export default {
       options: ["radio", "listbox"],
       control: { type: "select" },
     },
+    labelPosition: {
+      options: ["inside", "outside"],
+      control: { type: "select" },
+    },
   },
   parameters: {
     actions: {
@@ -83,6 +87,7 @@ const Template = ({
   showItemLabels,
   imageSrc,
   showItemDescriptions,
+  labelPosition,
 }) => {
   return html`
     <style>
@@ -136,6 +141,7 @@ const Template = ({
       ${[...Array.from({ length: 3 })].map(
         (_, i) =>
           html`<moz-visual-picker-item
+            labelposition=${labelPosition}
             value=${i + 1}
             class=${classMap({ "avatar-item": slottedItem == "avatar" })}
             data-l10n-id=${slottedItem == "avatar"
@@ -163,6 +169,7 @@ Default.args = {
   type: "radio",
   showItemLabels: false,
   showItemDescriptions: false,
+  labelPosition: "inside",
 };
 
 export const WithPickerDescription = Template.bind({});

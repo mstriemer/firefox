@@ -1,0 +1,242 @@
+[
+  {
+    "id": "default",
+    "nameL10nId": "themes-selector-name-default",
+    "addon_id": "default-theme@mozilla.org",
+    "variants": {
+      "light": {
+        "addon_id": "firefox-compact-light@mozilla.org",
+        "tabstripStart": "rgb(234, 234, 237)",
+        "tabstripEnd": "#F9F9FB",
+        "toolbarBg": "rgb(255, 255, 255)",
+        "accentColor": "rgb(28, 27, 34)"
+      },
+      "dark": {
+        "addon_id": "firefox-compact-dark@mozilla.org",
+        "tabstripStart": "rgb(28, 27, 34)",
+        "tabstripEnd": "rgb(43, 42, 51)",
+        "toolbarBg": "rgb(28, 27, 34)",
+        "accentColor": "rgb(234, 234, 237)"
+      },
+      "auto": {
+        "addon_id": "default-theme@mozilla.org"
+      }
+    }
+  },
+  {
+    "id": "sun",
+    "nameL10nId": "themes-selector-name-sun",
+    "addon_id": "{cd6791f7-4b6d-47b4-8877-1d4c82c6699d}",
+    "variants": {
+      "light": {
+        "addon_id": "{cd6791f7-4b6d-47b4-8877-1d4c82c6699d}",
+        "tabstripStart": "rgb(255, 230, 153)",
+        "tabstripEnd": "rgb(255, 244, 208)",
+        "toolbarBg": "rgb(255, 255, 255)",
+        "accentColor": "rgb(39, 16, 0)"
+      },
+      "dark": {
+        "addon_id": "{cd6791f7-4b6d-47b4-8877-1d4c82c6699d}",
+        "tabstripStart": "rgb(39, 16, 0)",
+        "tabstripEnd": "rgb(66, 27, 0)",
+        "toolbarBg": "rgb(22, 22, 22)",
+        "accentColor": "rgb(255, 230, 153)"
+      },
+      "auto": {
+        "addon_id": "{cd6791f7-4b6d-47b4-8877-1d4c82c6699d}"
+      }
+    }
+  },
+  {
+    "id": "spark",
+    "nameL10nId": "themes-selector-name-spark",
+    "addon_id": "{7a301b7b-c3e2-40bf-a06b-6d517bbf138b}",
+    "variants": {
+      "light": {
+        "addon_id": "{7a301b7b-c3e2-40bf-a06b-6d517bbf138b}",
+        "tabstripStart": "rgb(255, 205, 158)",
+        "tabstripEnd": "rgb(255, 237, 214)",
+        "toolbarBg": "rgb(255, 255, 255)",
+        "accentColor": "rgb(39, 15, 0)"
+      },
+      "dark": {
+        "addon_id": "{7a301b7b-c3e2-40bf-a06b-6d517bbf138b}",
+        "tabstripStart": "rgb(39, 15, 0)",
+        "tabstripEnd": "rgb(72, 18, 0)",
+        "toolbarBg": "rgb(22, 22, 22)",
+        "accentColor": "rgb(255, 205, 158)"
+      },
+      "auto": {
+        "addon_id": "{7a301b7b-c3e2-40bf-a06b-6d517bbf138b}"
+      }
+    }
+  },
+  {
+    "id": "flame",
+    "nameL10nId": "themes-selector-name-flame",
+    "addon_id": "{8de5f8c3-bfc2-443b-9913-7bbadbd1ba0d}",
+    "variants": {
+      "light": {
+        "addon_id": "{8de5f8c3-bfc2-443b-9913-7bbadbd1ba0d}",
+        "tabstripStart": "rgb(255, 195, 201)",
+        "tabstripEnd": "rgb(255, 232, 234)",
+        "toolbarBg": "rgb(255, 255, 255)",
+        "accentColor": "rgb(41, 11, 15)"
+      },
+      "dark": {
+        "addon_id": "{8de5f8c3-bfc2-443b-9913-7bbadbd1ba0d}",
+        "tabstripStart": "rgb(41, 11, 15)",
+        "tabstripEnd": "rgb(76, 5, 22)",
+        "toolbarBg": "rgb(22, 22, 22)",
+        "accentColor": "rgb(255, 195, 201)"
+      },
+      "auto": {
+        "addon_id": "{8de5f8c3-bfc2-443b-9913-7bbadbd1ba0d}"
+      }
+    }
+  },
+  {
+    "id": "flare",
+    "nameL10nId": "themes-selector-name-flare",
+    "addon_id": "{2b0fadbf-238d-43db-aa9d-e06c9a7e000b}",
+    "variants": {
+      "light": {
+        "addon_id": "{2b0fadbf-238d-43db-aa9d-e06c9a7e000b}",
+        "tabstripStart": "rgb(255, 194, 219)",
+        "tabstripEnd": "rgb(255, 232, 244)",
+        "toolbarBg": "rgb(255, 255, 255)",
+        "accentColor": "rgb(39, 11, 21)"
+      },
+      "dark": {
+        "addon_id": "{2b0fadbf-238d-43db-aa9d-e06c9a7e000b}",
+        "tabstripStart": "rgb(39, 11, 21)",
+        "tabstripEnd": "rgb(73, 6, 36)",
+        "toolbarBg": "rgb(22, 22, 22)",
+        "accentColor": "rgb(255, 194, 219)"
+      },
+      "auto": {
+        "addon_id": "{2b0fadbf-238d-43db-aa9d-e06c9a7e000b}"
+      }
+    }
+  },
+  {
+    "id": "lavender",
+    "nameL10nId": "themes-selector-name-lavender",
+    "addon_id": "{1d73a1eb-128d-4e9e-83f8-c0c51f8c5fd3}",
+    "variants": {
+      "light": {
+        "addon_id": "{1d73a1eb-128d-4e9e-83f8-c0c51f8c5fd3}",
+        "tabstripStart": "rgb(247, 202, 255)",
+        "tabstripEnd": "rgb(255, 236, 255)",
+        "toolbarBg": "rgb(255, 255, 255)",
+        "accentColor": "rgb(30, 14, 37)"
+      },
+      "dark": {
+        "addon_id": "{1d73a1eb-128d-4e9e-83f8-c0c51f8c5fd3}",
+        "tabstripStart": "rgb(30, 14, 37)",
+        "tabstripEnd": "rgb(56, 17, 71)",
+        "toolbarBg": "rgb(22, 22, 22)",
+        "accentColor": "rgb(247, 202, 255)"
+      },
+      "auto": {
+        "addon_id": "{1d73a1eb-128d-4e9e-83f8-c0c51f8c5fd3}"
+      }
+    }
+  },
+  {
+    "id": "dusk",
+    "nameL10nId": "themes-selector-name-dusk",
+    "addon_id": "{aab1adac-5449-47fd-b836-c2f43dc28f3f}",
+    "variants": {
+      "light": {
+        "addon_id": "{aab1adac-5449-47fd-b836-c2f43dc28f3f}",
+        "tabstripStart": "rgb(221, 207, 255)",
+        "tabstripEnd": "rgb(244, 240, 255)",
+        "toolbarBg": "rgb(255, 255, 255)",
+        "accentColor": "rgb(22, 17, 43)"
+      },
+      "dark": {
+        "addon_id": "{aab1adac-5449-47fd-b836-c2f43dc28f3f}",
+        "tabstripStart": "rgb(22, 17, 43)",
+        "tabstripEnd": "rgb(40, 25, 83)",
+        "toolbarBg": "rgb(22, 22, 22)",
+        "accentColor": "rgb(221, 207, 255)"
+      },
+      "auto": {
+        "addon_id": "{aab1adac-5449-47fd-b836-c2f43dc28f3f}"
+      }
+    }
+  },
+  {
+    "id": "lagoon",
+    "nameL10nId": "themes-selector-name-lagoon",
+    "addon_id": "{4223a94a-d3f9-40e9-95dd-99aca80ea04b}",
+    "variants": {
+      "light": {
+        "addon_id": "{4223a94a-d3f9-40e9-95dd-99aca80ea04b}",
+        "tabstripStart": "rgb(171, 223, 255)",
+        "tabstripEnd": "rgb(226, 247, 255)",
+        "toolbarBg": "rgb(255, 255, 255)",
+        "accentColor": "rgb(8, 21, 44)"
+      },
+      "dark": {
+        "addon_id": "{4223a94a-d3f9-40e9-95dd-99aca80ea04b}",
+        "tabstripStart": "rgb(8, 21, 44)",
+        "tabstripEnd": "rgb(4, 35, 86)",
+        "toolbarBg": "rgb(22, 22, 22)",
+        "accentColor": "rgb(171, 223, 255)"
+      },
+      "auto": {
+        "addon_id": "{4223a94a-d3f9-40e9-95dd-99aca80ea04b}"
+      }
+    }
+  },
+  {
+    "id": "pine",
+    "nameL10nId": "themes-selector-name-pine",
+    "addon_id": "{7063abff-a690-4b87-a548-fc32d3ce5708}",
+    "variants": {
+      "light": {
+        "addon_id": "{7063abff-a690-4b87-a548-fc32d3ce5708}",
+        "tabstripStart": "rgb(181, 240, 181)",
+        "tabstripEnd": "rgb(225, 255, 225)",
+        "toolbarBg": "rgb(255, 255, 255)",
+        "accentColor": "rgb(5, 28, 7)"
+      },
+      "dark": {
+        "addon_id": "{7063abff-a690-4b87-a548-fc32d3ce5708}",
+        "tabstripStart": "rgb(5, 28, 7)",
+        "tabstripEnd": "rgb(0, 50, 0)",
+        "toolbarBg": "rgb(22, 22, 22)",
+        "accentColor": "rgb(181, 240, 181)"
+      },
+      "auto": {
+        "addon_id": "{7063abff-a690-4b87-a548-fc32d3ce5708}"
+      }
+    }
+  },
+  {
+    "id": "tide",
+    "nameL10nId": "themes-selector-name-tide",
+    "addon_id": "{0683b144-0d4a-4815-963e-55a8ec8d386b}",
+    "variants": {
+      "light": {
+        "addon_id": "{0683b144-0d4a-4815-963e-55a8ec8d386b}",
+        "tabstripStart": "rgb(166, 236, 244)",
+        "tabstripEnd": "rgb(207, 255, 255)",
+        "toolbarBg": "rgb(255, 255, 255)",
+        "accentColor": "rgb(0, 31, 43)"
+      },
+      "dark": {
+        "addon_id": "{0683b144-0d4a-4815-963e-55a8ec8d386b}",
+        "tabstripStart": "rgb(0, 31, 43)",
+        "tabstripEnd": "rgb(0, 50, 61)",
+        "toolbarBg": "rgb(22, 22, 22)",
+        "accentColor": "rgb(166, 236, 244)"
+      },
+      "auto": {
+        "addon_id": "{0683b144-0d4a-4815-963e-55a8ec8d386b}"
+      }
+    }
+  }
+]

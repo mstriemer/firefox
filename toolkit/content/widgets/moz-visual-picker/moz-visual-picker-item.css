@@ -5,19 +5,27 @@
 @import url("chrome://global/content/elements/moz-visual-picker-item.tokens.css");
 
 :host {
+  --visual-picker-item-border-radius-inner: calc(var(--visual-picker-item-border-radius) - var(--visual-picker-item-border-width));
+
   cursor: default;
   display: flex;
 }
 
-.picker-item {
-  --visual-picker-item-border-radius-inner: calc(var(--visual-picker-item-border-radius) - var(--visual-picker-item-border-width));
+:host([labelposition="outside"]) {
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-small);
+}
 
+.picker-item {
+  appearance: none;
   overflow: hidden;
   border: var(--visual-picker-item-border-width) solid var(--visual-picker-item-border-color);
   border-radius: var(--visual-picker-item-border-radius);
   /* The margin needs to account for the increased border-width on the checked item. */
   /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
   margin: calc(var(--visual-picker-item-border-width-checked) - var(--visual-picker-item-border-width));
+  padding: 0;
   flex: 1;
 
   &:focus {

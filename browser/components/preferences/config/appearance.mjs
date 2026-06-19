@@ -101,6 +101,11 @@ Preferences.addSetting({
 });
 
 Preferences.addSetting({
+  id: "browserTheme",
+  visible: () => Services.prefs.getBoolPref("browser.nova.enabled", false),
+});
+
+Preferences.addSetting({
   id: "related-settings-accessibility-link",
   onUserClick: e => {
     e.preventDefault();
@@ -287,6 +292,11 @@ SettingGroupManager.registerGroups({
     iconSrc: "chrome://browser/skin/customize.svg",
     headingLevel: 2,
     items: [
+      {
+        id: "browserTheme",
+        l10nId: "browser-theme",
+        control: "theme-picker",
+      },
       {
         id: "web-appearance-manage-themes-link",
         l10nId: "browser-theme-manage-link",

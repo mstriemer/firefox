@@ -32,6 +32,7 @@ h1 {
   font-size: var(--font-size-xlarge);
 }
 
+.theme-picker-card::part(heading),
 h2 {
   font-size: var(--font-size-large);
 }

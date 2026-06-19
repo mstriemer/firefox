@@ -506,7 +506,7 @@ export var AddonRepository = {
    *
    * @param  aIDs
    *         The array of ids to retrieve metadata for.
-   * @returns {Array<AddonSearchResult>}
+   * @returns {Promise<Array<AddonSearchResult>>}
    */
   async getAddonsByIDs(aIDs) {
     const idCheck = aIDs.map(id => {
