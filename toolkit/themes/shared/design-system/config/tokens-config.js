@@ -9,6 +9,11 @@ const { createPropertyFormatter } = StyleDictionary.formatHelpers;
 const figmaConfig = require("./figma-tokens-config");
 const { OVERRIDE_IDENTIFIERS } = require("./override-identifiers");
 
+// When set (e.g. by `mach buildtokens --output-dir`), built files are written
+// under this directory instead of their default checked-in locations. Used by
+// the design-system tests to build into a throwaway directory for comparison.
+const OUTPUT_DIR = process.env.STYLE_DICTIONARY_OUTPUT_DIR;
+
 /**
  * Base tokens are shared across all components and surfaces (e.g. color, typography, spacing).
  * They are not component-specific and always go into the shared CSS output.
@@ -1213,6 +1218,7 @@ module.exports = {
   ],
   platforms: {
     css: {
+      ...(OUTPUT_DIR && { buildPath: OUTPUT_DIR }),
       options: {
         outputReferences: true,
         showFileHeader: false,
@@ -1250,6 +1256,7 @@ module.exports = {
       ],
     },
     tables: {
+      ...(OUTPUT_DIR && { buildPath: OUTPUT_DIR }),
       options: {
         outputReferences: true,
         showFileHeader: false,
@@ -1270,6 +1277,8 @@ module.exports = {
         },
       ],
     },
-    figma: figmaConfig.platform,
+    figma: OUTPUT_DIR
+      ? { ...figmaConfig.platform, buildPath: OUTPUT_DIR }
+      : figmaConfig.platform,
   },
 };

@@ -4,26 +4,31 @@
 
 import {
   existsSync,
+  mkdirSync,
   readdirSync,
   readFileSync,
   unlinkSync,
   writeFileSync,
 } from "fs";
-import { basename, join } from "path";
+import { basename, dirname, join, relative } from "path";
+import process from "node:process";
 
 // eslint-disable-next-line mozilla/reject-import-system-module-from-non-system
 import { ObjectUtils } from "../../../../modules/ObjectUtils.sys.mjs";
+import TOKEN_SUBDIRS from "../config/token-dirs.js";
 
 function joinRelativePath(...args) {
   return join(import.meta.dirname, ...args);
 }
 
-const WIDGETS_PATH = "../../../../content/widgets".split("/");
-const TOKEN_DIRS = [
-  joinRelativePath("tokens", "base"),
-  joinRelativePath("tokens", "components"),
-  joinRelativePath(...WIDGETS_PATH),
-];
+const TOKEN_DIRS = TOKEN_SUBDIRS.map(dir => joinRelativePath("..", dir));
+
+// When set (e.g. by `mach buildtokens --output-dir`), the generated
+// *.nova.tokens.json files are written under this directory instead of next to
+// their source tokens, leaving the working tree untouched. Paths mirror their
+// location relative to the design-system root.
+const OUTPUT_DIR = process.env.STYLE_DICTIONARY_OUTPUT_DIR;
+const DESIGN_SYSTEM_ROOT = joinRelativePath("..");
 const FIGMA_VALUE_MAP = {
   Light: "/light",
   Dark: "/dark",
@@ -145,7 +150,11 @@ function getTokenFiles(globalDirs) {
         prop = prop.substring(4);
       }
       if (remainder.startsWith("nova")) {
-        unlinkSync(path);
+        // Regenerated below. Don't delete source files when building to an
+        // output dir so the working tree stays untouched.
+        if (!OUTPUT_DIR) {
+          unlinkSync(path);
+        }
         continue;
       }
       files[prop] = path;
@@ -373,12 +382,16 @@ function writeTokens() {
   for (let [filePath, tokens] of _tokensFiles.entries()) {
     let original = JSON.parse(readFileSync(filePath));
     let novaPath = filePath.replace(".tokens.", ".nova.tokens.");
+    if (OUTPUT_DIR) {
+      novaPath = join(OUTPUT_DIR, relative(DESIGN_SYSTEM_ROOT, novaPath));
+    }
     let stripped = stripUnchangedTokens(tokens, original);
     if (!stripped) {
       if (existsSync(novaPath)) {
         unlinkSync(novaPath);
       }
     } else {
+      mkdirSync(dirname(novaPath), { recursive: true });
       writeFileSync(novaPath, JSON.stringify(stripped, null, 2) + "\n");
     }
   }

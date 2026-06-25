@@ -11,11 +11,11 @@
  * https://searchfox.org/mozilla-central/rev/9cd4ea81e27db6b767f1d9bbbcf47da238dd64fa/browser/components/newtab/bin/try-runner.js
  */
 
-const { readFileSync, readdirSync, rmSync } = require("fs");
+const { execFileSync } = require("child_process");
+const { existsSync, readFileSync, readdirSync, rmSync } = require("fs");
 const chalk = require("chalk");
 const path = require("path");
 const prettier = require("prettier");
-const StyleDictionary = require("style-dictionary");
 const config = require("../config/tokens-config.js");
 
 // Mirror the design-system's real depth in the source tree (toolkit/themes/
@@ -26,16 +26,14 @@ const TEST_BUILD_PATH = "tests/build/toolkit/themes/shared/design-system/";
 const PROJECT_ROOT = path.resolve(__dirname, "../../../../../");
 
 function buildFilesWithTestConfig() {
-  // Use our real config, just modify some values for the test. This prevents us
-  // from re-building the CSS files that get checked in when we run the tests.
-  let testConfig = Object.assign({}, config);
-  testConfig.platforms.css.buildPath = TEST_BUILD_PATH;
-  testConfig.platforms.tables.buildPath = TEST_BUILD_PATH;
-  testConfig.platforms.figma.buildPath = TEST_BUILD_PATH;
-
-  // This is effectively the same as running `npm run build` and allows us to
-  // use the modified config.
-  StyleDictionary.extend(testConfig).buildAllPlatforms();
+  // Build via the real `mach buildtokens` command, pointing it at the test
+  // output directory. This prevents us from re-building the CSS files that get
+  // checked in when we run the tests.
+  execFileSync(
+    path.resolve(PROJECT_ROOT, "mach"),
+    ["buildtokens", "--output-dir", TEST_BUILD_PATH],
+    { cwd: PROJECT_ROOT, stdio: "inherit" }
+  );
 }
 
 /**
@@ -52,6 +50,28 @@ function getBuiltCSSFiles() {
     path: destination,
     testPath: path.join(TEST_BUILD_PATH, destination),
   }));
+}
+
+// Source directories (relative to the design-system dir, which is the cwd)
+// holding the checked-in *.nova.tokens.json files. Shared with
+// src/figma-import.mjs so the generator and its test can't drift apart.
+const NOVA_TOKEN_DIRS = require("../config/token-dirs.js");
+
+/**
+ * Every checked-in *.nova.tokens.json file and where the test build writes its
+ * regenerated copy.
+ *
+ * @returns {{ name: string, path: string, testPath: string }[]}
+ */
+function getNovaTokenFiles() {
+  return NOVA_TOKEN_DIRS.flatMap(dir =>
+    readdirSync(dir, { recursive: true })
+      .filter(f => typeof f === "string" && f.endsWith(".nova.tokens.json"))
+      .map(f => {
+        let name = path.join(dir, f);
+        return { name, path: name, testPath: path.join(TEST_BUILD_PATH, name) };
+      })
+  );
 }
 
 function logErrors(tool, errors) {
@@ -139,6 +159,16 @@ const tests = {
       errors.push(
         `Built ${builtComponentCSS.length} component CSS files but found ${componentTokenCount} *.tokens.json source files`
       );
+    }
+
+    // Verify the regenerated *.nova.tokens.json files match what's checked in.
+    // If the test build didn't produce one, the checked-in file is out of date
+    // (or should have been removed).
+    for (let { name, path: currentPath, testPath } of getNovaTokenFiles()) {
+      let built = existsSync(testPath) ? readFileSync(testPath, "utf8") : null;
+      if (built !== readFileSync(currentPath, "utf8")) {
+        errors.push(`${name} is out of date`);
+      }
     }
 
     logErrors("build CSS", errors);
