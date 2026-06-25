@@ -147,11 +147,11 @@ const tests = {
   },
 };
 
-(function runTests() {
+(async function runTests() {
   let results = [];
 
   for (let testName of Object.keys(tests)) {
-    results.push([testName, tests[testName]()]);
+    results.push([testName, await tests[testName]()]);
   }
 
   for (const [name, result] of results) {
