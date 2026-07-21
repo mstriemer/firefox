@@ -26,15 +26,18 @@ const PREF_ACTIVE_THEME_ID = "extensions.activeThemeID";
  * @implements {ReactiveController}
  */
 export class ThemePickerDirectController {
+  #telemetrySessionId = crypto.randomUUID();
+
   /**
    * @param {ThemePicker} host
    */
   constructor(host) {
     this.host = host;
     this.host.addController(this);
+    this.installSource = this.host.getAttribute("installsource") || "unknown";
     lazy
       .getThemesList({
-        installSource: this.host.getAttribute("installsource") || "unknown",
+        installSource: this.installSource,
       })
       .then(tm => {
         this.themesManager = tm;
@@ -66,6 +69,9 @@ export class ThemePickerDirectController {
       /** @param {ThemechangeEvent} e */
       e => this.onThemechange(e.detail)
     );
+    this.host.addEventListener("pickershown", () =>
+      this.#initializeTelemetry()
+    );
   }
 
   hostConnected() {
@@ -75,6 +81,25 @@ export class ThemePickerDirectController {
 
   hostDisconnected() {
     Services.obs.removeObserver(this.updateHost, "look-and-feel-changed");
+  }
+
+  #initializeTelemetry() {
+    Glean.themePicker.shown.record({
+      session: this.#telemetrySessionId,
+      source: this.installSource,
+    });
+    Glean.themePicker.shownCount.add(1);
+  }
+
+  #recordChange({ property, value }) {
+    Glean.themePicker.change.record({
+      session: this.#telemetrySessionId,
+      source: this.installSource,
+      property,
+      themeId: property == "theme" ? value : this.lazy.activeThemeId,
+      appearance: this.lazy.nativeTheme,
+    });
+    Glean.themePicker.changeCount.add(1);
   }
 
   /**
@@ -98,7 +123,11 @@ export class ThemePickerDirectController {
       case "nativeTheme":
         Services.prefs.setBoolPref(PREF_NATIVE_THEME, Boolean(value));
         break;
+      default:
+        // Break out of telemetry recording.
+        return;
     }
+    this.#recordChange({ property });
   }
 
   /**

@@ -2118,3 +2118,93 @@ nova:
       - sthompson@mozilla.com
       - jbrown@mozilla.com
     expires: never
+
+theme_picker:
+  shown:
+    type: event
+    description: >
+      Recorded when the user is shown an instance of the theme picker.
+    bugs:
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2052547
+    data_reviews:
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2052547
+    notification_emails:
+      - mstriemer@mozilla.com
+      - hjones@mozilla.com
+      - lgreco@mozilla.com
+      - athomas@mozilla.com
+    expires: never
+    extra_keys:
+      session:
+        description: Identifier for this picker showing.
+        type: string
+      source:
+        description: >
+          Identifier for the picker source.
+        type: string
+
+  change:
+    type: event
+    description: >
+      Recorded when the user interacts with an instance of the theme picker.
+    bugs:
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2052547
+    data_reviews:
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2052547
+    notification_emails:
+      - mstriemer@mozilla.com
+      - hjones@mozilla.com
+      - lgreco@mozilla.com
+      - athomas@mozilla.com
+    expires: never
+    extra_keys:
+      session:
+        description: Identifier for this picker showing.
+        type: string
+      source:
+        description: >
+          Identifier for the picker source.
+        type: string
+      property:
+        description: >
+          The property that was changed: theme, appearance, native.
+        type: string
+      theme_id:
+        description: The current (or updated) theme id.
+        type: string
+      appearance:
+        description: The current (or updated) appearance (light, dark, device).
+        type: string
+      native_theme:
+        description: The current (or updated) native theme value.
+        type: boolean
+
+  shown_count:
+    type: counter
+    description: >
+      Recorded when the user is shown an instance of the theme picker.
+    bugs:
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2052547
+    data_reviews:
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2052547
+    notification_emails:
+      - mstriemer@mozilla.com
+      - hjones@mozilla.com
+      - lgreco@mozilla.com
+      - athomas@mozilla.com
+    expires: never
+
+  change_count:
+    type: counter
+    description: >
+      Recorded when the user interacts with an instance of the theme picker.
+    bugs:
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2052547
+    data_reviews:
+      - https://bugzilla.mozilla.org/show_bug.cgi?id=2052547
+    notification_emails:
+      - mstriemer@mozilla.com
+      - hjones@mozilla.com
+      - lgreco@mozilla.com
+      - athomas@mozilla.com
+    expires: never

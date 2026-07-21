@@ -220,6 +220,7 @@ const FIREFOX_THEMES_MAP = new Map(
  */
 class ThemesList {
   #installSource;
+  #telemetrySessionId;
 
   /**
    * @param {object} options
