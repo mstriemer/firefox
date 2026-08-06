@@ -1121,7 +1121,6 @@
         color-mix(var(--toolbox-background-color-gradient-trailing) 50%, transparent) 101.72%
       );
       --toolbox-text-color: var(--text-color);
-      --toolbox-text-color-inactive: var(--text-color-deemphasized);
     }
   }
 

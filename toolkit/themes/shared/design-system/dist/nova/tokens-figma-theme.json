@@ -574,11 +574,6 @@
     "dark": "{Theme$text/color}",
     "forcedColors": "{Theme$text/color}"
   },
-  "toolbox/text/color/inactive": {
-    "light": "{Theme$text/color/deemphasized}",
-    "dark": "{Theme$text/color/deemphasized}",
-    "forcedColors": "{Theme$text/color/deemphasized}"
-  },
   "badge/background/color/filled": {
     "light": "{Colors$color/green/50}",
     "dark": "{Colors$color/green/20}",

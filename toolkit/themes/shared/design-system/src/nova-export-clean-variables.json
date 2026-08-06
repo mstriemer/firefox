@@ -2564,11 +2564,11 @@
           "Private": "{text/color}",
           "Smart Light (WIP)": "{text/color}",
           "inactive": {
-            "Light": "{text/color/deemphasized}",
-            "Dark": "{text/color/deemphasized}",
-            "HCM": "{text/color/deemphasized}",
-            "Private": "{text/color/deemphasized}",
-            "Smart Light (WIP)": "{text/color/deemphasized}"
+            "Light": "{toolbox/text/color}",
+            "Dark": "{toolbox/text/color}",
+            "HCM": "{toolbox/text/color}",
+            "Private": "{toolbox/text/color}",
+            "Smart Light (WIP)": "{toolbox/text/color}"
           }
         }
       }

@@ -216,7 +216,6 @@
       /** toolbox **/
       --toolbox-background-color-inactive: -moz-headerbarinactive;
       --toolbox-text-color: -moz-headerbartext;
-      --toolbox-text-color-inactive: -moz-headerbarinactivetext;
     }
   }
 
@@ -268,7 +267,6 @@
         /** toolbox **/
         --toolbox-background-color-inactive: transparent;
         --toolbox-text-color: var(--text-color);
-        --toolbox-text-color-inactive: var(--text-color-deemphasized);
       }
     }
   }

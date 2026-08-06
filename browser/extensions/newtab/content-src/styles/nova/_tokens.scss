@@ -326,7 +326,6 @@
   /* This gradient is only used for Nova */
   --toolbox-background-gradient: linear-gradient(96deg, color-mix(var(--toolbox-background-color-gradient-leading) 50%, transparent) 39.84%, color-mix(var(--toolbox-background-color-gradient-trailing) 50%, transparent) 101.72%);
   --toolbox-text-color: var(--text-color);
-  --toolbox-text-color-inactive: var(--text-color-deemphasized);
 }
 
 @media (forced-colors) {
