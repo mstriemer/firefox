@@ -601,6 +601,7 @@
     --toolbox-background-color-inactive: var(--toolbox-background-color);
     --toolbox-text-color: light-dark(var(--color-gray-100), var(--color-gray-0));
     --toolbox-text-color-inactive: var(--toolbox-text-color);
+    --toolbox-text-color-inherit: inherit;
   }
 }
 

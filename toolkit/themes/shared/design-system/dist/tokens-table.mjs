@@ -763,6 +763,19 @@ export const tokensTable = {
       name: "--box-button-background-color-disabled",
     },
     {
+      value: "var(--button-background-color-ghost)",
+      name: "--tab-close-button-background-color",
+    },
+    {
+      value: "var(--button-background-color-ghost-hover)",
+      name: "--tab-close-button-background-color-hover",
+    },
+    {
+      value: "var(--button-background-color-ghost-active)",
+      name: "--tab-close-button-background-color-active",
+    },
+    { value: "transparent", name: "--tab-background-color" },
+    {
       value: "color-mix(in srgb, currentColor 11%, transparent)",
       name: "--tab-background-color-hover",
     },
@@ -1341,6 +1354,33 @@ export const tokensTable = {
       name: "--panel-list-border-color",
     },
     { value: "var(--border-color)", name: "--box-border-color" },
+    { value: "transparent", name: "--tab-border-color" },
+    {
+      value: { default: "transparent", prefersContrast: "currentColor" },
+      name: "--tab-border-color-hover",
+    },
+    {
+      value: { default: "transparent", prefersContrast: "currentColor" },
+      name: "--tab-border-color-selected",
+    },
+    {
+      value: "var(--tab-border-color)",
+      name: "--tab-close-button-border-color",
+    },
+    {
+      value: {
+        default: "var(--tab-border-color)",
+        forcedColors: "var(--button-border-color-hover)",
+      },
+      name: "--tab-close-button-border-color-hover",
+    },
+    {
+      value: {
+        default: "var(--tab-border-color)",
+        forcedColors: "var(--button-border-color-active)",
+      },
+      name: "--tab-close-button-border-color-active",
+    },
   ],
   "border-radius": [
     { value: "9999px", name: "--border-radius-circle" },
@@ -2651,6 +2691,7 @@ export const tokensTable = {
       },
       name: "--toolbox-text-color",
     },
+    { value: "inherit", name: "--toolbox-text-color-inherit" },
     {
       value: {
         default: "var(--toolbox-text-color)",
@@ -2755,6 +2796,47 @@ export const tokensTable = {
       value: "var(--button-text-color-menu-disabled)",
       name: "--box-button-text-color-disabled",
     },
+    { value: "var(--tab-text-color)", name: "--tab-close-button-text-color" },
+    {
+      value: {
+        default: "var(--tab-text-color)",
+        forcedColors: "var(--button-text-color-hover)",
+      },
+      name: "--tab-close-button-text-color-hover",
+    },
+    {
+      value: {
+        default: "var(--tab-text-color)",
+        forcedColors: "var(--button-text-color-active)",
+      },
+      name: "--tab-close-button-text-color-active",
+    },
+    {
+      value: {
+        default: "var(--toolbox-text-color-inherit)",
+        forcedColors: "var(--button-text-color)",
+      },
+      name: "--tab-text-color",
+    },
+    {
+      value: {
+        default: "var(--toolbox-text-color-inherit)",
+        forcedColors: "var(--button-text-color-hover)",
+      },
+      name: "--tab-text-color-hover",
+    },
+    {
+      value: {
+        nativeTheme: "var(--toolbar-text-color)",
+        default: "var(--toolbar-text-color)",
+        browserTheme: {
+          light: "rgb(21, 20, 26)",
+          dark: "var(--color-white)",
+          default: "light-dark(rgb(21, 20, 26), var(--color-white))",
+        },
+      },
+      name: "--tab-text-color-selected",
+    },
     { value: "inherit", name: "--urlbar-box-text-color" },
     {
       value: "var(--urlbar-box-text-color)",
@@ -2822,6 +2904,10 @@ export const tokensTable = {
     {
       value: "var(--box-border-width) solid var(--box-border-color)",
       name: "--box-border",
+    },
+    {
+      value: "var(--border-width) solid var(--tab-outline-color)",
+      name: "--tab-border",
     },
   ],
   uncategorized: [
@@ -4932,6 +5018,7 @@ export const variableLookupTable = {
     },
     default: "light-dark(var(--color-gray-100), var(--color-gray-0))",
   },
+  "toolbox-text-color-inherit": "inherit",
   "toolbox-text-color-inactive": {
     default: "var(--toolbox-text-color)",
     nativeTheme: "-moz-headerbarinactivetext",
@@ -5215,14 +5302,48 @@ export const variableLookupTable = {
   "box-icon-stroke": "var(--box-icon-fill)",
   "box-padding": "var(--space-large)",
   "tab-margin-block": "var(--dimension-4)",
+  "tab-border": "var(--border-width) solid var(--tab-outline-color)",
   "tab-border-radius": "var(--toolbarbutton-border-radius)",
+  "tab-border-color": "transparent",
+  "tab-border-color-hover": {
+    default: "transparent",
+    prefersContrast: "currentColor",
+  },
+  "tab-border-color-selected": {
+    default: "transparent",
+    prefersContrast: "currentColor",
+  },
   "tab-box-shadow-selected": "var(--box-shadow-level-1)",
   "tab-attention-dot-color": "var(--color-accent-attention)",
   "tab-close-button-padding": "6px",
+  "tab-close-button-background-color": "var(--button-background-color-ghost)",
+  "tab-close-button-background-color-hover":
+    "var(--button-background-color-ghost-hover)",
+  "tab-close-button-background-color-active":
+    "var(--button-background-color-ghost-active)",
+  "tab-close-button-border-color": "var(--tab-border-color)",
+  "tab-close-button-border-color-hover": {
+    default: "var(--tab-border-color)",
+    forcedColors: "var(--button-border-color-hover)",
+  },
+  "tab-close-button-border-color-active": {
+    default: "var(--tab-border-color)",
+    forcedColors: "var(--button-border-color-active)",
+  },
+  "tab-close-button-text-color": "var(--tab-text-color)",
+  "tab-close-button-text-color-hover": {
+    default: "var(--tab-text-color)",
+    forcedColors: "var(--button-text-color-hover)",
+  },
+  "tab-close-button-text-color-active": {
+    default: "var(--tab-text-color)",
+    forcedColors: "var(--button-text-color-active)",
+  },
   "tab-hover-outline-color": {
     default: "transparent",
     prefersContrast: "currentColor",
   },
+  "tab-background-color": "transparent",
   "tab-background-color-hover":
     "color-mix(in srgb, currentColor 11%, transparent)",
   "tab-background-color-selected": {
@@ -5232,6 +5353,23 @@ export const variableLookupTable = {
       light: "var(--color-white)",
       dark: "rgba(106, 106, 120, 0.7)",
       default: "light-dark(var(--color-white), rgba(106, 106, 120, 0.7))",
+    },
+  },
+  "tab-text-color": {
+    default: "var(--toolbox-text-color-inherit)",
+    forcedColors: "var(--button-text-color)",
+  },
+  "tab-text-color-hover": {
+    default: "var(--toolbox-text-color-inherit)",
+    forcedColors: "var(--button-text-color-hover)",
+  },
+  "tab-text-color-selected": {
+    nativeTheme: "var(--toolbar-text-color)",
+    default: "var(--toolbar-text-color)",
+    browserTheme: {
+      light: "rgb(21, 20, 26)",
+      dark: "var(--color-white)",
+      default: "light-dark(rgb(21, 20, 26), var(--color-white))",
     },
   },
   "tab-icon-end-margin": "5.5px",

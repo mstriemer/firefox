@@ -46,6 +46,7 @@ const FIGMA_IGNORES = new Set([
   "focus/outline/inset",
   "text/color/deemphasized",
   "text/color/disabled",
+  "toolbox/text/color/inherit",
   "panel/separator/color",
   // Base already has `inherit`; Figma stores a token reference that would overwrite it.
   "urlbar/box/text/color",
@@ -85,16 +86,15 @@ const NOVA_STRUCTURAL_OVERRIDES = {
   "tab/border/color/accent":
     "linear-gradient(96deg, var(--tab-border-color-selected-leading) 20.68%, var(--tab-border-color-selected-trailing) 79.34%)",
   // Tab HCM overrides are handled in CSS; strip forcedColors from these tokens.
-  "tab/background/color/hover": {
-    nativeTheme: "color-mix(in srgb, currentColor 17%, transparent)",
-    default: "{toolbarbutton.background.color.hover}",
-  },
-  "tab/background/color/selected": {
-    nativeTheme: "var(--toolbar-background-color)",
-    default: "{background.color.box.@base}",
-  },
+  // "tab/background/color/hover": {
+  //   nativeTheme: "color-mix(in srgb, currentColor 17%, transparent)",
+  //   default: "{toolbarbutton.background.color.hover}",
+  // },
+  // "tab/background/color/selected": {
+  //   nativeTheme: "var(--toolbar-background-color)",
+  //   default: "{background.color.box.@base}",
+  // },
   "tab/loading/fill": "{color.accent.primary.@base}",
-  "tab/outline/color": "transparent",
   "toolbar/field/border/color/focus": {
     nativeTheme: "color-mix(in srgb, {focus.outline.color} 50%, transparent)",
     default: "{focus.outline.color}",

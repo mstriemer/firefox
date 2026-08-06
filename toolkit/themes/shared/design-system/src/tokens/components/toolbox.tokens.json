@@ -41,6 +41,9 @@
           "nativeTheme": "-moz-headerbartext"
         }
       },
+      "inherit": {
+        "value": "inherit"
+      },
       "inactive": {
         "value": {
           "default": "{toolbox.text.color.@base}",

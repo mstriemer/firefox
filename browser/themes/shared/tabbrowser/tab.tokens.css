@@ -11,11 +11,25 @@
   :root,
   :host {
     --tab-attention-dot-color: var(--color-accent-attention);
+    --tab-background-color: transparent;
     --tab-background-color-hover: color-mix(in srgb, currentColor 11%, transparent);
     --tab-background-color-selected: var(--toolbar-background-color);
+    --tab-border: var(--border-width) solid var(--tab-outline-color);
+    --tab-border-color: transparent;
+    --tab-border-color-hover: transparent;
+    --tab-border-color-selected: transparent;
     --tab-border-radius: var(--toolbarbutton-border-radius);
     --tab-box-shadow-selected: var(--box-shadow-level-1);
+    --tab-close-button-background-color: var(--button-background-color-ghost);
+    --tab-close-button-background-color-hover: var(--button-background-color-ghost-hover);
+    --tab-close-button-background-color-active: var(--button-background-color-ghost-active);
+    --tab-close-button-border-color: var(--tab-border-color);
+    --tab-close-button-border-color-hover: var(--tab-border-color);
+    --tab-close-button-border-color-active: var(--tab-border-color);
     --tab-close-button-padding: 6px;
+    --tab-close-button-text-color: var(--tab-text-color);
+    --tab-close-button-text-color-hover: var(--tab-text-color);
+    --tab-close-button-text-color-active: var(--tab-text-color);
     --tab-group-blue: light-dark(var(--color-blue-50), var(--color-blue-10));
     --tab-group-blue-hover: light-dark(var(--color-blue-60), var(--color-blue-20));
     --tab-group-blue-invert: light-dark(var(--color-blue-10), var(--color-blue-50));
@@ -77,6 +91,9 @@
     --tab-pinned-margin-inline-expanded: var(--space-xsmall);
     --tab-selected-outline-color: transparent;
     --tab-selected-textcolor: var(--toolbar-text-color);
+    --tab-text-color: var(--toolbox-text-color-inherit);
+    --tab-text-color-hover: var(--toolbox-text-color-inherit);
+    --tab-text-color-selected: var(--toolbar-text-color);
     --tab-vertical-block-margin: var(--dimension-2);
     --tab-vertical-inline-padding: var(--space-medium);
   }
@@ -88,8 +105,26 @@
   @media (prefers-contrast) {
     :root,
     :host {
+      --tab-border-color-hover: currentColor;
+      --tab-border-color-selected: currentColor;
       --tab-hover-outline-color: currentColor;
       --tab-selected-outline-color: currentColor;
+    }
+  }
+}
+
+/* Bug 1879900: Can't nest media queries inside of :host, :root selector
+   until Bug 1879349 lands */
+@layer tokens-forced-colors {
+  @media (forced-colors) {
+    :root,
+    :host {
+      --tab-close-button-border-color-hover: var(--button-border-color-hover);
+      --tab-close-button-border-color-active: var(--button-border-color-active);
+      --tab-close-button-text-color-hover: var(--button-text-color-hover);
+      --tab-close-button-text-color-active: var(--button-text-color-active);
+      --tab-text-color: var(--button-text-color);
+      --tab-text-color-hover: var(--button-text-color-hover);
     }
   }
 }
@@ -102,6 +137,7 @@
     :host(.anonymous-content-host) {
       --tab-background-color-selected: light-dark(var(--color-white), rgba(106, 106, 120, 0.7));
       --tab-selected-textcolor: light-dark(rgb(21, 20, 26), var(--color-white));
+      --tab-text-color-selected: light-dark(rgb(21, 20, 26), var(--color-white));
     }
   }
 }
@@ -110,9 +146,12 @@
   @layer tokens-foundation-nova {
     :root,
     :host {
-      --tab-background-color-hover: color-mix(in srgb, currentColor 17%, transparent);
+      --tab-background-color: var(--button-background-color);
+      --tab-background-color-hover: var(--toolbarbutton-background-color-hover);
       --tab-background-color-selected: var(--toolbar-background-color);
+      --tab-border-color-hover: transparent;
       --tab-border-color-accent: linear-gradient(96deg, var(--tab-border-color-selected-leading) 20.68%, var(--tab-border-color-selected-trailing) 79.34%);
+      --tab-border-color-selected: transparent;
       --tab-border-color-selected-leading: var(--color-violet-30);
       --tab-border-color-selected-trailing: var(--color-orange-30);
       --tab-border-radius: var(--toolbarbutton-border-radius);
@@ -143,7 +182,9 @@
       --tab-group-yellow-text: light-dark(var(--color-white), var(--color-yellow-90));
       --tab-loading-fill: var(--color-accent-primary);
       --tab-margin-block: 6px;
+      --tab-outline-color: transparent;
       --tab-outline-offset: -1px;
+      --tab-text-color-selected: var(--toolbar-text-color);
     }
   }
 
@@ -153,8 +194,14 @@
     @media (forced-colors) {
       :root,
       :host {
-        --tab-border-color-selected-leading: var(--border-color);
-        --tab-border-color-selected-trailing: var(--border-color);
+        --tab-background-color-hover: var(--button-background-color-hover);
+        --tab-background-color-selected: var(--button-background-color-selected);
+        --tab-border-color-hover: var(--button-border-color-hover);
+        --tab-border-color-selected: var(--button-border-color-selected);
+        --tab-border-color-selected-leading: var(--tab-border-color-selected);
+        --tab-border-color-selected-trailing: var(--tab-border-color-selected);
+        --tab-outline-color: var(--button-border-color);
+        --tab-text-color-selected: var(--button-text-color-selected);
       }
     }
   }
@@ -165,8 +212,8 @@
     @media not ((forced-colors) or (-moz-native-theme)) {
       :root:is([theme-in-app], :not([lwtheme])),
       :host(.anonymous-content-host) {
-        --tab-background-color-hover: var(--toolbarbutton-background-color-hover);
         --tab-background-color-selected: var(--background-color-box);
+        --tab-text-color-selected: var(--toolbox-text-color);
       }
     }
   }
