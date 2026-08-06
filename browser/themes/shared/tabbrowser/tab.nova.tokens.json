@@ -12,17 +12,29 @@
       "accent": {
         "value": "linear-gradient(96deg, var(--tab-border-color-selected-leading) 20.68%, var(--tab-border-color-selected-trailing) 79.34%)"
       },
+      "hover": {
+        "value": {
+          "default": "transparent",
+          "forcedColors": "{button.border.color.hover}"
+        }
+      },
       "selected": {
+        "@base": {
+          "value": {
+            "default": "transparent",
+            "forcedColors": "{button.border.color.selected}"
+          }
+        },
         "leading": {
           "value": {
             "default": "{color.violet.30}",
-            "forcedColors": "{border.color.@base}"
+            "forcedColors": "{tab.border.color.selected.@base}"
           }
         },
         "trailing": {
           "value": {
             "default": "{color.orange.30}",
-            "forcedColors": "{border.color.@base}"
+            "forcedColors": "{tab.border.color.selected.@base}"
           }
         }
       }
@@ -37,16 +49,31 @@
   },
   "background": {
     "color": {
+      "@base": {
+        "value": "{button.background.color.@base}"
+      },
       "hover": {
         "value": {
-          "nativeTheme": "color-mix(in srgb, currentColor 17%, transparent)",
-          "default": "{toolbarbutton.background.color.hover}"
+          "default": "{toolbarbutton.background.color.hover}",
+          "forcedColors": "{button.background.color.hover}"
         }
       },
       "selected": {
         "value": {
           "nativeTheme": "var(--toolbar-background-color)",
-          "default": "{background.color.box.@base}"
+          "default": "{background.color.box.@base}",
+          "forcedColors": "{button.background.color.selected}"
+        }
+      }
+    }
+  },
+  "text": {
+    "color": {
+      "selected": {
+        "value": {
+          "nativeTheme": "var(--toolbar-text-color)",
+          "default": "{toolbox.text.color.@base}",
+          "forcedColors": "{button.text.color.selected}"
         }
       }
     }
@@ -57,6 +84,12 @@
     }
   },
   "outline": {
+    "color": {
+      "value": {
+        "default": "transparent",
+        "forcedColors": "{button.border.color.@base}"
+      }
+    },
     "offset": {
       "value": "-1px"
     }

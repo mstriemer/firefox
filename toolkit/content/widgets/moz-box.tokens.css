@@ -29,3 +29,12 @@
     --box-padding: var(--space-large);
   }
 }
+
+@media -moz-pref("browser.nova.enabled") {
+  @layer tokens-foundation-nova {
+    :root,
+    :host {
+      --box-border-color: var(--border-color-deemphasized);
+    }
+  }
+}

@@ -684,7 +684,7 @@
           "selected": {
             "Light": "{button/background/color/active}",
             "Dark": "{button/background/color/active}",
-            "HCM": "{button/background/color/active}",
+            "HCM": "{SelectedItem}",
             "Private": "{button/background/color/active}",
             "Smart Light (WIP)": "{button/background/color/active}"
           },
@@ -873,7 +873,7 @@
           "Light": "{color/accent/primary}",
           "Dark": "{color/accent/primary}",
           "HCM": "{border/color/interactive}",
-          "Private": "{color/purple-desaturated/30}",
+          "Private": "{color/accent/primary}",
           "hover": {
             "Light": "{button/border/color}",
             "Dark": "{button/border/color}",
@@ -1213,7 +1213,7 @@
             "disabled": {
               "Light": "{button/text/color/ghost/disabled}",
               "Dark": "{button/text/color/disabled}",
-              "HCM": "{button/text/color/primary/disabled}",
+              "HCM": "{button/text/color/disabled}",
               "Private": "{button/text/color/disabled}",
               "Smart Light (WIP)": "{button/text/color/ghost/disabled}"
             },
@@ -1260,6 +1260,19 @@
               "HCM": "{button/text/color/ghost/active}",
               "Private": "{button/text/color/ghost/active}",
               "Smart Light (WIP)": "{button/text/color/muted/active}"
+            }
+          }
+        }
+      },
+      "split": {
+        "separator": {
+          "background": {
+            "color": {
+              "Light": "{button/border/color}",
+              "Dark": "{button/border/color}",
+              "HCM": "{button/border/color}",
+              "Private": "{button/border/color}",
+              "Smart Light (WIP)": "{button/border/color}"
             }
           }
         }
@@ -1860,27 +1873,27 @@
           "hover": {
             "Light": "rgba(0, 0, 0, 0)",
             "Dark": "rgba(0, 0, 0, 0)",
-            "HCM": "{SelectedItem}",
+            "HCM": "{button/border/color/hover}",
             "Private": "rgba(0, 0, 0, 0)",
             "Smart Light (WIP)": "rgba(0, 0, 0, 0)"
           },
           "selected": {
             "Light": "rgba(0, 0, 0, 0)",
             "Dark": "rgba(0, 0, 0, 0)",
-            "HCM": "{SelectedItem}",
+            "HCM": "{button/border/color/selected}",
             "Private": "rgba(0, 0, 0, 0)",
             "Smart Light (WIP)": "rgba(0, 0, 0, 0)",
             "leading": {
               "Light": "{color/violet/30}",
               "Dark": "{color/violet/30}",
-              "HCM": "{border/color}",
+              "HCM": "{tab/border/color/selected}",
               "Private": "{color/violet/30}",
               "Smart Light (WIP)": "{color/violet/30}"
             },
             "trailing": {
               "Light": "{color/orange/30}",
               "Dark": "{color/orange/30}",
-              "HCM": "{border/color}",
+              "HCM": "{tab/border/color/selected}",
               "Private": "{color/violet/50}",
               "Smart Light (WIP)": "{color/orange/30}"
             }
@@ -1889,14 +1902,14 @@
       },
       "background": {
         "color": {
-          "Light": "rgba(0, 0, 0, 0)",
-          "Dark": "rgba(0, 0, 0, 0)",
-          "HCM": "rgba(0, 0, 0, 0)",
+          "Light": "{button/background/color}",
+          "Dark": "{button/background/color}",
+          "HCM": "{button/background/color}",
           "Private": "rgba(0, 0, 0, 0)",
           "hover": {
             "Light": "{toolbarbutton/background/color/hover}",
             "Dark": "{toolbarbutton/background/color/hover}",
-            "HCM": "rgba(0, 0, 0, 0)",
+            "HCM": "{button/background/color/hover}",
             "Private": "{toolbarbutton/background/color/hover}",
             "Smart Light (WIP)": "rgba(66, 14, 80, 0.11999999731779099)"
           },
@@ -1904,7 +1917,7 @@
             "vertical": {
               "Light": "{tab/background/color/hover}",
               "Dark": "{tab/background/color/hover}",
-              "HCM": "{tab/background/color/hover}",
+              "HCM": "{tab/background/color}",
               "Private": "{tab/background/color/hover}",
               "Smart Light (WIP)": "rgba(179, 151, 255, 0.23999999463558197)"
             }
@@ -1920,7 +1933,7 @@
           "selected": {
             "Light": "{background/color/box}",
             "Dark": "{background/color/box}",
-            "HCM": "{ButtonFace}",
+            "HCM": "{button/background/color/selected}",
             "Private": "{background/color/box}",
             "Smart Light (WIP)": "#FFFFFF"
           }
@@ -1931,10 +1944,22 @@
           "selected": {
             "Light": "{toolbox/text/color}",
             "Dark": "{toolbox/text/color}",
-            "HCM": "{toolbox/text/color}",
+            "HCM": "{button/text/color/selected}",
             "Private": "{toolbox/text/color}",
             "Smart Light (WIP)": "{toolbox/text/color}"
-          }
+          },
+          "hover": {
+            "Light": "{toolbox/text/color/inherit}",
+            "Dark": "{toolbox/text/color/inherit}",
+            "HCM": "{button/text/color/hover}",
+            "Private": "{toolbox/text/color/inherit}",
+            "Smart Light (WIP)": "{toolbox/text/color/inherit}"
+          },
+          "Light": "{toolbox/text/color/inherit}",
+          "Dark": "{toolbox/text/color/inherit}",
+          "HCM": "{button/text/color}",
+          "Private": "{toolbox/text/color/inherit}",
+          "Smart Light (WIP)": "{toolbox/text/color/inherit}"
         }
       },
       "attention": {
@@ -2569,6 +2594,13 @@
             "HCM": "{toolbox/text/color}",
             "Private": "{toolbox/text/color}",
             "Smart Light (WIP)": "{toolbox/text/color}"
+          },
+          "inherit": {
+            "Light": "{toolbox/text/color}",
+            "Dark": "{toolbox/text/color}",
+            "HCM": "{toolbox/text/color}",
+            "Private": "{toolbox/text/color}",
+            "Smart Light (WIP)": "{toolbox/text/color}"
           }
         }
       }
@@ -2835,25 +2867,25 @@
           "Private": "{background/color/box}",
           "Smart Light (WIP)": "{background/color/box}",
           "warning": {
-            "Light": "{message-bar/background/color}",
-            "Dark": "{message-bar/background/color}",
-            "HCM": "{message-bar/background/color}",
-            "Private": "{message-bar/background/color}",
-            "Smart Light (WIP)": "{message-bar/background/color}"
+            "Light": "{background/color/box}",
+            "Dark": "{background/color/box}",
+            "HCM": "{background/color/box}",
+            "Private": "{background/color/box}",
+            "Smart Light (WIP)": "{background/color/box}"
           },
           "success": {
-            "Light": "{message-bar/background/color}",
-            "Dark": "{message-bar/background/color}",
-            "HCM": "{message-bar/background/color}",
-            "Private": "{message-bar/background/color}",
-            "Smart Light (WIP)": "{message-bar/background/color}"
+            "Light": "{background/color/box}",
+            "Dark": "{background/color/box}",
+            "HCM": "{background/color/box}",
+            "Private": "{background/color/box}",
+            "Smart Light (WIP)": "{background/color/box}"
           },
           "critical": {
-            "Light": "{message-bar/background/color}",
-            "Dark": "{message-bar/background/color}",
-            "HCM": "{message-bar/background/color}",
-            "Private": "{message-bar/background/color}",
-            "Smart Light (WIP)": "{message-bar/background/color}"
+            "Light": "{background/color/box}",
+            "Dark": "{background/color/box}",
+            "HCM": "{background/color/box}",
+            "Private": "{background/color/box}",
+            "Smart Light (WIP)": "{background/color/box}"
           }
         }
       },
@@ -2875,6 +2907,45 @@
               "Smart Light (WIP)": "rgba(0, 0, 0, 0)"
             }
           }
+        },
+        "background": {
+          "color": {
+            "Light": "{background/color/information}",
+            "Dark": "{background/color/information}",
+            "HCM": "{background/color/information}",
+            "Private": "#FFFFFF",
+            "Smart Light (WIP)": "#FFFFFF",
+            "warning": {
+              "Light": "{background/color/warning}",
+              "Dark": "{background/color/warning}",
+              "HCM": "{background/color/warning}",
+              "Private": "#FFFFFF",
+              "Smart Light (WIP)": "#FFFFFF"
+            },
+            "success": {
+              "Light": "{background/color/success}",
+              "Dark": "{background/color/success}",
+              "HCM": "{background/color/success}",
+              "Private": "#FFFFFF",
+              "Smart Light (WIP)": "#FFFFFF"
+            },
+            "critical": {
+              "Light": "{background/color/critical}",
+              "Dark": "{background/color/critical}",
+              "HCM": "{background/color/critical}",
+              "Private": "#FFFFFF",
+              "Smart Light (WIP)": "#FFFFFF"
+            }
+          }
+        }
+      },
+      "text": {
+        "color": {
+          "Light": "{text/color}",
+          "Dark": "{text/color}",
+          "HCM": "{text/color}",
+          "Private": "#FFFFFF",
+          "Smart Light (WIP)": "#FFFFFF"
         }
       }
     },
@@ -3090,6 +3161,13 @@
             "HCM": "{button/background/color/active}",
             "Private": "{button/background/color/active}",
             "Smart Light (WIP)": "{button/background/color/active}"
+          },
+          "disabled": {
+            "Light": "{button/background/color/disabled}",
+            "Dark": "{button/background/color/disabled}",
+            "HCM": "{button/background/color/disabled}",
+            "Private": "{button/background/color/disabled}",
+            "Smart Light (WIP)": "{button/background/color/disabled}"
           }
         }
       }
@@ -3164,7 +3242,18 @@
           }
         }
       }
+    },
+    "box": {
+      "border": {
+        "color": {
+          "Light": "{border/color/deemphasized}",
+          "Dark": "{border/color/deemphasized}",
+          "HCM": "{border/color/deemphasized}",
+          "Private": "{border/color/deemphasized}",
+          "Smart Light (WIP)": "{border/color/deemphasized}"
+        }
       }
+    }
   },
   "Surface": {
     "space": {
@@ -3914,7 +4003,10 @@
           "Value": "{border/radius/xlarge}"
         },
         "width": {
-          "Value": "{border/width}"
+          "Value": "{border/width}",
+          "split": {
+            "Value": 0
+          }
         }
       },
       "min-height": {
@@ -3930,10 +4022,10 @@
         "icon": {
           "Value": "{button/min-height}",
           "small": {
-            "Value": "{size/item/medium}"
+            "Value": "{button/min-height/small}"
           },
-          "lage": {
-            "Value": "{size/item/large}"
+          "large": {
+            "Value": "{button/min-height/large}"
           }
         }
       },
@@ -3949,6 +4041,11 @@
         },
         "block": {
           "Value": "{space/xsmall}"
+        }
+      },
+      "gap": {
+        "split": {
+          "Value": 0
         }
       }
     },
@@ -4035,9 +4132,6 @@
       },
       "padding": {
         "inner": {
-          "narrow": {
-            "Value": 7
-          },
           "Value": 8,
           "touch": {
             "narrow": {
@@ -4046,9 +4140,6 @@
           }
         },
         "outer": {
-          "narrow": {
-            "Value": 1
-          },
           "Value": 2
         },
         "compact": {
@@ -4142,20 +4233,25 @@
       "border": {
         "radius": {
           "Value": "{border/radius/medium}"
+        },
+        "width": {
+          "Value": "{border/width}"
         }
       },
       "container": {
         "padding": {
           "inline": {
-            "Value": 8
-          }
-        }
-      },
-      "text-container": {
-        "padding": {
+            "Value": 0
+          },
           "block": {
             "Value": 0
           }
+        },
+        "gap": {
+          "Value": "{space/small}"
+        },
+        "min-height": {
+          "Value": "{size/item/large}"
         }
       },
       "icon": {
@@ -4164,12 +4260,63 @@
         },
         "height": {
           "Value": "{message-bar/icon/size}"
+        },
+        "container": {
+          "border": {
+            "radius-start-end": {
+              "Value": 0
+            },
+            "radius-end-end": {
+              "Value": 0
+            }
+          }
         }
       },
       "margin": {
         "block": {
           "start": {
             "Value": 0
+          }
+        }
+      },
+      "text": {
+        "container": {
+          "padding": {
+            "block": {
+              "Value": 0
+            }
+          }
+        }
+      },
+      "content": {
+        "padding": {
+          "inline": {
+            "Value": 8
+          },
+          "block": {
+            "Value": "{space/small}"
+          }
+        }
+      },
+      "actions": {
+        "gap": {
+          "Value": "{space/small}"
+        }
+      },
+      "message": {
+        "margin": {
+          "inline-end": {
+            "Value": "{space/xsmall}"
+          }
+        }
+      },
+      "close": {
+        "margin": {
+          "inline-end": {
+            "Value": 8
+          },
+          "block-start": {
+            "Value": "{space/small}"
           }
         }
       }
@@ -4334,6 +4481,18 @@
         "outline": {
           "offset": {
             "Value": "{focus/outline/offset}"
+          }
+        }
+      }
+    },
+    "info-bar": {
+      "margin": {
+        "inline": {
+          "Value": 0
+        },
+        "block": {
+          "start": {
+            "Value": 0
           }
         }
       }

@@ -5,15 +5,33 @@
     }
   },
   "border": {
+    "@base": {
+      "value": "{border.width} solid {tab.outline.color}"
+    },
     "radius": {
       "value": "var(--toolbarbutton-border-radius)"
     },
     "color": {
+      "@base": {
+        "value": "transparent"
+      },
       "accent": {
         "override": true,
         "value": "unset"
       },
+      "hover": {
+        "value": {
+          "default": "transparent",
+          "prefersContrast": "currentColor"
+        }
+      },
       "selected": {
+        "@base": {
+          "value": {
+            "default": "transparent",
+            "prefersContrast": "currentColor"
+          }
+        },
         "leading": {
           "override": true,
           "value": "unset"
@@ -43,6 +61,57 @@
     "button": {
       "padding": {
         "value": "6px"
+      },
+      "background": {
+        "color": {
+          "@base": {
+            "value": "{button.background.color.ghost.@base}"
+          },
+          "hover": {
+            "value": "{button.background.color.ghost.hover}"
+          },
+          "active": {
+            "value": "{button.background.color.ghost.active}"
+          }
+        }
+      },
+      "border": {
+        "color": {
+          "@base": {
+            "value": "{tab.border.color.@base}"
+          },
+          "hover": {
+            "value": {
+              "default": "{tab.border.color.@base}",
+              "forcedColors": "{button.border.color.hover}"
+            }
+          },
+          "active": {
+            "value": {
+              "default": "{tab.border.color.@base}",
+              "forcedColors": "{button.border.color.active}"
+            }
+          }
+        }
+      },
+      "text": {
+        "color": {
+          "@base": {
+            "value": "{tab.text.color.@base}"
+          },
+          "hover": {
+            "value": {
+              "default": "{tab.text.color.@base}",
+              "forcedColors": "{button.text.color.hover}"
+            }
+          },
+          "active": {
+            "value": {
+              "default": "{tab.text.color.@base}",
+              "forcedColors": "{button.text.color.active}"
+            }
+          }
+        }
       }
     }
   },
@@ -58,6 +127,9 @@
   },
   "background": {
     "color": {
+      "@base": {
+        "value": "transparent"
+      },
       "hover": {
         "value": "color-mix(in srgb, currentColor 11%, transparent)"
       },
@@ -66,6 +138,33 @@
           "light": "{color.white.@base}",
           "dark": "rgba(106, 106, 120, 0.7)",
           "nativeTheme": "var(--toolbar-background-color)"
+        }
+      },
+      "pinned": {
+        "override": true,
+        "value": "unset"
+      }
+    }
+  },
+  "text": {
+    "color": {
+      "@base": {
+        "value": {
+          "default": "{toolbox.text.color.inherit}",
+          "forcedColors": "{button.text.color.@base}"
+        }
+      },
+      "hover": {
+        "value": {
+          "default": "{toolbox.text.color.inherit}",
+          "forcedColors": "{button.text.color.hover}"
+        }
+      },
+      "selected": {
+        "value": {
+          "light": "rgb(21, 20, 26)",
+          "dark": "{color.white.@base}",
+          "nativeTheme": "var(--toolbar-text-color)"
         }
       }
     }

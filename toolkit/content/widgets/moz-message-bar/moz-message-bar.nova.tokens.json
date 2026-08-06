@@ -23,6 +23,9 @@
   },
   "container": {
     "padding": {
+      "block": {
+        "value": "0"
+      },
       "inline": {
         "value": {
           "comment": "Using rem-based space tokens ends up causing subpixel rendering issues that cause the icon to look uncentered",

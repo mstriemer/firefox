@@ -63,6 +63,7 @@
       --message-bar-background-color-critical: var(--message-bar-background-color);
       --message-bar-background-color-success: var(--message-bar-background-color);
       --message-bar-background-color-warning: var(--message-bar-background-color);
+      --message-bar-container-padding-block: 0;
       --message-bar-container-padding-inline: 8px;
       --message-bar-icon-container-border: 1px solid var(--message-bar-icon-container-border-color);
       --message-bar-icon-container-border-color: transparent;
