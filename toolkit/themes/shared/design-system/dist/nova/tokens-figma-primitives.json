@@ -23,7 +23,6 @@
   "panel/border/radius": "{Primitives$popup/border/radius}",
   "popup/border/radius": "{Primitives$border/radius/xlarge}",
   "toolbar/padding/inline": 6,
-  "toolbarbutton/padding/inner/touch/narrow": 0,
   "toolbarbutton/opacity/disabled": 0.4,
   "toolbarbutton/outline/offset": -1,
   "badge/border/radius": "{Primitives$border/radius/circle}",
