@@ -436,22 +436,37 @@ nsresult BounceTrackingState::OnDocumentStartRequest(nsIChannel* aChannel) {
   NS_ENSURE_SUCCESS(rv, rv);
 
   // For http(s) loads the channel we record bounces for must live in the same
-  // container as the BounceTrackingState which owns the per-tab record and
-  // selects the storage partition. This relies on a tab's userContextId staying
-  // constant for its whole lifetime. If that ever changes mid-load, bounces
-  // would be recorded under the tab's original container rather than the one
-  // the load ends up in, and BTP would need to account for the transition.
+  // storage partition as the BounceTrackingState which owns the per-tab record.
   // Non-http(s) channels (e.g. the initial about:blank) are excluded because
   // they do not necessarily carry the tab's OriginAttributes. See Bug 2054941.
+  //
+  // The container is left out of the comparison because a top level load can be
+  // retargeted into a new tab in the container its site is bound to, splitting
+  // one extended navigation across two tabs.
+  //
+  // TODO: Bug 2058145: BTP does not account for those transitions yet: hops
+  // which ran in another container are recorded under this tab's, causing false
+  // negatives and, more problematic, false positives. Bug 2059768 covers the
+  // known cases with todo() expectations.
 #ifdef DEBUG
   if (nsCOMPtr<nsIURI> channelURIForAssert;
       NS_SUCCEEDED(aChannel->GetURI(getter_AddRefs(channelURIForAssert))) &&
       channelURIForAssert &&
       mozilla::net::SchemeIsHttpOrHttps(channelURIForAssert)) {
-    MOZ_ASSERT(
-        loadInfo->GetOriginAttributes().EqualsIgnoringFPD(mOriginAttributes),
-        "BTP: channel OriginAttributes (userContextId/PBM) diverged from the "
-        "cached BounceTrackingState OriginAttributes (Bug 2054941).");
+    constexpr uint32_t kIgnoredForAssert =
+        OriginAttributes::STRIP_FIRST_PARTY_DOMAIN |
+        OriginAttributes::STRIP_PARTITION_KEY |
+        OriginAttributes::STRIP_USER_CONTEXT_ID;
+
+    OriginAttributes channelAttrsForAssert = loadInfo->GetOriginAttributes();
+    channelAttrsForAssert.StripAttributes(kIgnoredForAssert);
+
+    OriginAttributes stateAttrsForAssert = mOriginAttributes;
+    stateAttrsForAssert.StripAttributes(kIgnoredForAssert);
+
+    MOZ_ASSERT(channelAttrsForAssert == stateAttrsForAssert,
+               "BTP: channel OriginAttributes (PBM) diverged from the cached "
+               "BounceTrackingState OriginAttributes (Bug 2054941).");
   }
 #endif
 
@@ -631,6 +646,32 @@ BounceTrackingState::OnContentBlockingEvent(nsIWebProgress* aWebProgress,
   return NS_OK;
 }
 
+// Site host of aWindowContext's top level document. False if that document is
+// no longer the current one or is not a principal we track.
+static bool GetTopLevelSiteHost(dom::WindowContext* aWindowContext,
+                                nsACString& aSiteHost) {
+  if (!aWindowContext) {
+    return false;
+  }
+  dom::WindowContext* topWindowContext = aWindowContext->TopWindowContext();
+  if (!topWindowContext || !topWindowContext->IsCurrent()) {
+    return false;
+  }
+
+  nsIPrincipal* principal = topWindowContext->Canonical()->DocumentPrincipal();
+  if (!principal || !BounceTrackingState::ShouldTrackPrincipal(principal)) {
+    return false;
+  }
+
+  nsAutoCString siteHost;
+  if (NS_WARN_IF(NS_FAILED(principal->GetBaseDomain(siteHost)))) {
+    return false;
+  }
+
+  aSiteHost = siteHost;
+  return true;
+}
+
 nsresult BounceTrackingState::OnStartNavigation(
     nsIPrincipal* aTriggeringPrincipal,
     const bool aHasValidUserGestureActivation, uint64_t aLoadId) {
@@ -673,7 +714,7 @@ nsresult BounceTrackingState::OnStartNavigation(
   // Obtain the (schemeless) site to keep track of bounces.
   nsAutoCString siteHost;
 
-  // If origin is an opaque origin, set initialHost to empty host. Strictly
+  // If origin is an opaque origin, set siteHost to empty host. Strictly
   // speaking we only need to check IsNullPrincipal, but we're generally only
   // interested in content principals with http/s scheme. Other principal types
   // or schemes are not considered to be trackers.
@@ -687,6 +728,26 @@ nsresult BounceTrackingState::OnStartNavigation(
     }
   }
 
+  // RecordStatefulBounces exempts the initial host, so it must be the site this
+  // context is leaving, not the initiator's, otherwise a frame which navigates
+  // the top level exempts itself. Both reads are at commit time. A context with
+  // no committed document was opened by this navigation; use its opener, not
+  // the initiator, which can resolve back into it and name the frame again.
+  nsAutoCString initialSiteHost;
+  if (RefPtr<dom::BrowsingContext> browsingContext = CurrentBrowsingContext()) {
+    if (browsingContext->GetHasLoadedNonInitialDocument()) {
+      GetTopLevelSiteHost(browsingContext->GetCurrentWindowContext(),
+                          initialSiteHost);
+    } else if (RefPtr<dom::BrowsingContext> opener =
+                   browsingContext->GetOpener()) {
+      GetTopLevelSiteHost(opener->GetCurrentWindowContext(), initialSiteHost);
+    }
+  }
+
+  MOZ_LOG_FMT(gBounceTrackingProtectionLog, LogLevel::Debug,
+              "{}: siteHost: {}, initialSiteHost: {}", __FUNCTION__, siteHost,
+              initialSiteHost);
+
   // If sourceSnapshotParams’s has transient activation is true,
   // we initialize a new bounce tracking record with the initialHost
   // having been activated. Also treat system principal navigation as
@@ -699,7 +760,7 @@ nsresult BounceTrackingState::OnStartNavigation(
   // initialHost.
   if (!mBounceTrackingRecord) {
     mBounceTrackingRecord = MakeRefPtr<BounceTrackingRecord>();
-    mBounceTrackingRecord->SetInitialHost(siteHost);
+    mBounceTrackingRecord->SetInitialHost(initialSiteHost);
     if (hasUserActivation) {
       mBounceTrackingRecord->AddUserActivationHost(siteHost);
     }
@@ -722,7 +783,9 @@ nsresult BounceTrackingState::OnStartNavigation(
 
     MOZ_ASSERT(!mBounceTrackingRecord);
     mBounceTrackingRecord = MakeRefPtr<BounceTrackingRecord>();
-    mBounceTrackingRecord->SetInitialHost(siteHost);
+    mBounceTrackingRecord->SetInitialHost(initialSiteHost);
+    // Not initialSiteHost: the user activation set feeds
+    // DynamicFpiNavigationHeuristic, which wants the site interacted with.
     mBounceTrackingRecord->AddUserActivationHost(siteHost);
 
     return NS_OK;

@@ -17,6 +17,8 @@ import "chrome://browser/content/aiwindow/components/website-chip-container.mjs"
 // eslint-disable-next-line import/no-unassigned-import
 import "chrome://browser/content/aiwindow/components/ai-website-confirmation.mjs";
 // eslint-disable-next-line import/no-unassigned-import
+import "chrome://browser/content/aiwindow/components/ai-action-confirmation.mjs";
+// eslint-disable-next-line import/no-unassigned-import
 import "chrome://browser/content/aiwindow/components/kit-mention.mjs";
 // eslint-disable-next-line import/no-unassigned-import
 import "chrome://browser/content/aiwindow/components/agent-monitor-item.mjs";
@@ -26,6 +28,10 @@ import {
   dispatchClientError,
   installClientErrorListeners,
 } from "chrome://browser/content/aiwindow/modules/ClientErrorTelemetry.mjs";
+
+/**
+ * @typedef {import("chrome://browser/content/aiwindow/components/ai-action-confirmation.mjs").TabSelectionData} TabSelectionData
+ */
 
 const FOLLOW_UP_QTY = 2;
 // Stand-in "error" for invalid message data, which has no error object of its
@@ -56,12 +62,12 @@ const UI_UPDATE_TYPES = {
   UNDO_TAB_CLOSE: "undo-tab-close",
   UNDO_TAB_GROUP: "undo-tab-group",
   RETRY_PROMPT: "retry-prompt",
-  CREATE_MONITOR: "create-monitor",
-  CANCEL_MONITOR: "cancel-monitor",
-  UPDATE_MONITOR: "update-monitor",
-  DELETE_MONITOR: "delete-monitor",
-  PAUSE_MONITOR: "pause-monitor",
-  CHECK_MONITOR: "check-monitor",
+  CREATE_WATCH: "create-watch",
+  CANCEL_WATCH: "cancel-watch",
+  UPDATE_WATCH: "update-watch",
+  DELETE_WATCH: "delete-watch",
+  PAUSE_WATCH: "pause-watch",
+  CHECK_WATCH: "check-watch",
 };
 
 const CONFIRMATION_UI_TYPES = [
@@ -240,10 +246,18 @@ export class AIChatContent extends MozLitElement {
     );
   }
 
+  // ai-window sends its mode (sidebar/fullpage) over the actor once the content
+  // is ready; reflect it as an attribute so styles can key off it.
+  #handleSetMode(event) {
+    const mode = event.detail?.mode;
+    if (mode) {
+      this.setAttribute("mode", mode);
+    }
+  }
+
   /**
    * Initialize event listeners for AI chat content events
    */
-
   #initEventListeners() {
     this.addEventListener(
       "aiChatContentActor:message",
@@ -273,6 +287,11 @@ export class AIChatContent extends MozLitElement {
     this.addEventListener(
       "aiChatContentActor:assets-ready",
       this.#handleAssetsReady.bind(this)
+    );
+
+    this.addEventListener(
+      "aiChatContentActor:set-mode",
+      this.#handleSetMode.bind(this)
     );
 
     this.addEventListener(
@@ -1348,8 +1367,8 @@ export class AIChatContent extends MozLitElement {
       messageId,
       toolCallId,
       updateType: isEdit
-        ? UI_UPDATE_TYPES.UPDATE_MONITOR
-        : UI_UPDATE_TYPES.CREATE_MONITOR,
+        ? UI_UPDATE_TYPES.UPDATE_WATCH
+        : UI_UPDATE_TYPES.CREATE_WATCH,
       updateData: event.detail,
     });
   };
@@ -1359,7 +1378,7 @@ export class AIChatContent extends MozLitElement {
     this.#dispatchToolUIUpdate({
       messageId,
       toolCallId,
-      updateType: UI_UPDATE_TYPES.CANCEL_MONITOR,
+      updateType: UI_UPDATE_TYPES.CANCEL_WATCH,
       updateData: event.detail,
     });
   };
@@ -1388,21 +1407,21 @@ export class AIChatContent extends MozLitElement {
           event,
           messageId,
           toolCallId,
-          UI_UPDATE_TYPES.DELETE_MONITOR
+          UI_UPDATE_TYPES.DELETE_WATCH
         )}
       @agent-monitor-item:pause=${event =>
         this.#handleMonitorAction(
           event,
           messageId,
           toolCallId,
-          UI_UPDATE_TYPES.PAUSE_MONITOR
+          UI_UPDATE_TYPES.PAUSE_WATCH
         )}
       @agent-monitor-item:check-now=${event =>
         this.#handleMonitorAction(
           event,
           messageId,
           toolCallId,
-          UI_UPDATE_TYPES.CHECK_MONITOR
+          UI_UPDATE_TYPES.CHECK_WATCH
         )}
     ></agent-monitor-item>`;
   }
@@ -1515,21 +1534,42 @@ export class AIChatContent extends MozLitElement {
               },
             })
         : undefined;
+    const tabs = this.#getConfirmationTabs(confirmedData, wasRestored);
 
     return html`
-      <ai-action-result
+      <ai-action-confirmation
         .labelL10nId=${actionResultData.labelL10nId}
         .labelL10nArgs=${actionResultData.labelL10nArgs}
-        .summaryL10nId=${actionResultData.summaryL10nId}
-        .summaryL10nArgs=${actionResultData.summaryL10nArgs}
-        .rows=${actionResultData.rows}
+        .tabs=${tabs}
         .canUndo=${canUndo}
         .isExpanded=${this.#actionResultExpandState.get(messageId) ?? false}
-        @action-result-toggle=${e =>
-          this.#actionResultExpandState.set(messageId, !!e.detail?.isExpanded)}
-        @action-result-undo=${onUndo}
-      ></ai-action-result>
+        @action-confirmation-toggle=${e =>
+          this.#actionResultExpandState.set(messageId, e.detail.isExpanded)}
+        @action-confirmation-undo=${onUndo}
+      ></ai-action-confirmation>
     `;
+  }
+
+  /**
+   * Build the list of affected tabs.
+   *
+   * @param {object} confirmedData - The confirmed action data
+   * @param {boolean} wasRestored - Whether the action has been undone
+   * @returns {Array<TabSelectionData>}
+   */
+  #getConfirmationTabs(confirmedData, wasRestored) {
+    let sourceTabs = confirmedData.originalClosedTabs;
+    if (!wasRestored) {
+      sourceTabs = confirmedData.selectedTabs;
+    } else if (confirmedData.actionType === "group_tabs") {
+      sourceTabs = confirmedData.originalGroupedTabs;
+    }
+
+    return (sourceTabs ?? []).map(tab => ({
+      url: tab.url,
+      title: tab.title,
+      iconSrc: tab.iconSrc || (tab.url ? `page-icon:${tab.url}` : ""),
+    }));
   }
 
   #renderCancelledComponent() {
@@ -1814,6 +1854,8 @@ export class AIChatContent extends MozLitElement {
           ${this.#renderError()}
         </div>
       </div>
+      <div class="fullpage-top-blur"></div>
+      <div class="fullpage-top-scrim"></div>
       <kit-mention variant="sidebar"></kit-mention>
       <div
         class="assistant-response-announcer"

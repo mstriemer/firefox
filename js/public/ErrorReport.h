@@ -209,8 +209,8 @@ class JSErrorNotes {
                  js::ErrorArgumentsType argumentsType, va_list ap);
 
  public:
-  JSErrorNotes();
-  ~JSErrorNotes();
+  JSErrorNotes() = default;
+  ~JSErrorNotes() = default;
 
   // Add a note to the given position.
   bool addNoteASCII(JSContext* cx, const char* filename, unsigned sourceId,

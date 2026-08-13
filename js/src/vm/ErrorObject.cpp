@@ -1571,14 +1571,14 @@ JSString* JS::ErrorReportBuilder::maybeCreateReportFromDOMException(
 }
 
 // Build a side-effect-free preview of a non-Error exception object by listing
-// its own string-keyed property names, e.g. |Object (code, message)|,
+// its own string-keyed property names, e.g. |Object { code, message }|,
 // instead of the unhelpful bare "Object". This runs while reporting an
 // exception without side effects, so it must not execute user code: only own
 // properties are inspected and getters and proxy traps are never invoked.
 // Indexed properties stored as dense elements are not included.
 // Cross-compartment wrappers (including cross-origin objects) are not native
-// and are left opaque. Returns nullptr when there are no such properties, in
-// which case the caller falls back to the bare class name.
+// and are left opaque. Returns just |ClassName| when there are no such
+// properties.
 static JSString* DescribeUncaughtObjectNoSideEffects(JSContext* cx,
                                                      HandleObject exnObject) {
   if (!exnObject->is<NativeObject>()) {
@@ -1610,7 +1610,7 @@ static JSString* DescribeUncaughtObjectNoSideEffects(JSContext* cx,
       break;
     }
     if (written == 0) {
-      if (!sb.append(" (")) {
+      if (!sb.append(" { ")) {
         return nullptr;
       }
     } else if (!sb.append(", ")) {
@@ -1624,9 +1624,11 @@ static JSString* DescribeUncaughtObjectNoSideEffects(JSContext* cx,
   }
 
   if (written == 0) {
-    return nullptr;
+    // Just return the className as a string.
+    return sb.finishString();
   }
-  if (!sb.append(")")) {
+
+  if (!sb.append(" }")) {
     return nullptr;
   }
 

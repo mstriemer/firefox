@@ -8,13 +8,11 @@ import androidx.core.net.toUri
 import mozilla.components.support.ktx.util.PromptAbuserDetector
 import org.junit.After
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.mozilla.fenix.customannotations.SmokeTest
 import org.mozilla.fenix.helpers.Constants
 import org.mozilla.fenix.helpers.Constants.PackageName.PRINT_SPOOLER
 import org.mozilla.fenix.helpers.MockBrowserDataHelper
-import org.mozilla.fenix.helpers.TestAssetHelper
 import org.mozilla.fenix.helpers.TestAssetHelper.firstForeignWebPageAsset
 import org.mozilla.fenix.helpers.TestAssetHelper.getGenericAsset
 import org.mozilla.fenix.helpers.TestAssetHelper.pdfFormAsset
@@ -35,6 +33,8 @@ import org.mozilla.fenix.ui.efficiency.selectors.MainMenuSelectors.DESKTOP_SITE_
 import org.mozilla.fenix.ui.efficiency.selectors.MainMenuSelectors.DESKTOP_SITE_ON
 import org.mozilla.fenix.ui.efficiency.selectors.MainMenuSelectors.EDIT_BOOKMARK_BUTTON
 import org.mozilla.fenix.ui.efficiency.selectors.MainMenuSelectors.FORWARD_BUTTON
+import org.mozilla.fenix.ui.efficiency.selectors.SettingsAddonsManagerSelectors
+import org.mozilla.fenix.ui.efficiency.selectors.SettingsSelectors
 import org.mozilla.fenix.ui.efficiency.selectors.TabHistorySelectors
 import org.mozilla.fenix.ui.efficiency.selectors.WebCompatReporterSelectors
 
@@ -88,6 +88,18 @@ class MainMenuTest : BaseTest(
             .mozVerifyElementsByGroup("browserViewMainMenuItems")
     }
 
+    // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/3080110
+    @SmokeTest
+    @Test
+    fun verifyTheMoreMainMenuSubListTest() {
+        val firstTestPage = mockWebServer.firstForeignWebPageAsset
+
+        on.browserPage.navigateToPage(firstTestPage.url.toString())
+        on.mainMenu.navigateToPage()
+            .mozClick(MainMenuSelectors.MORE_BUTTON)
+            .mozVerifyElementsByGroup("moreMainMenuSubList")
+    }
+
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/3080172
     @SmokeTest
     @Test
@@ -99,11 +111,14 @@ class MainMenuTest : BaseTest(
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/3080181
     @SmokeTest
-    @Ignore("Covered by verifyNavigationReachability[1: SettingsHomepagePage (TBD) — Navigation Reachability]")
     @Test
     fun verifyTheHomePageSettingsMenuItemTest() {
         on.settings.navigateToPage()
+            .mozVerify(SettingsSelectors.NAVIGATION_TOOLBAR)
+            .mozVerify(SettingsSelectors.SETTINGS_TITLE)
         on.home.navigateToPage()
+            .mozVerify(HomeSelectors.HOME_WORDMARK_LOGO)
+            .mozVerify(HomeSelectors.HOME_WORDMARK_TEXT)
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/3080129
@@ -304,9 +319,9 @@ class MainMenuTest : BaseTest(
             .openMainMenu()
             .mozClick(MainMenuSelectors.MORE_BUTTON)
             .mozClick(MainMenuSelectors.TRANSLATE_BUTTON)
-            .mozVerifyElementsByGroup("notTranslatedPageTranslationSheet")
-            .mozClickIfPresent(BrowserPageSelectors.TRANSLATION_SHEET_TRANSLATE_BUTTON)
-            .mozWaitUntilAbsent(BrowserPageSelectors.TRANSLATION_SHEET_TRANSLATE_BUTTON, TestAssetHelper.waitingTimeLong)
+        on.browserPage
+            .verifyTranslationSheetIsDisplayed()
+            .translatePageFromSheet()
         on.browserPage
             .openMainMenu()
             .mozClick(MainMenuSelectors.MORE_BUTTON)
@@ -505,6 +520,116 @@ class MainMenuTest : BaseTest(
         // "Add <addon>" install button, retrying against a hardcoded candidate list. The port asserts a
         // recommended-addon row is present instead — which addons AMO recommends is server-driven, so
         // matching on names couples the test to remote data. The install-button check did not carry over.
+    }
+
+    // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/3080160
+    @SmokeTest
+    @Test
+    fun verifyTheExtensionsMenuListAfterRemovingAnExtensionTest() {
+        val genericURL = mockWebServer.getGenericAsset(1)
+
+        // Install a recommended extension from the expanded Extensions submenu.
+        on.browserPage.navigateToPage(genericURL.url.toString())
+            .verifyPageContent(genericURL.content)
+        on.mainMenu.navigateToPage()
+            .mozVerify(MainMenuSelectors.TRY_RECOMMENDED_EXTENSION_BUTTON)
+            .mozClick(MainMenuSelectors.EXTENSIONS_BUTTON_UIAUTOMATOR)
+        val addonTitle = on.mainMenu.installFirstRecommendedExtension()
+
+        // Remove it through Manage extensions -> the add-ons manager.
+        on.browserPage.navigateToPage(genericURL.url.toString(), forceNavigation = true)
+        on.mainMenu.navigateToPage()
+            .mozClick(MainMenuSelectors.EXTENSIONS_BUTTON_UIAUTOMATOR)
+            .mozClick(MainMenuSelectors.MANAGE_EXTENSIONS_BUTTON)
+        on.settingsAddonsManager.removeInstalledExtension(addonTitle)
+            .mozClick(SettingsAddonsManagerSelectors.NAVIGATE_BACK_TOOLBAR_BUTTON)
+
+        // With no extensions installed, the "Try a recommended extension" entry point is shown again.
+        on.browserPage.navigateToPage(genericURL.url.toString(), forceNavigation = true)
+        on.mainMenu.navigateToPage()
+            .mozVerify(MainMenuSelectors.TRY_RECOMMENDED_EXTENSION_BUTTON)
+    }
+
+    // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/3080163
+    @SmokeTest
+    @Test
+    fun verifyTheManageExtensionsItemTest() {
+        val genericURL = mockWebServer.getGenericAsset(1)
+
+        // Install a recommended extension from the expanded Extensions submenu.
+        on.browserPage.navigateToPage(genericURL.url.toString())
+            .verifyPageContent(genericURL.content)
+        on.mainMenu.navigateToPage()
+            .mozVerify(MainMenuSelectors.TRY_RECOMMENDED_EXTENSION_BUTTON)
+            .mozClick(MainMenuSelectors.EXTENSIONS_BUTTON_UIAUTOMATOR)
+        val addonTitle = on.mainMenu.installFirstRecommendedExtension()
+
+        // Manage extensions opens the add-ons manager, where the extension is listed under Enabled.
+        // Parity: legacy verifyAddonIsInstalled asserted the addon's install (+) button was invisible;
+        // the extension appearing under the Enabled section is the equivalent "installed & enabled" signal.
+        on.browserPage.navigateToPage(genericURL.url.toString(), forceNavigation = true)
+        on.mainMenu.navigateToPage()
+            .mozClick(MainMenuSelectors.EXTENSIONS_BUTTON_UIAUTOMATOR)
+            .mozClick(MainMenuSelectors.MANAGE_EXTENSIONS_BUTTON)
+        on.settingsAddonsManager
+            .mozVerify(SettingsAddonsManagerSelectors.ADD_ONS_LIST)
+            .mozVerify(SettingsAddonsManagerSelectors.ENABLED_SECTION_TITLE)
+            .mozVerify(SettingsAddonsManagerSelectors.INSTALLED_ADDON_ITEM(addonTitle))
+    }
+
+    // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/3080156
+    @SmokeTest
+    @Test
+    fun verifyTheExtensionInstallationTest() {
+        val genericURL = mockWebServer.getGenericAsset(1)
+
+        // Install a recommended extension from the expanded Extensions submenu.
+        on.browserPage.navigateToPage(genericURL.url.toString())
+            .verifyPageContent(genericURL.content)
+        on.mainMenu.navigateToPage()
+            .mozVerify(MainMenuSelectors.TRY_RECOMMENDED_EXTENSION_BUTTON)
+            .mozClick(MainMenuSelectors.EXTENSIONS_BUTTON_UIAUTOMATOR)
+        val addonTitle = on.mainMenu.installFirstRecommendedExtension()
+
+        // Re-open the Extensions submenu: the collapsed Extensions row now advertises the installed
+        // extension, the extension is listed in the submenu, and "Discover more" has been replaced by
+        // "Manage extensions".
+        on.browserPage.navigateToPage(genericURL.url.toString(), forceNavigation = true)
+        on.mainMenu.navigateToPage()
+            .mozClick(MainMenuSelectors.EXTENSIONS_BUTTON_UIAUTOMATOR)
+            .mozVerify(MainMenuSelectors.EXTENSIONS_BUTTON_WITH_INSTALLED_EXTENSION(addonTitle))
+            .mozVerifyElementAbsent(MainMenuSelectors.DISCOVER_MORE_EXTENSIONS_BUTTON)
+            .mozVerify(MainMenuSelectors.MANAGE_EXTENSIONS_BUTTON)
+            .mozVerify(MainMenuSelectors.INSTALLED_EXTENSION_ITEM(addonTitle))
+    }
+
+    // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/3080162
+    @SmokeTest
+    @Test
+    fun verifyTheExtensionMenuListWhileExtensionsAreDisabledTest() {
+        val genericURL = mockWebServer.getGenericAsset(1)
+
+        // Install a recommended extension from the expanded Extensions submenu.
+        on.browserPage.navigateToPage(genericURL.url.toString())
+            .verifyPageContent(genericURL.content)
+        on.mainMenu.navigateToPage()
+            .mozVerify(MainMenuSelectors.TRY_RECOMMENDED_EXTENSION_BUTTON)
+            .mozClick(MainMenuSelectors.EXTENSIONS_BUTTON_UIAUTOMATOR)
+        val addonTitle = on.mainMenu.installFirstRecommendedExtension()
+
+        // Open the installed extension's detail from Manage extensions and disable it.
+        on.browserPage.navigateToPage(genericURL.url.toString(), forceNavigation = true)
+        on.mainMenu.navigateToPage()
+            .mozClick(MainMenuSelectors.EXTENSIONS_BUTTON_UIAUTOMATOR)
+            .mozVerify(MainMenuSelectors.EXTENSIONS_BUTTON_WITH_INSTALLED_EXTENSION(addonTitle))
+            .mozClick(MainMenuSelectors.MANAGE_EXTENSIONS_BUTTON)
+        on.settingsAddonsManager.disableInstalledExtension(addonTitle)
+            .mozClick(SettingsAddonsManagerSelectors.NAVIGATE_BACK_TOOLBAR_BUTTON)
+
+        // With the only extension disabled, the menu advertises the "no extensions enabled" entry point.
+        on.browserPage.navigateToPage(genericURL.url.toString(), forceNavigation = true)
+        on.mainMenu.navigateToPage()
+            .mozVerify(MainMenuSelectors.NO_EXTENSIONS_ENABLED_BUTTON)
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/3080117

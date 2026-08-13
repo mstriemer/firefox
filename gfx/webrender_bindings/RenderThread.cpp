@@ -1721,11 +1721,6 @@ static already_AddRefed<gl::GLContext> CreateGLContextANGLE(
     flags |= gl::CreateContextFlags::PREFER_ROBUSTNESS;
   }
 
-  if (egl->IsExtensionSupported(
-          gl::EGLExtension::MOZ_create_context_provoking_vertex_dont_care)) {
-    flags |= gl::CreateContextFlags::PROVOKING_VERTEX_DONT_CARE;
-  }
-
   // Create GLContext with dummy EGLSurface, the EGLSurface is not used.
   // Instread we override it with EGLSurface of SwapChain's back buffer.
 

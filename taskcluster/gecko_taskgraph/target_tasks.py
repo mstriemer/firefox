@@ -1294,6 +1294,12 @@ def target_tasks_pinning_update(full_task_graph, parameters, graph_config):
     return ["repo-update-pinning-update"]
 
 
+@register_target_task("bhr_aggregate")
+def target_tasks_bhr_aggregate(full_task_graph, parameters, graph_config):
+    """Select the daily Background Hang Reporter aggregation task"""
+    return ["bhr-aggregate-cron"]
+
+
 @register_target_task("l10n_bump")
 def target_tasks_l10n_bump(full_task_graph, parameters, graph_config):
     """Select the set of tasks required to perform l10n bumping."""
@@ -1911,6 +1917,20 @@ def target_tasks_android_macrobenchmark_daily(
         label
         for label, task in full_task_graph.tasks.items()
         if task.kind == "run-macrobenchmark-firebase"
+    ]
+
+
+@register_target_task("devtools_backward_compat")
+def target_tasks_devtools_backward_compat(full_task_graph, parameters, graph_config):
+    """
+    Select the DevTools remote debugging backward compatibility tests. They are
+    too slow and too dependent on external builds to run on every push, see
+    bug 2053559.
+    """
+    return [
+        label
+        for label, task in full_task_graph.tasks.items()
+        if task.attributes.get("unittest_suite") == "devtools-compat"
     ]
 
 

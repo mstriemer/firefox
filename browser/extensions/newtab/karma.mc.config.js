@@ -77,6 +77,63 @@ module.exports = function (config) {
           functions: 100,
           branches: 66,
           overrides: {
+            "common/Reducers.sys.mjs": {
+              statements: 0,
+              lines: 0,
+              functions: 0,
+              branches: 0,
+            },
+            "content-src/components/Sections/Sections.jsx": {
+              statements: 0,
+              lines: 0,
+              functions: 0,
+              branches: 0,
+            },
+            "content-src/components/Card/Card.jsx": {
+              statements: 0,
+              lines: 0,
+              functions: 0,
+              branches: 0,
+            },
+            "content-src/components/CollapsibleSection/CollapsibleSection.jsx":
+              {
+                statements: 0,
+                lines: 0,
+                functions: 0,
+                branches: 0,
+              },
+            "content-src/components/ContextMenu/ContextMenu.jsx": {
+              statements: 0,
+              lines: 0,
+              functions: 0,
+              branches: 0,
+            },
+            "content-src/components/ConfirmDialog/ConfirmDialog.jsx": {
+              statements: 0,
+              lines: 0,
+              functions: 0,
+              branches: 0,
+            },
+            "content-src/components/LinkMenu/LinkMenu.jsx": {
+              statements: 0,
+              lines: 0,
+              functions: 0,
+              branches: 0,
+            },
+            "content-src/components/DiscoveryStreamBase/DiscoveryStreamBase.jsx":
+              {
+                statements: 0,
+                lines: 0,
+                functions: 0,
+                branches: 0,
+              },
+            "content-src/components/ActivationWindowMessage/ActivationWindowMessage.jsx":
+              {
+                statements: 0,
+                lines: 0,
+                functions: 0,
+                branches: 0,
+              },
             /**
              * ErrorBoundary.jsx is tested via Jest (see test/jest/content-src/components/ErrorBoundary.test.jsx).
              */
@@ -414,10 +471,10 @@ module.exports = function (config) {
               branches: 0,
             },
             "content-src/components/Weather/Weather.jsx": {
-              statements: 48,
-              lines: 49,
-              functions: 31.2,
-              branches: 31.2,
+              statements: 0,
+              lines: 0,
+              functions: 0,
+              branches: 0,
             },
             "content-src/components/Widgets/WeatherForecast/WeatherForecast.jsx":
               {
@@ -595,16 +652,16 @@ module.exports = function (config) {
               functions: 92.86,
             },
             "content-src/components/MessageWrapper/MessageWrapper.jsx": {
-              lines: 50,
-              statements: 51.1,
-              functions: 31.2,
-              branches: 31.2,
+              statements: 0,
+              lines: 0,
+              functions: 0,
+              branches: 0,
             },
             "content-src/components/Search/Search.jsx": {
-              statements: 38,
-              lines: 39,
-              functions: 28,
-              branches: 25,
+              statements: 0,
+              lines: 0,
+              functions: 0,
+              branches: 0,
             },
             "content-src/components/Widgets/SportsWidget/SportsWidget.jsx": {
               statements: 0,
@@ -669,6 +726,20 @@ module.exports = function (config) {
               branches: 0,
             },
             "content-src/components/Widgets/useMouseDnD.jsx": {
+              statements: 0,
+              lines: 0,
+              functions: 0,
+              branches: 0,
+            },
+            // Covered by test/jest/content-src/components/Widgets/useCountUp.test.jsx
+            "content-src/components/Widgets/useCountUp.jsx": {
+              statements: 0,
+              lines: 0,
+              functions: 0,
+              branches: 0,
+            },
+            // Covered by test/jest/content-src/components/Widgets/Privacy.test.jsx
+            "content-src/components/Widgets/usePageVisible.jsx": {
               statements: 0,
               lines: 0,
               functions: 0,
@@ -790,6 +861,13 @@ module.exports = function (config) {
             __dirname,
             "../../../toolkit/content/vendor/react/react-redux.js"
           )
+        ),
+        // AppConstants is imported eagerly in AboutPreferences.sys.mjs, but
+        // karma's webpack bundler can't resolve resource:// URIs.
+        // Redirect to a test stub.
+        new webpack.NormalModuleReplacementPlugin(
+          /^resource:\/\/gre\/modules\/AppConstants\.sys\.mjs$/,
+          path.resolve(__dirname, "test/unit/stubs/AppConstants.sys.mjs")
         ),
       ],
       externals: [

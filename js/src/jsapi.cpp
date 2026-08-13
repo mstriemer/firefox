@@ -4222,10 +4222,6 @@ void JSErrorBase::freeMessage() {
   message_ = JS::ConstUTF8CharsZ();
 }
 
-JSErrorNotes::JSErrorNotes() = default;
-
-JSErrorNotes::~JSErrorNotes() = default;
-
 static UniquePtr<JSErrorNotes::Note> CreateErrorNoteVA(
     FrontendContext* fc, const char* filename, unsigned sourceId,
     uint32_t lineno, JS::ColumnNumberOneOrigin column,

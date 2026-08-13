@@ -208,6 +208,7 @@ class ChromeUtils {
   static void GetCachedJavaScriptSource(GlobalObject& aGlobal,
                                         const nsACString& aKey,
                                         const nsACString& aURI,
+                                        const nsACString& aHintCharset,
                                         JS::MutableHandle<JS::Value> aRetval,
                                         ErrorResult& aRv);
 
@@ -373,6 +374,9 @@ class ChromeUtils {
                                       const PredictRemoteTypeOptions& aOptions,
                                       nsACString& aRemoteType,
                                       ErrorResult& aRv);
+
+  static bool IsBlobURLValid(GlobalObject& aGlobal, nsIPrincipal* aPrincipal,
+                             const nsACString& aURIString);
 
 #ifdef MOZ_WMF_CDM
   static already_AddRefed<Promise> GetWMFContentDecryptionModuleInformation(

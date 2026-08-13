@@ -565,7 +565,7 @@ bool FrameIter::isResumingGenerator() const {
     return interpFrame()->isResumingGenerator();
   }
   if (isPhysicalJitFrame()) {
-    return physicalJitFrame()->descriptor().isResumingGenerator();
+    return physicalJitFrame()->isResumingGenerator();
   }
   // Wasm frames and inlined Ion frames are never resuming a generator.
   return false;

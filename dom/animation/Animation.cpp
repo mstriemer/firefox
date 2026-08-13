@@ -1746,8 +1746,8 @@ void Animation::PlayNoUpdate(ErrorResult& aRv, LimitBehavior aLimitBehavior) {
   bool hasPendingReadyPromise = false;
   const bool hasFiniteTimeline = HasFiniteTimeline();
   const Nullable<TimeDuration> prevCurrentTime = GetCurrentTimeAsDuration();
-  const bool enableSeek =
-      (aLimitBehavior == LimitBehavior::AutoRewind) && !hasFiniteTimeline;
+  const bool autoRewindIsTrue = aLimitBehavior == LimitBehavior::AutoRewind;
+  const bool enableSeek = autoRewindIsTrue && !hasFiniteTimeline;
 
   // 6. Perform the steps corresponding to the first matching condition from the
   // following, if any:
@@ -1788,10 +1788,12 @@ void Animation::PlayNoUpdate(ErrorResult& aRv, LimitBehavior aLimitBehavior) {
     mHoldTime = TimeDuration();
   }
 
-  // 7. If has finite timeline and previous current time is unresolved:
-  if (hasFiniteTimeline && prevCurrentTime.IsNull()) {
+  // 7. If has finite timeline and auto-rewind is true:
+  if (hasFiniteTimeline && autoRewindIsTrue) {
     // Set the flag auto align start time to true.
     mAutoAlignStartTime = true;
+    // Set the animation’s hold time to previous current time.
+    mHoldTime = prevCurrentTime;
   }
 
   // Note: This is a special case mentioned in web-animations-1, but not in
@@ -2413,6 +2415,9 @@ void Animation::AutoAlignStartTime() {
   mStartTime.SetValue(TimeDuration::FromMilliseconds(
       (effectivePlaybackRate >= 0.0 ? startOffset : endOffset) *
       PROGRESS_TIMELINE_DURATION_MILLISEC));
+
+  // Apply any pending playback rate on animation.
+  ApplyPendingPlaybackRate();
 
   // Clear hold time.
   mHoldTime.SetNull();

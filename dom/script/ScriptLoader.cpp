@@ -832,10 +832,8 @@ void ScriptLoader::PrepareCacheInfoChannel(nsIChannel* aChannel,
       // the serialized stencil disk cache instead of the sources, if such entry
       // is already registered.
       LOG(("ScriptLoadRequest (%p): Maybe request the disk cache", aRequest));
-      nsAutoCString mimeType;
-      ScriptLoader::BytecodeMimeTypeFor(aRequest->getLoadedScript(), mimeType);
       cic->PreferAlternativeDataType(
-          mimeType, ""_ns,
+          ScriptLoader::BytecodeMimeTypeFor(aRequest), ""_ns,
           nsICacheInfoChannel::PreferredAlternativeDataDeliveryType::ASYNC);
     } else {
       // If we are explicitly loading from the sources, such as after a
@@ -1246,10 +1244,9 @@ void ScriptLoader::NotifyObserversForCachedScript(
     return;
   }
 
-  ScriptHashKey key(this, aRequest->mKind, aRequest->ReferrerPolicy(),
+  ScriptHashKey key(this, aRequest, aRequest->ReferrerPolicy(),
                     aRequest->FetchOptions(),
-                    aRequest->getLoadedScript()->GetURI(),
-                    aRequest->MaybeClassicScriptFallbackEncoding());
+                    aRequest->getLoadedScript()->GetURI());
   nsAutoCString keyStr;
   key.ToStringForLookup(keyStr);
 
@@ -1263,12 +1260,7 @@ already_AddRefed<ScriptLoadRequest> ScriptLoader::CreateLoadRequest(
     CORSMode aCORSMode, const nsAString& aNonce,
     RequestPriority aRequestPriority, const SRIMetadata& aIntegrity,
     ReferrerPolicy aReferrerPolicy, ParserMetadata aParserMetadata,
-    ScriptLoadRequestType aRequestType, const nsAString* aMaybePreloadCharset) {
-  MOZ_ASSERT_IF(aRequestType == ScriptLoadRequestType::Preload,
-                aMaybePreloadCharset);
-  MOZ_ASSERT_IF(aRequestType != ScriptLoadRequestType::Preload,
-                !aMaybePreloadCharset);
-
+    ScriptLoadRequestType aRequestType) {
   nsIURI* referrer = mDocument->GetDocumentURIAsReferrer();
   RefPtr<ScriptFetchOptions> fetchOptions =
       new ScriptFetchOptions(aCORSMode, aNonce, aRequestPriority,
@@ -1291,11 +1283,8 @@ already_AddRefed<ScriptLoadRequest> ScriptLoader::CreateLoadRequest(
   RefPtr<ScriptLoadRequest> request =
       new ScriptLoadRequest(aKind, aIntegrity, referrer, context);
 
-  const Encoding* fallbackCharset =
-      GetClassicScriptFallbackEncoding(aElement, aMaybePreloadCharset);
-
   TryUseCache(aReferrerPolicy, fetchOptions, aURI, request, aElement, aNonce,
-              aRequestType, fallbackCharset);
+              aRequestType);
 
   return request.forget();
 }
@@ -1305,14 +1294,9 @@ void ScriptLoader::TryUseCache(ReferrerPolicy aReferrerPolicy,
                                ScriptLoadRequest* aRequest,
                                nsIScriptElement* aElement,
                                const nsAString& aNonce,
-                               ScriptLoadRequestType aRequestType,
-                               const Encoding* aClassicScriptFallbackEncoding) {
-  MOZ_ASSERT_IF(!aRequest->IsModuleRequest(), aClassicScriptFallbackEncoding);
-  MOZ_ASSERT_IF(aRequest->IsModuleRequest(), !aClassicScriptFallbackEncoding);
-
+                               ScriptLoadRequestType aRequestType) {
   if (aRequestType == ScriptLoadRequestType::Inline) {
-    aRequest->NoCacheEntryFound(aReferrerPolicy, aFetchOptions, aURI,
-                                aClassicScriptFallbackEncoding);
+    aRequest->NoCacheEntryFound(aReferrerPolicy, aFetchOptions, aURI);
     LOG(
         ("ScriptLoader (%p): Created LoadedScript (%p) for "
          "ScriptLoadRequest(%p) because inline %s.",
@@ -1322,8 +1306,7 @@ void ScriptLoader::TryUseCache(ReferrerPolicy aReferrerPolicy,
   }
 
   if (!mCache) {
-    aRequest->NoCacheEntryFound(aReferrerPolicy, aFetchOptions, aURI,
-                                aClassicScriptFallbackEncoding);
+    aRequest->NoCacheEntryFound(aReferrerPolicy, aFetchOptions, aURI);
     LOG(
         ("ScriptLoader (%p): Created LoadedScript (%p) for "
          "ScriptLoadRequest(%p) %s.",
@@ -1336,19 +1319,16 @@ void ScriptLoader::TryUseCache(ReferrerPolicy aReferrerPolicy,
   //       either NoCacheEntryFound or CacheEntryFound is called,
   //       which constructs ScriptFetchInfo and LoadedScript.
   //       aRequest->FetchOptions() and aRequest->ReferrerPolicy() are
-  //       backed by ScriptFetchInfo, and aRequest->URI() and
-  //       aRequest->ClassicScriptFallbackEncoding() are backed by
+  //       backed by ScriptFetchInfo, and aRequest->URI() is backed by
   //       LoadedScript, and we cannot use them here.
-  ScriptHashKey key(this, aRequest->mKind, aReferrerPolicy, aFetchOptions, aURI,
-                    aClassicScriptFallbackEncoding);
+  ScriptHashKey key(this, aRequest, aReferrerPolicy, aFetchOptions, aURI);
   auto cacheResult = mCache->Lookup(*this, key, /* aSyncLoad = */ true);
   MOZ_ASSERT_IF(cacheResult.mState == CachedSubResourceState::Complete,
                 cacheResult.mCompleteValue->IsCachedStencil() ||
                     cacheResult.mCompleteValue->IsInvalidatedCachedStencil());
   if (cacheResult.mState != CachedSubResourceState::Complete ||
       !cacheResult.mCompleteValue->IsCachedStencil()) {
-    aRequest->NoCacheEntryFound(aReferrerPolicy, aFetchOptions, aURI,
-                                aClassicScriptFallbackEncoding);
+    aRequest->NoCacheEntryFound(aReferrerPolicy, aFetchOptions, aURI);
     LOG(
         ("ScriptLoader (%p): Created LoadedScript (%p) for "
          "ScriptLoadRequest(%p) because cache is not found %s.",
@@ -1360,8 +1340,7 @@ void ScriptLoader::TryUseCache(ReferrerPolicy aReferrerPolicy,
   if (!cacheResult.mCompleteValue->IsSRIMetadataReusableBy(
           aRequest->mIntegrity)) {
     mCache->Evict(key);
-    aRequest->NoCacheEntryFound(aReferrerPolicy, aFetchOptions, aURI,
-                                aClassicScriptFallbackEncoding);
+    aRequest->NoCacheEntryFound(aReferrerPolicy, aFetchOptions, aURI);
     LOG(
         ("ScriptLoader (%p): Created LoadedScript (%p) for "
          "ScriptLoadRequest(%p) because of SRI metadata mismatch %s",
@@ -1375,8 +1354,7 @@ void ScriptLoader::TryUseCache(ReferrerPolicy aReferrerPolicy,
     // Fetch from necko and validate in ScriptLoader::OnStreamComplete.
     TRACE_FOR_TEST(aRequest, "memorycache:dirty:hit");
     aRequest->SetHasDirtyCache();
-    aRequest->NoCacheEntryFound(aReferrerPolicy, aFetchOptions, aURI,
-                                aClassicScriptFallbackEncoding);
+    aRequest->NoCacheEntryFound(aReferrerPolicy, aFetchOptions, aURI);
     LOG(
         ("ScriptLoader (%p): Created LoadedScript (%p) for "
          "ScriptLoadRequest(%p) because of dirty flag %s.",
@@ -1390,8 +1368,7 @@ void ScriptLoader::TryUseCache(ReferrerPolicy aReferrerPolicy,
     //       LookupPreloadRequest call.
     if (NS_FAILED(CheckContentPolicy(aElement, aNonce, aRequest, aFetchOptions,
                                      aURI))) {
-      aRequest->NoCacheEntryFound(aReferrerPolicy, aFetchOptions, aURI,
-                                  aClassicScriptFallbackEncoding);
+      aRequest->NoCacheEntryFound(aReferrerPolicy, aFetchOptions, aURI);
       LOG(
           ("ScriptLoader (%p): Created LoadedScript (%p) for "
            "ScriptLoadRequest(%p) because content policy violation %s.",
@@ -1405,9 +1382,6 @@ void ScriptLoader::TryUseCache(ReferrerPolicy aReferrerPolicy,
 
   MOZ_ASSERT(cacheResult.mCompleteValue->CachedReferrerPolicy() ==
              aReferrerPolicy);
-  MOZ_ASSERT_IF(cacheResult.mCompleteValue->IsClassicScript(),
-                cacheResult.mCompleteValue->ClassicScriptFallbackEncoding() ==
-                    aClassicScriptFallbackEncoding);
 
   mMemoryCacheUsed++;
   if (!cacheResult.mCompleteValue->IsEverHitFromMemoryCache()) {
@@ -1614,11 +1588,10 @@ bool ScriptLoader::ProcessExternalScript(nsIScriptElement* aElement,
     ReferrerPolicy referrerPolicy = GetReferrerPolicy(aElement);
     ParserMetadata parserMetadata = GetParserMetadata(aElement);
 
-    request = CreateLoadRequest(aScriptKind, scriptURI, aElement, VoidString(),
-                                principal, ourCORSMode, nonce,
-                                FetchPriorityToRequestPriority(fetchPriority),
-                                sriMetadata, referrerPolicy, parserMetadata,
-                                ScriptLoadRequestType::External, nullptr);
+    request = CreateLoadRequest(
+        aScriptKind, scriptURI, aElement, VoidString(), principal, ourCORSMode,
+        nonce, FetchPriorityToRequestPriority(fetchPriority), sriMetadata,
+        referrerPolicy, parserMetadata, ScriptLoadRequestType::External);
 
     PROFILER_MARKER("ScriptLoader::ProcessExternalScript CreateLoadRequest", JS,
                     {mozilla::MarkerStack::Capture()}, FlowMarker,
@@ -1860,7 +1833,7 @@ bool ScriptLoader::ProcessInlineScript(nsIScriptElement* aElement,
       mDocument->NodePrincipal(), corsMode, nonce,
       FetchPriorityToRequestPriority(fetchPriority),
       SRIMetadata(),  // SRI doesn't apply
-      referrerPolicy, parserMetadata, ScriptLoadRequestType::Inline, nullptr);
+      referrerPolicy, parserMetadata, ScriptLoadRequestType::Inline);
   request->GetScriptLoadContext()->mIsInline = true;
   request->GetScriptLoadContext()->mLineNo = aElement->GetScriptLineNumber();
   request->GetScriptLoadContext()->mColumnNo =
@@ -3737,10 +3710,9 @@ ScriptLoader::CacheBehavior ScriptLoader::GetCacheBehavior(
     return CacheBehavior::Insert;
   }
 
-  ScriptHashKey key(this, aRequest->mKind, aRequest->ReferrerPolicy(),
+  ScriptHashKey key(this, aRequest, aRequest->ReferrerPolicy(),
                     aRequest->FetchOptions(),
-                    aRequest->getLoadedScript()->GetURI(),
-                    aRequest->MaybeClassicScriptFallbackEncoding());
+                    aRequest->getLoadedScript()->GetURI());
   auto cacheResult = mCache->Lookup(*this, key,
                                     /* aSyncLoad = */ true);
   MOZ_ASSERT_IF(cacheResult.mState == CachedSubResourceState::Complete,
@@ -3824,9 +3796,8 @@ void ScriptLoader::TryCacheRequest(ScriptLoadRequest* aRequest) {
     // Evict any existing cache.
 
     MOZ_ASSERT(cacheBehavior == CacheBehavior::Evict);
-    ScriptHashKey key(this, aRequest->mKind, aRequest->ReferrerPolicy(),
-                      aRequest->FetchOptions(), aRequest->URI(),
-                      aRequest->MaybeClassicScriptFallbackEncoding());
+    ScriptHashKey key(this, aRequest, aRequest->ReferrerPolicy(),
+                      aRequest->FetchOptions(), aRequest->URI());
     mCache->Evict(key);
     LOG(("ScriptLoader (%p): Evicting in-memory cache for %s.", this,
          aRequest->URI()->GetSpecOrDefault().get()));
@@ -3838,49 +3809,21 @@ void ScriptLoader::TryCacheRequest(ScriptLoadRequest* aRequest) {
 }
 
 /* static */
-void ScriptLoader::BytecodeMimeTypeFor(
-    const JS::loader::LoadedScript* aLoadedScript, nsAutoCString& aMIMEType) {
-  if (aLoadedScript->IsModuleScript()) {
-    aMIMEType.Assign(nsContentUtils::JSModuleBytecodeMimeType());
-    return;
+nsCString& ScriptLoader::BytecodeMimeTypeFor(
+    const ScriptLoadRequest* aRequest) {
+  if (aRequest->IsModuleRequest()) {
+    return nsContentUtils::JSModuleBytecodeMimeType();
   }
-
-  aMIMEType.Assign(nsContentUtils::JSScriptBytecodeMimeType());
-  aMIMEType.Append("-");
-  const Encoding* encoding = aLoadedScript->ClassicScriptFallbackEncoding();
-  nsAutoCString name;
-  encoding->Name(name);
-  aMIMEType.Append(name);
+  return nsContentUtils::JSScriptBytecodeMimeType();
 }
 
-const Encoding* ScriptLoader::GetClassicScriptFallbackEncoding(
-    nsIScriptElement* aMaybeScriptElement,
-    const nsAString* aMaybePreloadCharset) {
-  // Check the hint charset from the script element or preload
-  // request.
-  if (aMaybeScriptElement) {
-    MOZ_ASSERT(!aMaybePreloadCharset);
-
-    nsAutoString hintCharset;
-    aMaybeScriptElement->GetScriptCharset(hintCharset);
-    if (const Encoding* encoding = Encoding::ForLabel(hintCharset)) {
-      return encoding;
-    }
-  } else if (aMaybePreloadCharset) {
-    if (const Encoding* encoding = Encoding::ForLabel(*aMaybePreloadCharset)) {
-      return encoding;
-    }
+/* static */
+nsCString& ScriptLoader::BytecodeMimeTypeFor(
+    const JS::loader::LoadedScript* aLoadedScript) {
+  if (aLoadedScript->IsModuleScript()) {
+    return nsContentUtils::JSModuleBytecodeMimeType();
   }
-
-  // Get the charset from the charset of the document.
-  if (mDocument) {
-    return mDocument->GetDocumentCharacterSet();
-  }
-
-  // Curiously, there are various callers that don't pass aDocument. The
-  // fallback in the old code was ISO-8859-1, which behaved like
-  // windows-1252.
-  return WINDOWS_1252_ENCODING;
+  return nsContentUtils::JSScriptBytecodeMimeType();
 }
 
 nsresult ScriptLoader::MaybePrepareForDiskCacheAfterExecute(
@@ -4310,11 +4253,9 @@ bool ScriptLoader::SaveToDiskCache(
   // We don't wait for the parent process here because there's nothing we can
   // do for the error case.
   nsCOMPtr<nsIAsyncOutputStream> output;
-  nsAutoCString mimeType;
-  ScriptLoader::BytecodeMimeTypeFor(aLoadedScript, mimeType);
   nsresult rv = aLoadedScript->mCacheEntry->OpenAlternativeOutputStream(
-      mimeType, static_cast<int64_t>(aCompressed.length()),
-      getter_AddRefs(output));
+      BytecodeMimeTypeFor(aLoadedScript),
+      static_cast<int64_t>(aCompressed.length()), getter_AddRefs(output));
   if (NS_FAILED(rv)) {
     LOG(
         ("LoadedScript (%p): Cannot open the disk cache (rv = %X, output "
@@ -4716,9 +4657,8 @@ nsresult ScriptLoader::OnStreamComplete(
         if (aRequest->HasDirtyCache()) {
           // This request found a dirty cache.
           // Validate the cache with the response's cache ID.
-          ScriptHashKey key(this, aRequest->mKind, aRequest->ReferrerPolicy(),
-                            aRequest->FetchOptions(), aRequest->URI(),
-                            aRequest->MaybeClassicScriptFallbackEncoding());
+          ScriptHashKey key(this, aRequest, aRequest->ReferrerPolicy(),
+                            aRequest->FetchOptions(), aRequest->URI());
           auto cacheResult = mCache->Lookup(*this, key, /* aSyncLoad = */ true);
           MOZ_ASSERT_IF(
               cacheResult.mState == CachedSubResourceState::Complete,
@@ -5437,7 +5377,7 @@ void ScriptLoader::PreloadURI(
       sriMetadata, aReferrerPolicy,
       aLinkPreload ? ParserMetadata::NotParserInserted
                    : ParserMetadata::ParserInserted,
-      ScriptLoadRequestType::Preload, &aCharset);
+      ScriptLoadRequestType::Preload);
   request->GetScriptLoadContext()->mIsInline = false;
   request->GetScriptLoadContext()->mScriptFromHead = aScriptFromHead;
   request->GetScriptLoadContext()->SetScriptMode(aDefer, aAsync, aLinkPreload);

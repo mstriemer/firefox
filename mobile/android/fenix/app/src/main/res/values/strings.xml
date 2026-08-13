@@ -789,6 +789,8 @@
     <string name="preferences_toolbar_shortcut">Toolbar shortcut</string>
     <!-- Preference for gestures based actions -->
     <string name="preferences_toolbar_select_shortcut">Select a shortcut</string>
+    <!-- Title of a menu option allowing to change the shortcut button shown in the toolbar -->
+    <string name="toolbar_shortcut_menu_edit_option">Edit shortcut</string>
     <!-- Preference for gestures based actions -->
     <string name="preferences_gestures">Gestures</string>
     <!-- Preference for settings related to visual options -->
@@ -1354,6 +1356,12 @@
     <!-- Title of inactive tabs preference -->
     <string name="preferences_inactive_tabs_title">Tabs you haven’t viewed for two weeks get moved to the inactive section.</string>
 
+    <!-- Privacy report -->
+    <!-- Category header of a preference that allows a user to enable or disable the privacy report feature -->
+    <string name="preferences_privacy_report">Privacy report</string>
+    <!-- Title of the privacy report preference that allows a user to enable or disable the feature -->
+    <string name="preferences_privacy_report_title">Enable privacy report</string>
+
     <!-- Studies -->
     <!-- Title of the remove studies button -->
     <string name="studies_remove">Remove</string>
@@ -1512,13 +1520,6 @@
       <item quantity="one">Add to %1$s tab group, %2$d tab, color %3$s</item>
       <item quantity="other">Add to %1$s tab group, %2$d tabs, color %3$s</item>
     </plurals>
-    <!-- Content Description for share tab group button.
-      %1$s is the name of the tab group.
-      %2$d is the number of tabs in a tab group. -->
-  <plurals name="share_tab_group_button_content_description">
-        <item quantity="one">Share %1$s tab group with %2$d tab.</item>
-        <item quantity="other">Share %1$s tab group with %2$d tabs.</item>
-  </plurals>
     <!-- Content description for the grabber/handle of the tab group bottom sheet. -->
   <string name="tab_group_sheet_dismiss_description">View tab group, collapse drag handle</string>
     <!-- Accessibility description for the header of an expanded tab group.
@@ -1551,6 +1552,8 @@
   <string name="tab_group_three_dot_menu_ungroup">Ungroup</string>
   <!-- Text shown on the delete button for a tab group on the three dot menu -->
   <string name="tab_group_three_dot_menu_delete">Delete</string>
+  <!-- Text shown on the share button for a tab group on the three dot menu -->
+  <string name="tab_group_three_dot_menu_share">Share</string>
   <!-- Text shown on the close button for a tab group on the three dot menu -->
   <string name="tab_group_three_dot_menu_close">Close</string>
   <!-- Title for the Ungroup tab group confirmation dialog. -->
@@ -2629,12 +2632,8 @@
     <string name="add_to_homescreen_cancel">Cancel</string>
     <!-- Add button text for the Add to Homescreen dialog -->
     <string name="add_to_homescreen_add">Add</string>
-    <!-- Continue to website button text for the first-time Add to Homescreen dialog -->
-    <string name="add_to_homescreen_continue">Continue to website</string>
     <!-- Placeholder text for the TextView in the Add to Homescreen dialog -->
     <string name="add_to_homescreen_text_placeholder">Shortcut name</string>
-    <!-- Describes the add to homescreen functionality -->
-    <string name="add_to_homescreen_description_2">You can easily add this website to your device’s Home screen to have instant access and browse faster with an app-like experience.</string>
 
     <!-- Preference for managing the settings for logins and passwords in Fenix -->
     <string name="preferences_passwords_logins_and_passwords_2">Passwords</string>
@@ -4033,6 +4032,14 @@
     <!-- The second active link used in privacy_notice_updated_homepage_message -->
     <string name="privacy_notice_updated_homepage_message_learn_more" tools:ignore="UnusedResources">Learn more</string>
 
+    <!-- Collections migration homepage card -->
+    <!-- Title shown on the collections to tab groups migration card on the homepage. -->
+    <string name="collections_migration_homepage_banner_title">Collections are now groups</string>
+    <!-- Message shown on the collections to tab groups migration card on the homepage. -->
+    <string name="collections_migration_homepage_card_message">There’s a simpler way to keep your tabs organized</string>
+    <!-- Link text shown on the collections to tab groups migration card that opens the tab groups page in the tab manager. -->
+    <string name="collections_migration_homepage_card_link">View my tab groups</string>
+
     <!-- Google Lens prototype related strings -->
     <string name="preferences_debug_settings_google_lens_integration">Enable Google Lens Integration</string>
     <!-- Lens image search button content description -->
@@ -4109,4 +4116,8 @@
     <string name="firefox_labs_feature_conflict">Feature isn’t available to try.</string>
     <!-- Text displayed on the Firefox Labs screen when there are no Labs experimental features present. -->
     <string name="firefox_labs_no_labs_available_description">No experimental features to try right now</string>
+    <!-- Title of the Firefox Labs Sandboxing experiment. -->
+    <string name="firefox_labs_website_isolation_title" tools:ignore="UnusedResources">Website isolation</string>
+    <!-- Description of the Firefox Labs Sandboxing experiment. -->
+    <string name="firefox_labs_website_isolation_description" tools:ignore="UnusedResources">An extra barrier between websites that helps protect your data across tabs. May affect performance, stability, website compatibility, and how browsing history is saved.</string>
 </resources>

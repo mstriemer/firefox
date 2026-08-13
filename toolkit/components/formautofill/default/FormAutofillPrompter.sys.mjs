@@ -1251,6 +1251,10 @@ CONTENT = {
           l10nId: "address-capture-not-now-button",
           callbackState: "cancel",
         },
+        {
+          l10nId: "address-capture-never-save-button",
+          callbackState: "disable",
+        },
       ],
     },
     options: {
@@ -1667,10 +1671,15 @@ export let FormAutofillPrompter = {
     }
 
     if (action == "disable") {
-      Services.prefs.setBoolPref(
-        AutofillDataTypes.get(type).enabledPref,
-        false
-      );
+      const descriptor = AutofillDataTypes.get(type);
+      if (type == AutofillDataTypes.ADDRESS) {
+        Services.prefs.setBoolPref(
+          `extensions.formautofill.${descriptor.prefKey}.capture.enabled`,
+          false
+        );
+      } else {
+        Services.prefs.setBoolPref(descriptor.enabledPref, false);
+      }
       return;
     }
 

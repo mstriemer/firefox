@@ -297,6 +297,24 @@ export const INITIAL_STATE = {
     // "sites where we blocked something"; see PrivacyFeed).
     sitesToday: 0,
     lastUpdated: null,
+    // Secondary-message decision chosen by PrivacyFeed's selector
+    // (Bug 2050954). variant: empty | blank | streak | tip. `category` is the
+    // message family (CATEGORY) so the UI can tell a celebration from an
+    // ordinary tip; `icon` is an icon key (see Privacy.jsx); `countArg` is the
+    // l10n plural/var arg.
+    variant: null,
+    messageId: null,
+    category: null,
+    icon: null,
+    countArg: null,
+    // SpecialMessageAction for the message's CTA button (null → no button).
+    cta: null,
+    // When set, the count readout shows "{countCeiling}+" (the daily-cap render).
+    countCeiling: null,
+    // Pending count-up celebration awarded by PrivacyFeed, or null. Shaped
+    // { awardedAt, fromCount, toCount }, plus `forcedTier` when the debug
+    // pref made it; `awardedAt` doubles as its id.
+    celebration: null,
   },
 };
 
@@ -1252,11 +1270,12 @@ const PictureOfTheDay = (prevState = INITIAL_STATE.PictureOfTheDay, action) => {
 function PrivacyWidget(prevState = INITIAL_STATE.PrivacyWidget, action) {
   switch (action.type) {
     case at.WIDGETS_PRIVACY_UPDATE:
+      // Merge whatever the feed sent: SYSTEM_TICK/INIT broadcast counts only
+      // (message fields absent → kept); NEW_TAB_INIT also carries the
+      // selector's message decision.
       return {
         ...prevState,
-        trackersToday: action.data.trackersToday,
-        sitesToday: action.data.sitesToday,
-        lastUpdated: action.data.lastUpdated,
+        ...action.data,
         initialized: true,
       };
     default:

@@ -129,14 +129,15 @@ class CustomTabsTest : BaseTest() {
     fun verifyDownloadInACustomTabTest() {
         // Deliberate deviation from legacy, which loads
         // https://storage.googleapis.com/mobile_test_assets/test_app/downloads.html. The local
-        // mockWebServer asset serves the same downloads.html with the same web_icon.png link, so
+        // mockWebServer asset serves the same downloads.html with the same PNG link, so
         // coverage is unchanged while the test stops depending on external network.
         val customTabPage = mockWebServer.downloadPageAsset
-        val downloadFile = "web_icon.png"
+        val downloadFile = "png_image.png"
 
         on.customTabs.launchCustomTab(customTabPage.url.toString(), "TestMenuItem")
         on.customTabs.clickWebContent(downloadFile)
         on.downloads
+            .mozVerify(DownloadsSelectors.DOWNLOAD_DIALOG_TITLE)
             .mozVerifyElementsByGroup("downloadDialog")
             .mozClick(DownloadsSelectors.DOWNLOAD_DIALOG_CONFIRM_BUTTON)
             .mozVerify(DownloadsSelectors.DOWNLOAD_COMPLETE_SNACKBAR, timeout = 15_000)

@@ -495,8 +495,6 @@ static void MozCrashWarningReporter(JSContext*, JSErrorReport*) {
   MOZ_CRASH("Why is someone touching JSAPI without an AutoJSAPI?");
 }
 
-JSHolderMap::Entry::Entry() : Entry(nullptr, nullptr, nullptr) {}
-
 JSHolderMap::Entry::Entry(void* aHolder, nsScriptObjectTracer* aTracer,
                           JS::Zone* aZone)
     : mHolder(aHolder),
@@ -560,8 +558,6 @@ void JSHolderMap::Iter::UpdateForRemovals() {
   mIter.Settle();
   Settle();
 }
-
-JSHolderMap::JSHolderMap() : mJSHolderMap(256) {}
 
 bool JSHolderMap::RemoveEntry(EntryVector& aJSHolders, Entry* aEntry) {
   MOZ_ASSERT(aEntry);

@@ -224,13 +224,15 @@ This offset also gives us the opportunity to land strings sooner. If the strings
 
 The caveat to landing strings early is that localizers *must have the right context* to supply their localizations. We cannot supply English strings and just assume that our localizers will be able to understand the context in which the translations must appear. Therefore, it is important to provide comments in the Fluent files that describe what the strings are for \- and to *provide URLs to publicly available screenshots or Figma documents* that show the strings being used in context. This is documented [here](https://mozilla-l10n.github.io/documentation/localization/dev_best_practices.html#add-localization-notes).
 
-Packaging the localized strings into the XPI is a manual process, and actually involves pulling in the Fluent files for all supported locales and landing them in the source tree. This can be done with a `mach` command:
+When the XPI is built, New Tab's localized `newtab.ftl` files are generated into the objdir and packaged into the XPI. The English `newtab.ftl` always comes from the in-tree copy. Every other locale is copied from a clone of the `firefox-l10n` repository, and is only included for shipped builds, which set the `MOZ_BROWSER_NEWTAB_LOCALES_ALL` environment variable. Local and try builds package en-US only.
+
+It is still useful to inspect the localization status. You can generate a report to show how many strings per locale are "pending" or "missing". A "pending" string is one that hasn't been localized yet, and has not had its 3 week opportunity on the Beta channel to be localized. A "missing" string is one that hasn't been localized, but has been on the Beta channel for more than 3 weeks, and therefore can safely fall back.
+
+The report is produced by:
 
 `./mach newtab update-locales`
 
-This will update the English `newtab.ftl` that is included with the XPI, and grab the most recent `newtab.ftl` files that have been translated and pushed to the `firefox-l10n` repository. It will also produce a report that will display how many strings per locale are "pending" or "missing". A "pending" string is one that hasn't been localized yet, and has not had its' 3 week opportunity on the Beta channel to be localized. A string that is "missing" is one that hasn't been localized, but has been on the Beta channel for more than 3 weeks, and therefore can safely fallback.
-
-You can see the most recent report for the current snapshot of the locales by running:
+This clones `firefox-l10n`, writes a local snapshot of the locale files and the report into the source tree, and refreshes the English `newtab.ftl`. It is not needed for cutting a train-hop, since the build packages the locales on its own, but it does double as the escape hatch if build-time generation ever needs to be bypassed. To read the most recent report without regenerating it, run:
 
 `./mach newtab locales-report`
 
@@ -242,13 +244,9 @@ would show the pending and missing Fluent string IDs for the Polish locale, as w
 
 It is the responsibility of the New Tab team to ensure that a train-hop that aims to enable a feature for a particular region has the necessary strings translated for that feature.
 
-For example, if there was a new `StockTicketWidget` UI component that happened to use some Fluent strings, and we aimed to enable UI component for English, Italian and German locales, we'd want to:
+For example, if there was a new `StockTicketWidget` UI component that happened to use some Fluent strings, and we aimed to enable it for the English, Italian and German locales, we'd want to ensure the Italian and German strings had either been localized, or had their 3 week opportunity. Running `./mach newtab update-locales` locally is the way to check this.
 
-1. Ensure that the strings had either been localized in those regions, or had their 3 week opportunity.
-2. Run `./mach newtab update-locales` and post the resulting Fluent string and report changes to Phabricator for review.
-3. Land the reviewed changes in the Nightly code.
-
-The train-hopped XPI should then be built off of that revision that landed in the Nightly code (or a later revision, presuming no new strings have landed in the interim). Notably, it's only necessary to run `./mach newtab update-locales` in advance of a train-hop. It is not strictly necessary to run it on a regular cadence.
+It helps to understand when the translations are captured. The train-hop XPI is built through ShipIt off a chosen Nightly revision, and during that build the current `firefox-l10n` translations are pulled in and frozen into the XPI. Nothing is fetched afterwards, since when Firefox loads the XPI it only registers the packaged files. So a locale's translations track `firefox-l10n` as it stands at XPI build time, independent of the Nightly revision: if a translation lands later, rebuilding the XPI picks it up.
 
 # Train-hop compatibility automated testing
 

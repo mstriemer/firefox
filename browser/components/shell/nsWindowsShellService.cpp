@@ -407,6 +407,20 @@ nsWindowsShellService::CheckBrowserUserChoiceHashes(bool* aResult) {
 }
 
 NS_IMETHODIMP
+nsWindowsShellService::IsUserChoiceProtectionDriverRunning(bool* aResult) {
+  *aResult = ::IsUserChoiceProtectionDriverRunning();
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsWindowsShellService::CanRenameUserChoiceAssociationKey(
+    const nsAString& aAssociation, bool* aResult) {
+  const nsString& flatAssociation = PromiseFlatString(aAssociation);
+  *aResult = ::CanRenameUserChoiceAssociationKey(flatAssociation.get());
+  return NS_OK;
+}
+
+NS_IMETHODIMP
 nsWindowsShellService::CheckCurrentProcessAUMIDForTesting(
     nsAString& aRetAumid) {
   PWSTR id;
@@ -1872,7 +1886,7 @@ static bool PollAppsFolderForShortcut(const nsAString& aAppUserModelId,
 static Result<nsString, nsresult> EnsurePinnableShortcutExists(
     bool aPrivateBrowsing, const nsAString& aAppUserModelId,
     const nsAString& aShortcutName, const nsAString& aShortcutSubstring,
-    nsIFile* aGreDir, const ShortcutLocations& location) {
+    nsIFile* aGreDir, const ShortcutLocations& aLocation) {
   MOZ_DIAGNOSTIC_ASSERT(
       !NS_IsMainThread(),
       "EnsurePinnableShortcutExists should be called off main thread only");
@@ -1906,9 +1920,12 @@ static Result<nsString, nsresult> EnsurePinnableShortcutExists(
     MOZ_TRY(CreateShortcutImpl(exeFile, arguments, aShortcutName, exeFile,
                                // Icon indexes are defined as Resource IDs, but
                                // CreateShortcutImpl needs an index.
-                               IDI_APPICON - 1, aAppUserModelId, location,
+                               IDI_APPICON - 1, aAppUserModelId, aLocation,
                                linkName));
+
+    shortcutPath.Assign(aLocation.shortcutFile->NativePath());
   }
+
   MOZ_TRY(EnsureShellAppsFolderShortcut(aAppUserModelId));
 
   return shortcutPath;

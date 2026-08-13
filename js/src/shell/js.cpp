@@ -6292,7 +6292,8 @@ static bool GetModuleEnvironmentValue(JSContext* cx, unsigned argc, Value* vp) {
     return false;
   }
 
-  if (module->hadEvaluationError()) {
+  if (module->hadEvaluationError() ||
+      module->status() == ModuleStatus::Unlinked) {
     JS_ReportErrorASCII(cx, "Module environment unavailable");
     return false;
   }
@@ -13306,6 +13307,13 @@ bool InitOptionParser(OptionParser& op) {
                        "Stop the MIPS simulator after the given "
                        "NUMBER of instructions.",
                        -1) ||
+#ifdef JS_CODEGEN_LOONG64
+      !op.addStringOption(
+          '\0', "loong64-isa", "[isa]",
+          "Specify the LoongArch code generation ISA (\"la64v1.0\" or "
+          "\"la64v1.1\").") ||
+#endif
+#if defined(JS_SIMULATOR_LOONG64)
       !op.addBoolOption('\0', "loong64-sim-icache-checks",
                         "Enable icache flush checks in the LoongArch64 "
                         "simulator.") ||
@@ -13313,6 +13321,7 @@ bool InitOptionParser(OptionParser& op) {
                        "Stop the LoongArch64 simulator after the given "
                        "NUMBER of instructions.",
                        -1) ||
+#endif
 #ifdef JS_CODEGEN_RISCV64
       !op.addBoolOption('\0', "riscv-debug",
                         "Print riscv debugging messages.") ||
@@ -13494,9 +13503,8 @@ bool SetGlobalOptionsPreJSInit(const OptionParser& op) {
   if (op.getBoolOption("enable-joint-iteration")) {
     JS::Prefs::setAtStartup_experimental_joint_iteration(true);
   }
-
   if (op.getBoolOption("enable-legacy-regexp")) {
-    JS::Prefs::set_experimental_legacy_regexp(true);
+    JS::Prefs::setAtStartup_experimental_legacy_regexp(true);
   }
   if (op.getBoolOption("enable-import-text")) {
     JS::Prefs::set_experimental_import_text(true);
@@ -13680,6 +13688,11 @@ bool SetGlobalOptionsPreJSInit(const OptionParser& op) {
   if (op.getBoolOption("no-cssc")) {
     vixl::CPUFeatures cssc(vixl::CPUFeatures::kCSSC);
     jit::ARM64Flags::DisableCPUFeatures(cssc);
+  }
+#endif
+#if defined(JS_CODEGEN_LOONG64)
+  if (const char* str = op.getStringOption("loong64-isa")) {
+    jit::SetLOONG64ISAString(str);
   }
 #endif
 #if defined(JS_CODEGEN_RISCV64)

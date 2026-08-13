@@ -1383,54 +1383,6 @@ newtab-card-dismiss-button =
     .title = Dismiss
     .aria-label = Dismiss
 
-## Strings for "Homepage" and "Firefox Home" sections of about:settings#home.
-## Homepage panel
-
-home-homepage-title =
-    .label = Homepage
-
-home-homepage-new-windows =
-    .label = New windows
-
-home-homepage-new-tabs =
-    .label = New tabs
-
-# This option leads to the "Custom Homepage" subpage
-home-homepage-custom-homepage-button =
-    .label = Choose a specific site
-
-## Custom URLs subpage
-
-# Subheader on the Custom Homepage subpage. Followed by a form to enter URLs and a list of URLs already saved, if any.
-home-custom-homepage-card-header =
-    .label = Website address(es)
-
-home-custom-homepage-address =
-    .placeholder = Enter address
-home-custom-homepage-address-button =
-    .label = Add address
-
-# Shown when no custom websites/URLs to use as a homepage have been added yet
-home-custom-homepage-no-results =
-    .label = No websites added yet.
-
-home-custom-homepage-delete-address-button =
-    .aria-label = Delete address
-    .title = Delete address
-
-# Further options to use when setting the home page. Two action buttons are placed in line with this prompt
-# to replace the current home page with a currently open page or bookmark.
-home-custom-homepage-replace-with-prompt =
-    .label = Replace with
-
-# Button that appears in-line after text "Replace with" (home-custom-homepage-replace-with-prompt)
-home-custom-homepage-current-pages-button =
-    .label = Current opened pages
-
-# Button that appears in-line after text "Replace with" (home-custom-homepage-replace-with-prompt)
-home-custom-homepage-bookmarks-button =
-    .label = Bookmarks…
-
 ## Firefox Home content
 
 home-prefs-content-header =
@@ -1504,12 +1456,6 @@ home-prefs-sections-rows-option-srd =
             [one] { $num } row
            *[other] { $num } rows
         }
-
-# Dropdown option shown when an extension replaces the contents of new windows or tabs.
-# Variables:
-#   $extension (string) - Name of the extension
-home-prefs-homepage-extension-option =
-    .label = Extension ({ $extension })
 
 home-restore-defaults-srd =
     .label = Restore Defaults

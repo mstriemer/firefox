@@ -6,10 +6,12 @@ package org.mozilla.fenix.ui.efficiency.selectors
 
 import org.mozilla.fenix.R
 import org.mozilla.fenix.compose.snackbar.SNACKBAR_BUTTON_TEST_TAG
+import org.mozilla.fenix.compose.snackbar.SNACKBAR_TEST_TAG
 import org.mozilla.fenix.helpers.DataGenerationHelper.getStringResource
 import org.mozilla.fenix.helpers.TestHelper.shortAppName
 import org.mozilla.fenix.ui.efficiency.helpers.Selector
 import org.mozilla.fenix.ui.efficiency.helpers.SelectorStrategy
+import mozilla.components.feature.app.links.R as applinksR
 
 object BrowserPageSelectors {
     val ENGINE_VIEW = Selector(
@@ -31,6 +33,13 @@ object BrowserPageSelectors {
         value = SNACKBAR_BUTTON_TEST_TAG,
         description = "Snackbar Edit button",
         groups = listOf("snackbar"),
+    )
+
+    val SNACKBAR = Selector(
+        strategy = SelectorStrategy.UIAUTOMATOR_WITH_COMPOSE_TAG,
+        value = SNACKBAR_TEST_TAG,
+        description = "Snackbar container",
+        groups = listOf(),
     )
 
     val MAIN_MENU_BUTTON = Selector(
@@ -280,6 +289,44 @@ object BrowserPageSelectors {
         groups = listOf(),
     )
 
+    // "Set cookies" button on the storage_write.html test page. Web DOM id, exposed unprefixed by
+    // GeckoView (same mechanism as SUBMIT_LOGIN_BUTTON), so UIAUTOMATOR_WITH_COMPOSE_TAG matches it.
+    val SET_COOKIES_WEB_BUTTON = Selector(
+        strategy = SelectorStrategy.UIAUTOMATOR_WITH_COMPOSE_TAG,
+        value = "setCookies",
+        description = "Web page 'Set cookies' button",
+        groups = listOf(),
+    )
+
+    // UiObject2 (By.textContains): clicking these applinks-prompt buttons only dismisses the in-app
+    // sheet, which the legacy UiObject.click() misreports as a failed click (gotcha: no post-click
+    // window-change event for its sync to latch). UiObject2.click() does not gate on that sync.
+    val STAY_IN_FIREFOX_PROMPT_BUTTON = Selector(
+        strategy = SelectorStrategy.UIAUTOMATOR2_BY_TEXT_CONTAINS,
+        value = "Stay in",
+        description = "Applinks prompt 'Stay in Firefox' button",
+        groups = listOf(),
+    )
+
+    val OPEN_IN_APP_PROMPT_BUTTON = Selector(
+        strategy = SelectorStrategy.UIAUTOMATOR2_BY_TEXT_CONTAINS,
+        value = getStringResource(applinksR.string.mozac_feature_applinks_confirm_dialog_confirm_2),
+        description = "Applinks prompt 'Open in App' button",
+        groups = listOf(),
+    )
+
+    // Title of the "open link in another app" prompt, parameterized by the target app name.
+    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    fun OPEN_IN_APP_PROMPT(appName: String = "") = Selector(
+        strategy = SelectorStrategy.UIAUTOMATOR_WITH_TEXT_CONTAINS,
+        value = getStringResource(
+            applinksR.string.mozac_feature_applinks_normal_confirm_dialog_title_with_app_name_2,
+            appName,
+        ),
+        description = "Open link in '$appName' app prompt",
+        groups = listOf(),
+    )
+
     val all = listOf(
         ADDED_TO_SHORTCUTS_SNACKBAR_TEXT,
         ADDRESS_CITY_WEB_FIELD,
@@ -289,6 +336,8 @@ object BrowserPageSelectors {
         AUTOFILLED_STREET_ADDRESS(),
         ENGINE_VIEW,
         MAIN_MENU_BUTTON,
+        OPEN_IN_APP_PROMPT(),
+        OPEN_IN_APP_PROMPT_BUTTON,
         PAGE_CONTENT,
         PAGE_CONTENT(),
         PASSWORD_WEB_FIELD,
@@ -297,11 +346,15 @@ object BrowserPageSelectors {
         SAVE_LOGIN_PROMPT,
         SAVE_LOGIN_PROMPT_CONFIRM_BUTTON,
         SELECT_ADDRESS_HEADER,
+        SET_COOKIES_WEB_BUTTON,
         SNACKBAR_EDIT_BUTTON,
+        STAY_IN_FIREFOX_PROMPT_BUTTON,
         SUBMIT_LOGIN_BUTTON,
         SUGGESTED_LOGIN(),
         SUGGESTED_LOGINS_BAR,
         TAB_CRASH_REPORTER_CLOSE_BUTTON,
+        SNACKBAR,
+        MAIN_MENU_BUTTON,
         TAB_CRASH_REPORTER_IMAGE,
         TAB_CRASH_REPORTER_MESSAGE,
         TAB_CRASH_REPORTER_RESTORE_BUTTON,

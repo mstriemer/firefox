@@ -1630,8 +1630,84 @@ export const PREFS_CONFIG = new Map([
   [
     "widgets.privacy.maxCount",
     {
-      title: "Max trackers-blocked count shown before the '+' cap",
+      title:
+        "Today-count that fires the Privacy widget 'daily cap' celebration",
       value: 100,
+    },
+  ],
+  [
+    "widgets.privacy.maxDisplayCount",
+    {
+      title: "Ceiling for the tracker-count readout before the '+' (e.g. 999+)",
+      value: 999,
+    },
+  ],
+  [
+    "widgets.privacy.blankChance",
+    {
+      title:
+        "Probability (0..1) an eligible Privacy widget info message is shown blank",
+      // Stored as a string: prefs have no float type, so a numeric 0.4 would
+      // land as 0 and disable blanks. resolvePrivacyBlankChance parses it.
+      value: "0.4",
+    },
+  ],
+  [
+    "widgets.privacy.showVpnMessages",
+    {
+      title:
+        "Allow VPN promotional messages in the Privacy widget (off by default; not all users are VPN-eligible)",
+      value: false,
+    },
+  ],
+  [
+    "widgets.privacy.forceMessageId",
+    {
+      title:
+        "Debug: pin the Privacy widget to one catalog message id (QA/design; empty = normal scheduling)",
+      value: "",
+    },
+  ],
+  [
+    "widgets.privacy.celebrationThreshold",
+    {
+      title:
+        "Increase in blocked trackers that triggers the count-up celebration",
+      value: 10,
+    },
+  ],
+  [
+    "widgets.privacy.forceCelebration",
+    {
+      // Fires on every parent count refresh (new tab, init, tick), counting up
+      // from a fixed span below the live count and leaving the real baseline
+      // alone. Animation only: the message, and so the animated kit icon,
+      // follows widgets.privacy.forceMessageId.
+      title:
+        "Debug: force the Privacy widget celebration. 'brief' | 'major' | 'cap', empty = off",
+      value: "",
+    },
+  ],
+  [
+    "widgets.privacy.celebrationState",
+    {
+      // Parent-only count-up bookkeeping (daily baseline + unplayed award)
+      // owned by PrivacyFeed. Separate from messageState because the
+      // scheduler normalizes that blob and would strip these keys.
+      title: "Privacy widget celebration state (JSON, internal)",
+      skipBroadcast: true,
+      value: "{}",
+    },
+  ],
+  [
+    "widgets.privacy.messageState",
+    {
+      // Parent-only scheduler bookkeeping (frequency caps, milestone
+      // watermarks, etc.) owned by PrivacyFeed. skipBroadcast keeps the blob
+      // out of the content-synced prefs.
+      title: "Privacy widget message scheduler state (JSON, internal)",
+      skipBroadcast: true,
+      value: "{}",
     },
   ],
   [
@@ -2117,7 +2193,7 @@ const FEEDS_DATA = [
         IE: ["en-CA", "en-GB", "en-US"],
         ZA: ["en-CA", "en-GB", "en-US"],
         CH: ["de"],
-        BE: ["de"],
+        BE: ["de", "fr"],
         DE: ["de"],
         AT: ["de"],
         IT: ["it"],
@@ -2125,6 +2201,9 @@ const FEEDS_DATA = [
         ES: ["es-ES"],
         PL: ["pl"],
         JP: ["ja", "ja-JP-mac"],
+        NL: ["nl"],
+        PT: ["pt-PT"],
+        BR: ["pt-BR"],
       }[geo];
 
       const regionBlocked = preffedBlockRegions.includes(geo);

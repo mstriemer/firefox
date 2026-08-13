@@ -31,6 +31,13 @@ let ignoreList = [
     errorMessage: /Error in parsing value for ‘content’/i,
     isFromDevTools: false,
   },
+  // megalist-agent.css is loaded as an agent sheet, so its UA-only
+  // ::-moz-reveal selector doesn't parse as an author sheet here.
+  {
+    sourceName: /\bmegalist-agent\.css$/i,
+    errorMessage: /Unknown pseudo-class or pseudo-element ‘-moz-reveal’/i,
+    isFromDevTools: false,
+  },
   // These variables are declared somewhere else, and error when we load the
   // files directly. They're all marked intermittent because their appearance
   // in the error console seems to not be consistent.
@@ -256,9 +263,6 @@ let propNameAllowlist = [
   { propName: "--tab-group-gray-hover", isFromDevTools: false },
   { propName: "--tab-group-gray-text", isFromDevTools: false },
   { propName: "--tab-group-gray-text-invert", isFromDevTools: false },
-
-  /* This variable is used in a radial-gradient function, which confuses the test. */
-  { propName: "--radio-indicator-background-color", isFromDevTools: false },
 
   /* Allow design tokens in devtools without all variables being used there */
   { sourceName: /\/design-system\/tokens-.*\.css$/, isFromDevTools: true },

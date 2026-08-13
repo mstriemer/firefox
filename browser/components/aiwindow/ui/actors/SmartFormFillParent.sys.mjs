@@ -200,9 +200,14 @@ export class SmartFormFillParent extends JSWindowActorParent {
       return;
     }
 
+    const numberOfTabs = selectedTabs.length + 1;
+    const perTabTextCharBudget = Math.ceil(
+      MAX_PAGE_CONTENT_LENGTH / numberOfTabs
+    );
+
     const [pageText, tabContentById] = await Promise.all([
-      this.#getPageText(this.manager.documentURI.spec),
-      this.#getTabsContent(selectedTabs),
+      this.#getPageText(this.manager.documentURI.spec, perTabTextCharBudget),
+      this.#getTabsContent(selectedTabs, perTabTextCharBudget),
     ]);
 
     if (this.#cannotApplyAutofill(generation)) {
@@ -238,19 +243,23 @@ export class SmartFormFillParent extends JSWindowActorParent {
   /**
    * Gets the page content for each tab
    *
-   * @param {RelevantTab} selectedTabs
+   * @param {Array<RelevantTab>} selectedTabs
+   * @param {number} textCharLimitPerTab
    *
    * @returns {Promise<Map<string, string>>}
    */
-  async #getTabsContent(selectedTabs) {
+  async #getTabsContent(selectedTabs, textCharLimitPerTab) {
     const tabContentById = new Map();
+
     const promises = selectedTabs.map(selectedTab => {
       const tabData = this.#controller.getRelevantTabData(selectedTab.id);
 
       if (tabData) {
-        return this.#getPageText(tabData.url).then(tabContent => {
-          tabContentById.set(selectedTab.id, tabContent);
-        });
+        return this.#getPageText(tabData.url, textCharLimitPerTab).then(
+          tabContent => {
+            tabContentById.set(selectedTab.id, tabContent);
+          }
+        );
       }
 
       return Promise.resolve();
@@ -265,10 +274,11 @@ export class SmartFormFillParent extends JSWindowActorParent {
    * Attempts to extract page content from a url if the tab is found
    *
    * @param {string} sourceUrl
+   * @param {number} textCharLimit
    *
    * @returns {Promise<string>}
    */
-  async #getPageText(sourceUrl) {
+  async #getPageText(sourceUrl, textCharLimit) {
     let windowGlobal = this.manager;
 
     if (windowGlobal.documentURI.spec !== sourceUrl) {
@@ -284,7 +294,7 @@ export class SmartFormFillParent extends JSWindowActorParent {
     try {
       const pageExtractor = windowGlobal.getActor("PageExtractor");
       const extraction = await pageExtractor.getText({
-        sufficientLength: MAX_PAGE_CONTENT_LENGTH,
+        sufficientLength: textCharLimit,
         removeBoilerplate: false,
         sourceUrl,
       });

@@ -61,8 +61,7 @@ async function openGroupingWindowWithTabs() {
   return win;
 }
 
-// Open the panel and wait for the two clustered suggestion rows to render.
-async function openPanelWithSuggestions(win) {
+async function openPanel(win) {
   AIWindowUI.toggleGroupTabsPanel(win);
   const panel = await TestUtils.waitForCondition(() =>
     win.document.getElementById("smartwindow-group-tabs-panel")
@@ -71,6 +70,12 @@ async function openPanelWithSuggestions(win) {
     () => panel.state === "open",
     "Panel finished opening"
   );
+  return panel;
+}
+
+// Open the panel and wait for the two clustered suggestion rows to render.
+async function openPanelWithSuggestions(win) {
+  const panel = await openPanel(win);
   await TestUtils.waitForCondition(
     () => panel.querySelectorAll(".swgt-suggestion").length === 2,
     "Two suggested group rows render once clustering finishes"
@@ -274,39 +279,87 @@ describe("Auto Tab Grouping toolbar button", () => {
       );
     });
 
-    it("records an 'offered' event, and re-offers when reopened", async () => {
+    it("records the clustering pipeline, and asks again when reopened", async () => {
       win = await openGroupingWindowWithTabs();
+      const tabs = String(win.gBrowser.tabs.length);
 
       await openPanelWithSuggestions(win);
-      const offered = Glean.smartWindow.autoTabGroupOffered.testGetValue();
-      Assert.equal(offered?.length, 1, "One 'offered' event recorded");
-      Assert.equal(offered[0].extra.count, "2", "Offered the two suggestions");
-      Assert.equal(offered[0].extra.median_tabs, "2", "Offered median size");
-      Assert.equal(offered[0].extra.mean_tabs, "2", "Offered mean size");
+
+      const opened = Glean.smartWindow.autoTabGroupMenuOpened.testGetValue();
+      Assert.equal(opened?.length, 1, "One 'menu opened' event recorded");
+      Assert.equal(opened[0].extra.source, "button", "Opened by the button");
+      Assert.equal(opened[0].extra.tabs, tabs, "Recorded the open tab count");
+
+      const requested =
+        Glean.smartWindow.autoTabGroupingRequested.testGetValue();
+      Assert.equal(requested?.length, 1, "One 'requested' event recorded");
       Assert.equal(
-        offered[0].extra.recomputed,
-        "false",
-        "First offer is not a recompute"
+        requested[0].extra.tabs,
+        tabs,
+        "Recorded the open tab count"
       );
+
+      const started = Glean.smartWindow.autoTabGroupingStarted.testGetValue();
+      Assert.equal(started?.length, 1, "One 'started' event recorded");
+      Assert.greater(
+        Number(started[0].extra.total_length),
+        0,
+        "Reported how much tab-title text the model was given"
+      );
+
+      const completed =
+        Glean.smartWindow.autoTabGroupingCompleted.testGetValue();
+      Assert.equal(completed?.length, 1, "One 'completed' event recorded");
+      Assert.equal(completed[0].extra.success, "true", "Clustering succeeded");
+      Assert.equal(completed[0].extra.groups, "2", "Suggested two groups");
+      Assert.equal(
+        completed[0].extra.grouped_tabs,
+        "4",
+        "Placed four tabs into those groups"
+      );
+      Assert.greater(
+        Number(completed[0].extra.total_length),
+        0,
+        "Reported how much tab-title text ended up in the suggestions"
+      );
+
+      const suggested = Glean.smartWindow.autoTabGroupSuggested.testGetValue();
+      Assert.equal(suggested?.length, 2, "One event per suggested group");
+      Assert.ok(
+        suggested.every(e => e.extra.grouped_tabs === "2"),
+        "Each suggested group holds two tabs"
+      );
+      Assert.equal(
+        new Set(suggested.map(e => e.extra.grouped_id)).size,
+        2,
+        "The two groups are told apart by grouped_id"
+      );
+
+      const displayed =
+        Glean.smartWindow.autoTabGroupWindowDisplay.testGetValue();
+      Assert.equal(displayed?.length, 1, "One 'window display' event recorded");
+      Assert.equal(
+        displayed[0].extra.suggested_groups,
+        "2",
+        "Showed both suggestions"
+      );
+      Assert.equal(displayed[0].extra.groups, "0", "Nothing created yet");
 
       await closePanel(win);
       await openPanelWithSuggestions(win);
-      const reoffered = Glean.smartWindow.autoTabGroupOffered.testGetValue();
       Assert.equal(
-        reoffered.length,
+        Glean.smartWindow.autoTabGroupingRequested.testGetValue().length,
         2,
-        "Reopening recomputes and offers again"
-      );
-      Assert.equal(
-        reoffered[1].extra.recomputed,
-        "true",
-        "The reopened offer is a recompute"
+        "Reopening the panel asks for suggestions again"
       );
     });
 
-    it("records a 'created' event when creating all groups", async () => {
+    it("records accepting every suggestion at once", async () => {
       win = await openGroupingWindowWithTabs();
       const panel = await openPanelWithSuggestions(win);
+      const suggestedIds = Glean.smartWindow.autoTabGroupSuggested
+        .testGetValue()
+        .map(e => e.extra.grouped_id);
 
       const groupsBefore = win.gBrowser.tabGroups.length;
       panel.querySelector(".swgt-create-all").click();
@@ -315,12 +368,28 @@ describe("Auto Tab Grouping toolbar button", () => {
         "Both groups created"
       );
 
-      const created = Glean.smartWindow.autoTabGroupCreated.testGetValue();
-      Assert.equal(created?.length, 1, "One 'created' event recorded");
-      Assert.equal(created[0].extra.type, "all", "Recorded as a 'create all'");
-      Assert.equal(created[0].extra.count, "2", "Two groups created");
-      Assert.equal(created[0].extra.median_tabs, "2", "Created median size");
-      Assert.equal(created[0].extra.mean_tabs, "2", "Created mean size");
+      const accepted = Glean.smartWindow.autoTabGroupAccepted.testGetValue();
+      Assert.equal(accepted?.length, 2, "One 'accepted' event per group");
+      Assert.ok(
+        accepted.every(e => e.extra.source === "collective_accept"),
+        "Both are recorded as a collective accept"
+      );
+      Assert.deepEqual(
+        accepted.map(e => e.extra.grouped_id),
+        suggestedIds,
+        "Accepting reports the same grouped_id the suggestion did"
+      );
+
+      const completed = Glean.smartWindow.autoTabGroupCompleted.testGetValue();
+      Assert.equal(completed?.length, 2, "One 'completed' event per group");
+      Assert.ok(
+        completed.every(e => e.extra.success === "true"),
+        "Both groups were created successfully"
+      );
+      Assert.ok(
+        completed.every(e => e.extra.grouped_tabs === "2"),
+        "Each created group holds two tabs"
+      );
     });
 
     it("creates one group at a time and keeps the panel open", async () => {
@@ -357,11 +426,11 @@ describe("Auto Tab Grouping toolbar button", () => {
         () => win.gBrowser.tabGroups.length === groupsBefore + 2,
         "The second suggestion created the second group without reopening"
       );
-      const created = Glean.smartWindow.autoTabGroupCreated.testGetValue();
-      Assert.equal(created?.length, 2, "Two 'created' events recorded");
+      const accepted = Glean.smartWindow.autoTabGroupAccepted.testGetValue();
+      Assert.equal(accepted?.length, 2, "Two 'accepted' events recorded");
       Assert.ok(
-        created.every(e => e.extra.type === "individual"),
-        "Both are recorded as individual creations"
+        accepted.every(e => e.extra.source === "individual_accept"),
+        "Both are recorded as individual accepts"
       );
     });
 
@@ -388,8 +457,8 @@ describe("Auto Tab Grouping toolbar button", () => {
         panel
           .querySelector(".swgt-note .swgt-message")
           .getAttribute("data-l10n-id"),
-        "smartwindow-group-tabs-empty",
-        "With ungrouped tabs left over the panel only says it has no suggestions"
+        "smartwindow-group-tabs-all-sorted",
+        "Having created groups, the panel credits the work even with tabs left ungrouped"
       );
 
       const ungroup = panel.querySelector(".swgt-ungroup");
@@ -409,9 +478,25 @@ describe("Auto Tab Grouping toolbar button", () => {
         tabsBefore,
         "Ungroup keeps the tabs open"
       );
-      const undone = Glean.smartWindow.autoTabGroupUndone.testGetValue();
-      Assert.equal(undone?.length, 1, "One 'undone' event recorded");
-      Assert.equal(undone[0].extra.count, "2", "Both groups were ungrouped");
+      const requested =
+        Glean.smartWindow.autoTabUngroupRequested.testGetValue();
+      Assert.equal(requested?.length, 2, "One 'ungroup requested' per group");
+      Assert.ok(
+        requested.every(e => e.extra.source === "collective_ungroup"),
+        "Both are recorded as a collective ungroup"
+      );
+      const ungrouped =
+        Glean.smartWindow.autoTabUngroupCompleted.testGetValue();
+      Assert.equal(ungrouped?.length, 2, "One 'ungroup completed' per group");
+      Assert.ok(
+        ungrouped.every(e => e.extra.success === "true"),
+        "Both groups were ungrouped successfully"
+      );
+      Assert.deepEqual(
+        ungrouped.map(e => e.extra.grouped_id),
+        requested.map(e => e.extra.grouped_id),
+        "Ungrouping reports the grouped_id the group was suggested under"
+      );
       await TestUtils.waitForCondition(
         () => !panel.querySelectorAll(".swgt-recent-row").length,
         "The 'Just created' list is cleared"
@@ -421,34 +506,74 @@ describe("Auto Tab Grouping toolbar button", () => {
         "Focus lands on the card once the 'Ungroup' row it was on is gone"
       );
     });
-  });
 
-  describe("when every tab ends up grouped", () => {
-    it("says everything is sorted", async () => {
+    it("only lists groups created while the panel was open", async () => {
       win = await openGroupingWindowWithTabs();
-      const panel = await openPanelWithSuggestions(win);
-      const card = panel.querySelector(".swgt-card");
+      let panel = await openPanelWithSuggestions(win);
 
       panel.querySelector(".swgt-create-all").click();
       await TestUtils.waitForCondition(
-        () => card.querySelectorAll(".swgt-recent-row").length === 2,
+        () => panel.querySelectorAll(".swgt-recent-row").length === 2,
         "Both created groups are listed under 'Just created'"
       );
-      Assert.greater(
-        card.ungrouped,
-        0,
-        "The panel is told about the tab clustering left ungrouped"
-      );
 
-      card.ungrouped = 0;
+      await closePanel(win);
+      panel = await openPanel(win);
+      const card = panel.querySelector(".swgt-card");
       await card.updateComplete;
 
+      Assert.ok(
+        card.querySelector(".swgt-header"),
+        "The reopened card rendered"
+      );
+      Assert.deepEqual(card.recent, [], "The 'Just created' list starts empty");
+      Assert.ok(
+        !card.querySelector(
+          '[data-l10n-id="smartwindow-group-tabs-just-created-heading"]'
+        ),
+        "The 'Just created' heading is gone"
+      );
+      Assert.ok(
+        !card.querySelector(".swgt-recent-row"),
+        "None of the groups made last time are listed"
+      );
+      Assert.ok(
+        !card.querySelector(".swgt-ungroup"),
+        "The 'Ungroup' row is gone with them"
+      );
       Assert.equal(
-        card
+        win.gBrowser.tabGroups.length,
+        2,
+        "The groups themselves are left alone"
+      );
+    });
+  });
+
+  describe("when there is nothing left to suggest", () => {
+    it("credits work done this time and forgets it the next", async () => {
+      win = await openGroupingWindowWithTabs();
+      let panel = await openPanelWithSuggestions(win);
+      const noteId = () =>
+        panel
           .querySelector(".swgt-note .swgt-message")
-          .getAttribute("data-l10n-id"),
+          ?.getAttribute("data-l10n-id");
+
+      panel.querySelector(".swgt-create-all").click();
+      await TestUtils.waitForCondition(
+        () => panel.querySelectorAll(".swgt-recent-row").length === 2,
+        "Both created groups are listed under 'Just created'"
+      );
+      Assert.equal(
+        noteId(),
         "smartwindow-group-tabs-all-sorted",
-        "With no ungrouped tabs left the panel says everything is sorted"
+        "Groups created this time earn the 'nice work' note"
+      );
+
+      await closePanel(win);
+      panel = await openPanel(win);
+      await TestUtils.waitForCondition(
+        () => noteId() === "smartwindow-group-tabs-empty",
+        "Reopened with nothing created, the panel just says it has no suggestions"
       );
     });
   });
@@ -510,6 +635,39 @@ describe("Auto Tab Grouping toolbar button", () => {
         urls.length,
         "Every remaining tab is at a distinct URL"
       );
+
+      const requested =
+        Glean.smartWindow.closeDuplicateTabsRequested.testGetValue();
+      Assert.equal(requested?.length, 1, "One 'requested' event recorded");
+      Assert.equal(
+        requested[0].extra.tabs,
+        String(tabsBefore),
+        "Recorded the tab count from before the duplicates were closed"
+      );
+
+      const started =
+        Glean.smartWindow.closeDuplicateTabsStarted.testGetValue();
+      Assert.equal(started?.length, 1, "One 'started' event recorded");
+      Assert.greater(
+        Number(started[0].extra.total_length),
+        0,
+        "Reported how much tab-title text was searched"
+      );
+
+      const completed =
+        Glean.smartWindow.closeDuplicateTabsCompleted.testGetValue();
+      Assert.equal(completed?.length, 1, "One 'completed' event recorded");
+      Assert.equal(completed[0].extra.success, "true", "The search succeeded");
+      Assert.equal(
+        completed[0].extra.duplicate_tabs,
+        "2",
+        "Found both duplicates"
+      );
+
+      const closed = Glean.smartWindow.duplicateTabsClosed.testGetValue();
+      Assert.equal(closed?.length, 1, "One 'closed' event recorded");
+      Assert.equal(closed[0].extra.duplicate_tabs, "2", "Closed both");
+      Assert.equal(closed[0].extra.success, "true", "Closing succeeded");
     });
   });
 
@@ -548,6 +706,13 @@ describe("Auto Tab Grouping toolbar button", () => {
         () => panel._flyoutPanel.state === "closed",
         "The flyout hides itself once the pointer has left"
       );
+
+      panel.querySelector(".swgt-create-all").focus();
+      row.focus();
+      await TestUtils.waitForCondition(
+        () => panel._activeRow === row && panel._flyoutPanel.state !== "closed",
+        "Focusing the row again reopens the flyout the pointer dismissed"
+      );
     });
 
     it("hides the flyout when another panel row is hovered", async () => {
@@ -559,16 +724,28 @@ describe("Auto Tab Grouping toolbar button", () => {
       row.dispatchEvent(new win.MouseEvent("mouseleave"));
       panel
         .querySelector(".swgt-create-all")
-        .dispatchEvent(new win.MouseEvent("mouseenter"));
+        .dispatchEvent(new win.MouseEvent("mouseover", { bubbles: true }));
 
-      await TestUtils.waitForCondition(
-        () => panel._flyoutPanel.state === "closed",
-        "Moving onto 'Create Groups' closes the suggestion's flyout"
+      Assert.ok(
+        !row.classList.contains("is-active"),
+        "The suggestion drops its highlight the moment the pointer moves on"
       );
       Assert.equal(
         panel._activeRow,
         null,
         "The suggestion row is no longer marked active"
+      );
+      Assert.equal(panel._hideTimer, 0, "No delayed hide is left pending");
+      await TestUtils.waitForCondition(
+        () => panel._flyoutPanel.state === "closed",
+        "Moving onto 'Create Groups' closes the suggestion's flyout"
+      );
+
+      panel.querySelector(".swgt-create-all").focus();
+      row.focus();
+      await TestUtils.waitForCondition(
+        () => panel._activeRow === row && panel._flyoutPanel.state !== "closed",
+        "Keyboard focus on that suggestion still opens its flyout afterwards"
       );
     });
 
@@ -969,6 +1146,58 @@ describe("Auto Tab Grouping toolbar button", () => {
           panel.querySelector(".swgt-message")?.getAttribute("data-l10n-id") ===
           "smartwindow-group-tabs-empty",
         "Panel falls back to the empty state after the clustering timeout"
+      );
+
+      const completed =
+        Glean.smartWindow.autoTabGroupingCompleted.testGetValue();
+      Assert.equal(completed?.length, 1, "The timed-out run still completes");
+      Assert.equal(
+        completed[0].extra.success,
+        "false",
+        "Recorded as a failure"
+      );
+      Assert.equal(
+        completed[0].extra.error_type,
+        "TimeoutError",
+        "Recorded the error's name, not its message"
+      );
+      Assert.equal(completed[0].extra.groups, "0", "Nothing was suggested");
+      Assert.ok(
+        !Glean.smartWindow.autoTabGroupSuggested.testGetValue(),
+        "No group was suggested"
+      );
+    });
+
+    it("records a request with no start when there are too few tabs", async () => {
+      await SpecialPowers.pushPrefEnv({
+        set: [["browser.smartwindow.autoTabGrouping.enabled", true]],
+      });
+      win = await openAIWindow();
+      await navigateToContent(win);
+
+      AIWindowUI.toggleGroupTabsPanel(win);
+      const panel = await TestUtils.waitForCondition(() =>
+        win.document.getElementById("smartwindow-group-tabs-panel")
+      );
+      await TestUtils.waitForCondition(
+        () =>
+          panel.querySelector(".swgt-message")?.getAttribute("data-l10n-id") ===
+          "smartwindow-group-tabs-empty",
+        "Panel says it has nothing to suggest"
+      );
+
+      Assert.equal(
+        Glean.smartWindow.autoTabGroupingRequested.testGetValue()?.length,
+        1,
+        "Opening the panel still asks for suggestions"
+      );
+      Assert.ok(
+        !Glean.smartWindow.autoTabGroupingStarted.testGetValue(),
+        "The model never ran, so nothing started"
+      );
+      Assert.ok(
+        !Glean.smartWindow.autoTabGroupingCompleted.testGetValue(),
+        "And nothing completed"
       );
     });
 

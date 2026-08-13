@@ -288,7 +288,11 @@ input.actions = {
       // Invalid URL encoding, leave filename undefined
     }
 
-    const profile = createSizeProfile(jsonString, filename);
+    const profile = createSizeProfile(
+      jsonString,
+      filename,
+      JSONView.isJsonlines
+    );
 
     // Wait for profiler to be ready and send the profile
     let isReady = false;

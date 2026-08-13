@@ -563,6 +563,7 @@ cbindgen-types = [
     { gecko = "StyleGenericBorderImageSideWidth", servo = "crate::values::generics::border::BorderImageSideWidth" },
     { gecko = "StyleGenericUrlOrNone", servo = "crate::values::generics::url::UrlOrNone" },
     { gecko = "StyleGenericCalcNode", servo = "crate::values::generics::calc::GenericCalcNode" },
+    { gecko = "StyleGenericCalcPercentageLeaf", servo = "crate::values::generics::calc::GenericCalcPercentageLeaf" },
     { gecko = "StyleCssUrl", servo = "crate::url::CssUrl" },
     { gecko = "StyleSpecifiedUrl", servo = "crate::url::SpecifiedUrl" },
     { gecko = "StyleComputedUrl", servo = "crate::url::ComputedUrl" },
@@ -687,6 +688,7 @@ mapped-generic-types = [
     { generic = false, gecko = "nsString", servo = "nsstring::nsString" },
     { generic = true, gecko = "nsTArray", servo = "thin_vec::ThinVec" },
     { generic = true, gecko = "CopyableTArray", servo = "thin_vec::ThinVec" },
+    { generic = true, gecko = "mozilla::StyleOptional", servo = "crate::values::generics::Optional" },
 ]
 
 allowlist-functions = ["Servo_.*", "Gecko_.*"]

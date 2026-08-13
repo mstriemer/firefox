@@ -7,6 +7,7 @@ package org.mozilla.fenix.ui.efficiency.helpers
 import android.os.SystemClock
 import android.util.Log
 import android.view.accessibility.AccessibilityWindowInfo
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.SemanticsNodeInteractionCollection
 import androidx.compose.ui.test.assert
@@ -20,6 +21,7 @@ import androidx.compose.ui.test.filter
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasAnyChild
 import androidx.compose.ui.test.hasAnySibling
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasParent
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
@@ -34,6 +36,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
@@ -685,6 +688,73 @@ abstract class BasePage(
     }
 
     /**
+     * Polls until [selector] is present AND enabled, then clicks it. Use for a control that renders
+     * immediately but is briefly disabled (e.g. the add-on permission dialog's "Add" button, which
+     * PermissionsDialogFragment disables for ~1s): [mozClick]/[mozClickIfPresent] check presence only
+     * and would tap the still-disabled control, which the app ignores — a silent no-op. Dispatches
+     * across all element backends so it works regardless of the selector's strategy.
+     */
+    fun mozClickWhenEnabled(
+        selector: Selector,
+        timeout: Long = TestAssetHelper.waitingTime,
+        interval: Long = 200,
+    ): BasePage {
+        val rep = rep()
+        rep?.startCmd(safeId("click_when_enabled", selector.description), "Attempting to click '${selector.description}' once enabled...", 1)
+
+        val deadline = System.currentTimeMillis() + timeout
+        var element: Any? = null
+        while (System.currentTimeMillis() < deadline) {
+            rep?.startLoc(safeId("loc", selector.description), "Waiting for '${selector.description}' to be enabled...", 2)
+            element = mozGetElement(selector, applyPreconditions = false)
+            val enabled = element != null && isElementEnabled(element)
+            rep?.endLoc(success = enabled, message = if (enabled) found(selector.description) else notFound(selector.description))
+            if (enabled) break
+            element = null
+            SystemClock.sleep(interval)
+        }
+
+        if (element == null) {
+            rep?.endCmd(success = false, message = "'${selector.description}' not enabled after ${timeout}ms")
+            ScreenDump.dump(composeRule, "mozClickWhenEnabled: '${selector.description}' never became enabled")
+            throw AssertionError("'${selector.description}' was expected to become enabled but did not, after ${timeout}ms")
+        }
+
+        try {
+            when (element) {
+                is ViewInteraction -> element.perform(click())
+                is UiObject -> element.click()
+                is UiObject2 -> element.click()
+                is SemanticsNodeInteraction -> {
+                    element.assertExists()
+                    element.assertIsDisplayed()
+                    element.performClick()
+                }
+                else -> throw AssertionError("Unsupported element type (${element::class.simpleName}) for selector: ${selector.description}")
+            }
+            rep?.endCmd(success = true, message = "Clicked '${selector.description}'")
+            return this
+        } catch (e: Throwable) {
+            rep?.endCmd(success = false, message = "Click '${selector.description}' failed: ${e.message ?: "exception"}")
+            ScreenDump.dump(composeRule, "mozClickWhenEnabled failed: ${selector.description}")
+            throw e
+        }
+    }
+
+    /** Exception-safe "is this element enabled right now?" probe, dispatched across all backends. */
+    private fun isElementEnabled(element: Any?): Boolean = try {
+        when (element) {
+            is ViewInteraction -> { element.check(matches(isEnabled())); true }
+            is UiObject -> element.isEnabled
+            is UiObject2 -> element.isEnabled
+            is SemanticsNodeInteraction -> { element.assertExists(); element.assertIsEnabled(); true }
+            else -> false
+        }
+    } catch (_: Throwable) {
+        false
+    }
+
+    /**
      * Presses back until [selector] disappears, bounded by [maxPresses]. Mirrors the legacy
      * exitMenu() pattern: gating on the anchor's disappearance rather than a fixed back-press
      * count tolerates presses that are swallowed while a Compose/fragment transition is still
@@ -778,10 +848,18 @@ abstract class BasePage(
         }
     }
 
+    /**
+     * Swipe a single [direction] on [selector]'s element. [steps] controls the gesture speed for the
+     * UiAutomator ([UiObject]) backend: it is the number of motion events sent, so a low value produces a
+     * fast flick and a high value a slow drag. Some gestures only register as a flick (e.g. swiping the
+     * navigation toolbar to switch tabs), so callers that need one pass a small [steps]; the default of
+     * 100 keeps the original slow-drag behaviour for existing callers.
+     */
     fun mozSwipeElement(
         selector: Selector,
         direction: SwipeDirection,
         applyPreconditions: Boolean = false,
+        steps: Int = 100,
     ): BasePage {
         val rep = rep()
         rep?.startCmd(safeId("swipe_element", selector.description), "Swiping ${direction.name} on '${selector.description}'...", 1)
@@ -801,7 +879,6 @@ abstract class BasePage(
                 }
 
                 is UiObject -> {
-                    val steps = 100
                     when (direction) {
                         SwipeDirection.DOWN -> containerElement.swipeDown(steps)
                         SwipeDirection.UP -> containerElement.swipeUp(steps)
@@ -991,6 +1068,28 @@ abstract class BasePage(
         } catch (e: Throwable) {
             rep?.endCmd(success = false, message = "Press Enter failed for '${selector.description}': ${e.message ?: "exception"}")
             throw AssertionError("Failed to press Enter for selector: ${selector.description}", e)
+        }
+    }
+
+    /**
+     * Drive a Compose slider to [value] via its SetProgress semantics action, rather than a touch
+     * drag. A synthetic swipe can only land on whatever step the gesture geometry happens to hit;
+     * SetProgress asks the slider for an exact value, which is what the legacy accessibility test
+     * relied on to set a precise font-size percentage. Compose-tag selectors only.
+     */
+    fun mozSetSliderValue(selector: Selector, value: Float): BasePage {
+        val rep = rep()
+        rep?.startCmd(safeId("set_slider", selector.description), "Setting '${selector.description}' to $value...", 1)
+        try {
+            val node = composeRule.onNodeWithTag(selector.value)
+            node.assertExists()
+            node.performSemanticsAction(SemanticsActions.SetProgress) { it(value) }
+            rep?.endCmd(success = true, message = "Set '${selector.description}' to $value")
+            return this
+        } catch (e: Throwable) {
+            rep?.endCmd(success = false, message = "Set slider '${selector.description}' failed: ${e.message ?: "exception"}")
+            ScreenDump.dump(composeRule, "mozSetSliderValue failed: ${selector.description}")
+            throw e
         }
     }
 
@@ -1289,6 +1388,21 @@ abstract class BasePage(
                     null
                 }
             }
+            SelectorStrategy.COMPOSE_BY_TAG_AND_CONTENT_DESCRIPTION_SUBSTRING -> {
+                val descriptionToMatch = selector.secondaryValue ?: ""
+                try {
+                    composeRule.onNode(
+                        hasTestTag(selector.value) and
+                            hasContentDescription(descriptionToMatch, substring = true),
+                    )
+                } catch (_: Exception) {
+                    Log.i(
+                        "mozGetElement",
+                        "Compose node not found for tag: ${selector.value} with content description: $descriptionToMatch",
+                    )
+                    null
+                }
+            }
             // TODO: easier way to isolate parent/child/sibling elements, auto-selects sibilings or children on failure as a back-up
             SelectorStrategy.COMPOSE_ON_ALL_NODES_BY_TAG_ON_FIRST -> {
                 try {
@@ -1405,6 +1519,26 @@ abstract class BasePage(
                 }
             }
 
+            SelectorStrategy.UIAUTOMATOR2_BY_TEXT_CONTAINS -> {
+                val obj = mDevice.findObject(By.textContains(selector.value))
+                if (obj == null) {
+                    Log.i("mozGetElement", "UIObject2 not found for textContains: ${selector.value}")
+                    null
+                } else {
+                    obj
+                }
+            }
+
+            SelectorStrategy.UIAUTOMATOR2_BY_DESCRIPTION_CONTAINS -> {
+                val obj = mDevice.findObject(By.descContains(selector.value))
+                if (obj == null) {
+                    Log.i("mozGetElement", "UIObject2 not found for descContains: ${selector.value}")
+                    null
+                } else {
+                    obj
+                }
+            }
+
             SelectorStrategy.UIAUTOMATOR2_BY_RES -> {
                 val obj = mDevice.findObject(By.res(packageName + ":id/" + selector.value))
                 if (obj == null) {
@@ -1422,6 +1556,14 @@ abstract class BasePage(
 
             SelectorStrategy.UIAUTOMATOR_WITH_COMPOSE_TAG -> {
                 val obj = mDevice.findObject(UiSelector().resourceId(selector.value))
+                if (!obj.exists()) null else obj
+            }
+
+            SelectorStrategy.UIAUTOMATOR_WITH_RES_ID_AND_DESCRIPTION_CONTAINS -> {
+                val descriptionToMatch = selector.secondaryValue ?: ""
+                val obj = mDevice.findObject(
+                    UiSelector().resourceId(selector.value).descriptionContains(descriptionToMatch),
+                )
                 if (!obj.exists()) null else obj
             }
 

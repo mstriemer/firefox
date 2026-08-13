@@ -25,6 +25,8 @@ const DEFAULT_PORT = 9222;
 const ENV_ALLOW_SYSTEM_ACCESS = "MOZ_REMOTE_ALLOW_SYSTEM_ACCESS";
 
 const SHARED_DATA_ACTIVE_KEY = "RemoteAgent:Active";
+const SHARED_DATA_IS_BROWSER_AUTOMATION_KEY =
+  "RemoteAgent:IsBrowserAutomationRunning";
 
 const PREF_DYNAMIC_START_ENABLED = "remote.experimental.dynamicstart.enabled";
 
@@ -38,6 +40,7 @@ class RemoteAgentParentProcess {
   #browserStartupFinished;
   #enabled;
   #host;
+  #isBrowserAutomation;
   #port;
   #server;
 
@@ -50,6 +53,10 @@ class RemoteAgentParentProcess {
 
     this.#browserStartupFinished = lazy.Deferred();
     this.#enabled = false;
+
+    // Whether the running instance belongs to a browser automation session.
+    // True for command line startup. Optional for startAtRuntime.
+    this.#isBrowserAutomation = true;
 
     // Configuration for httpd.js
     this.#host = DEFAULT_HOST;
@@ -134,6 +141,10 @@ class RemoteAgentParentProcess {
     return !!this.#server && !this.#server.isStopped();
   }
 
+  get isBrowserAutomationRunning() {
+    return this.running && this.#isBrowserAutomation;
+  }
+
   get scheme() {
     return this.#server?.identity.primaryScheme;
   }
@@ -149,6 +160,10 @@ class RemoteAgentParentProcess {
    */
   updateWebdriverActiveFlag(value) {
     Services.ppmm.sharedData.set(SHARED_DATA_ACTIVE_KEY, value);
+    Services.ppmm.sharedData.set(
+      SHARED_DATA_IS_BROWSER_AUTOMATION_KEY,
+      value && this.#isBrowserAutomation
+    );
     Services.ppmm.sharedData.flush();
   }
 
@@ -536,10 +551,17 @@ class RemoteAgentParentProcess {
    * Start RemoteAgent at runtime, unless already running via command line
    * arguments.
    *
+   * @param {object=} options
+   * @param {boolean=} options.isBrowserAutomation
+   *     True if the server is started for regular browser automation (as
+   *     opposed to tooling, agentic assisted browsing etc.). Defaults to true.
+   *
    * @returns {number}
    *     The port on which RemoteAgent started.
    */
-  async startAtRuntime() {
+  async startAtRuntime(options = {}) {
+    const { isBrowserAutomation = true } = options;
+
     if (!Services.prefs.getBoolPref(PREF_DYNAMIC_START_ENABLED, false)) {
       lazy.logger.debug(
         `Start aborted, ${PREF_DYNAMIC_START_ENABLED} is disabled`
@@ -580,6 +602,8 @@ class RemoteAgentParentProcess {
     // startup should already be done at this point and we can't monitor the
     // observer notification.
     this.#browserStartupFinished.resolve();
+
+    this.#isBrowserAutomation = isBrowserAutomation;
 
     // Start the RemoteAgent server.
     this.#enabled = true;
@@ -626,6 +650,13 @@ class RemoteAgentParentProcess {
 class RemoteAgentContentProcess {
   get running() {
     return Services.cpmm.sharedData.get(SHARED_DATA_ACTIVE_KEY) ?? false;
+  }
+
+  get isBrowserAutomationRunning() {
+    return (
+      Services.cpmm.sharedData.get(SHARED_DATA_IS_BROWSER_AUTOMATION_KEY) ??
+      false
+    );
   }
 
   // XPCOM

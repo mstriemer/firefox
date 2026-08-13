@@ -1911,6 +1911,13 @@ criteria = "safe-to-deploy"
 delta = "0.36.0 -> 0.37.0"
 notes = "First-party code"
 
+[[audits.cssparser]]
+who = "Emilio Cobos Álvarez <emilio@crisal.io>"
+criteria = "safe-to-deploy"
+delta = "0.37.0 -> 0.37.0@git:eff8704e994dc54e5df2a936b78b51828ee21464"
+importable = false
+notes = "Unpublished changes all authored or reviewed by me."
+
 [[audits.cssparser-color]]
 who = "Emilio Cobos Álvarez <emilio@crisal.io>"
 criteria = "safe-to-deploy"
@@ -1942,6 +1949,13 @@ who = "Nico Burns <nico@nicoburns.com>"
 criteria = "safe-to-deploy"
 delta = "0.6.1 -> 0.7.0"
 notes = "First party code"
+
+[[audits.cssparser-macros]]
+who = "Emilio Cobos Álvarez <emilio@crisal.io>"
+criteria = "safe-to-deploy"
+delta = "0.7.0 -> 0.7.0@git:eff8704e994dc54e5df2a936b78b51828ee21464"
+importable = false
+notes = "Dependency updates + upstream-reviewed changes."
 
 [[audits.cstr]]
 who = "Emilio Cobos Álvarez <emilio@crisal.io>"
@@ -3207,6 +3221,12 @@ criteria = "safe-to-deploy"
 delta = "0.30.0 -> 0.29.0"
 notes = "No unsafe code, mostly algorithms and parsing. Very unlikely to cause security issues."
 
+[[audits.gl_generator]]
+who = "Jamie Nicol <jnicol@mozilla.com>"
+criteria = "safe-to-deploy"
+delta = "0.14.0 -> 0.14.0@git:71c792dbfe0ec5caeb242fc90937e19098386342"
+importable = false
+
 [[audits.gleam]]
 who = "Jamie Nicol <jnicol@mozilla.com>"
 criteria = "safe-to-deploy"
@@ -3216,6 +3236,12 @@ delta = "0.13.1 -> 0.15.0"
 who = "Jamie Nicol <jnicol@mozilla.com>"
 criteria = "safe-to-deploy"
 delta = "0.15.0 -> 0.15.1"
+
+[[audits.gleam]]
+who = "Jamie Nicol <jnicol@mozilla.com>"
+criteria = "safe-to-deploy"
+delta = "0.15.1 -> 0.15.1@git:68ca4e5cc31135b843af07ff213a94b9ddce64cf"
+importable = false
 
 [[audits.glob]]
 who = "Mike Hommey <mh+mozilla@glandium.org>"
@@ -4079,6 +4105,11 @@ who = "Mike Hommey <mh+mozilla@glandium.org>"
 criteria = "safe-to-deploy"
 delta = "0.10.3 -> 0.10.5"
 
+[[audits.itertools]]
+who = "Erich Gubler <erichdongubler@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.14.0 -> 0.15.0"
+
 [[audits.itoa]]
 who = "Mike Hommey <mh+mozilla@glandium.org>"
 criteria = "safe-to-deploy"
@@ -4170,6 +4201,12 @@ delta = "0.1.4 -> 0.1.6"
 who = "Nicolas Silva <nical@fastmail.com>"
 criteria = "safe-to-deploy"
 delta = "4.1.0 -> 6.0.0"
+
+[[audits.khronos_api]]
+who = "Jamie Nicol <jnicol@mozilla.com>"
+criteria = "safe-to-deploy"
+delta = "3.1.0 -> 3.1.0@git:71c792dbfe0ec5caeb242fc90937e19098386342"
+importable = false
 
 [[audits.lalrpop-util]]
 who = "Ben Dean-Kawamura <bdk@mozilla.com>"
@@ -5008,11 +5045,11 @@ delta = "29.0.0 -> 30.0.0"
 [[audits.naga]]
 who = [
     "Teodor Tanasoaia <ttanasoaia@mozilla.com>",
-    "Erich Gubler <erichdongubler@gmail.com>",
     "Andy Leiserson <aleiserson@mozilla.com>",
+    "Erich Gubler <erichdongubler@gmail.com>",
 ]
 criteria = "safe-to-deploy"
-delta = "30.0.0 -> 30.0.0@git:f680a2c242ce109d632b1154d72e0e7836e31c67"
+delta = "30.0.0 -> 30.0.0@git:f7ebc076619e8e6f55def9a13199c1ccc02cc4b4"
 importable = false
 
 [[audits.naga-types]]
@@ -5026,11 +5063,11 @@ version = "30.0.0"
 [[audits.naga-types]]
 who = [
     "Teodor Tanasoaia <ttanasoaia@mozilla.com>",
-    "Erich Gubler <erichdongubler@gmail.com>",
     "Andy Leiserson <aleiserson@mozilla.com>",
+    "Erich Gubler <erichdongubler@gmail.com>",
 ]
 criteria = "safe-to-deploy"
-delta = "30.0.0 -> 30.0.0@git:f680a2c242ce109d632b1154d72e0e7836e31c67"
+delta = "30.0.0 -> 30.0.0@git:f7ebc076619e8e6f55def9a13199c1ccc02cc4b4"
 importable = false
 
 [[audits.net2]]
@@ -7978,11 +8015,11 @@ delta = "29.0.0 -> 30.0.0"
 [[audits.wgpu-core]]
 who = [
     "Teodor Tanasoaia <ttanasoaia@mozilla.com>",
-    "Erich Gubler <erichdongubler@gmail.com>",
     "Andy Leiserson <aleiserson@mozilla.com>",
+    "Erich Gubler <erichdongubler@gmail.com>",
 ]
 criteria = "safe-to-deploy"
-delta = "30.0.0 -> 30.0.0@git:f680a2c242ce109d632b1154d72e0e7836e31c67"
+delta = "30.0.0 -> 30.0.0@git:f7ebc076619e8e6f55def9a13199c1ccc02cc4b4"
 importable = false
 
 [[audits.wgpu-core-deps-apple]]
@@ -8037,11 +8074,11 @@ delta = "29.0.0 -> 30.0.0"
 [[audits.wgpu-core-deps-apple]]
 who = [
     "Teodor Tanasoaia <ttanasoaia@mozilla.com>",
-    "Erich Gubler <erichdongubler@gmail.com>",
     "Andy Leiserson <aleiserson@mozilla.com>",
+    "Erich Gubler <erichdongubler@gmail.com>",
 ]
 criteria = "safe-to-deploy"
-delta = "30.0.0 -> 30.0.0@git:f680a2c242ce109d632b1154d72e0e7836e31c67"
+delta = "30.0.0 -> 30.0.0@git:f7ebc076619e8e6f55def9a13199c1ccc02cc4b4"
 importable = false
 
 [[audits.wgpu-core-deps-windows-linux-android]]
@@ -8229,11 +8266,11 @@ delta = "29.0.0 -> 30.0.0"
 [[audits.wgpu-hal]]
 who = [
     "Teodor Tanasoaia <ttanasoaia@mozilla.com>",
-    "Erich Gubler <erichdongubler@gmail.com>",
     "Andy Leiserson <aleiserson@mozilla.com>",
+    "Erich Gubler <erichdongubler@gmail.com>",
 ]
 criteria = "safe-to-deploy"
-delta = "30.0.0 -> 30.0.0@git:f680a2c242ce109d632b1154d72e0e7836e31c67"
+delta = "30.0.0 -> 30.0.0@git:f7ebc076619e8e6f55def9a13199c1ccc02cc4b4"
 importable = false
 
 [[audits.wgpu-naga-bridge]]
@@ -8258,11 +8295,11 @@ delta = "29.0.0 -> 30.0.0"
 [[audits.wgpu-naga-bridge]]
 who = [
     "Teodor Tanasoaia <ttanasoaia@mozilla.com>",
-    "Erich Gubler <erichdongubler@gmail.com>",
     "Andy Leiserson <aleiserson@mozilla.com>",
+    "Erich Gubler <erichdongubler@gmail.com>",
 ]
 criteria = "safe-to-deploy"
-delta = "30.0.0 -> 30.0.0@git:f680a2c242ce109d632b1154d72e0e7836e31c67"
+delta = "30.0.0 -> 30.0.0@git:f7ebc076619e8e6f55def9a13199c1ccc02cc4b4"
 importable = false
 
 [[audits.wgpu-types]]
@@ -8390,11 +8427,11 @@ delta = "29.0.0 -> 30.0.0"
 [[audits.wgpu-types]]
 who = [
     "Teodor Tanasoaia <ttanasoaia@mozilla.com>",
-    "Erich Gubler <erichdongubler@gmail.com>",
     "Andy Leiserson <aleiserson@mozilla.com>",
+    "Erich Gubler <erichdongubler@gmail.com>",
 ]
 criteria = "safe-to-deploy"
-delta = "30.0.0 -> 30.0.0@git:f680a2c242ce109d632b1154d72e0e7836e31c67"
+delta = "30.0.0 -> 30.0.0@git:f7ebc076619e8e6f55def9a13199c1ccc02cc4b4"
 importable = false
 
 [[audits.whatsys]]

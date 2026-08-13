@@ -10,7 +10,6 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "mozilla/Maybe.h"
 #include "mozilla/StaticPtr.h"
 #include "mozilla/gfx/2D.h"
 #include "mozilla/layers/LayersTypes.h"
@@ -36,8 +35,8 @@ class GpuProcessD3D11TextureMap {
   static GpuProcessD3D11TextureMap* Get() { return sInstance; }
   static GpuProcessTextureId GetNextTextureId();
 
-  GpuProcessD3D11TextureMap();
-  ~GpuProcessD3D11TextureMap();
+  GpuProcessD3D11TextureMap() = default;
+  ~GpuProcessD3D11TextureMap() = default;
 
   void Register(GpuProcessTextureId aTextureId, ID3D11Texture2D* aTexture,
                 uint32_t aArrayIndex, const gfx::IntSize& aSize,
@@ -51,7 +50,8 @@ class GpuProcessD3D11TextureMap {
   void Unregister(GpuProcessTextureId aTextureId);
 
   RefPtr<ID3D11Texture2D> GetTexture(GpuProcessTextureId aTextureId);
-  Maybe<HANDLE> GetSharedHandle(GpuProcessTextureId aTextureId);
+  RefPtr<gfx::FileHandleWrapper> GetSharedHandle(
+      GpuProcessTextureId aTextureId);
   void DisableZeroCopyNV12Texture(GpuProcessTextureId aTextureId);
 
   size_t GetWaitingTextureCount() const;
@@ -99,7 +99,8 @@ class GpuProcessD3D11TextureMap {
 
   RefPtr<ID3D11Texture2D> UpdateTextureData(UpdatingTextureHolder* aHolder);
 
-  mutable Monitor mMonitor MOZ_UNANNOTATED;
+  mutable Monitor mMonitor MOZ_UNANNOTATED{
+      "GpuProcessD3D11TextureMap::mMonitor"};
 
   std::unordered_map<GpuProcessTextureId, TextureHolder,
                      GpuProcessTextureId::HashFn>

@@ -39,7 +39,7 @@ already_AddRefed<ViewTimeline> ViewTimeline::MakeNamed(
 
   // 2. Create timeline.
   return MakeAndAddRef<ViewTimeline>(aDocument, scroller, aAxis, aSubject,
-                                     aPseudoRequest.mType, aInset);
+                                     aPseudoRequest.mType, aInset, false);
 }
 
 /* static */
@@ -48,9 +48,9 @@ already_AddRefed<ViewTimeline> ViewTimeline::MakeAnonymous(
     StyleScrollAxis aAxis, const StyleViewTimelineInset& aInset) {
   // view() finds the nearest scroll container from the animation target.
   auto scroller = ScrollerInfo::Anonymous(StyleScroller::Nearest, aTarget);
-  return MakeAndAddRef<ViewTimeline>(aDocument, scroller, aAxis,
-                                     aTarget.mElement,
-                                     aTarget.mPseudoRequest.mType, aInset);
+  return MakeAndAddRef<ViewTimeline>(
+      aDocument, scroller, aAxis, aTarget.mElement,
+      aTarget.mPseudoRequest.mType, aInset, true);
 }
 
 JSObject* ViewTimeline::WrapObject(JSContext* aCx,
@@ -107,8 +107,7 @@ already_AddRefed<ViewTimeline> ViewTimeline::Constructor(
 
   // The spec doesn't provide the default value for element, so we use null
   // subject to align the behavior with other browsers.
-  RefPtr<Element> subject =
-      aOptions.mSubject.WasPassed() ? &aOptions.mSubject.Value() : nullptr;
+  RefPtr<Element> subject = aOptions.mSubject;
 
   StyleScrollAxis axis;
   switch (aOptions.mAxis) {
@@ -176,7 +175,7 @@ already_AddRefed<ViewTimeline> ViewTimeline::Constructor(
       subject, PseudoStyleRequest::NotPseudo());
 
   RefPtr<ViewTimeline> result = MakeAndAddRef<ViewTimeline>(
-      doc, scroller, axis, subject, PseudoStyleType::NotPseudo, inset);
+      doc, scroller, axis, subject, PseudoStyleType::NotPseudo, inset, false);
   if (subject) {
     // The values of subject, source, and currentTime are all computed when any
     // of them is requested or updated, per spec.
@@ -548,6 +547,14 @@ std::pair<double, double> ViewTimeline::IntervalForAttachmentRange(
       };
   return {computeNamedRangeEdgeAsPercentage(aStyleRange.mStart),
           computeNamedRangeEdgeAsPercentage(aStyleRange.mEnd)};
+}
+
+bool ViewTimeline::IsReusableAnonymousTimeline(
+    const StyleGenericViewFunction<StyleLengthPercentage>& aView) const {
+  if (!mIsAnonymous) {
+    return false;
+  }
+  return mAxis == aView.axis && mInset == aView.inset;
 }
 
 Maybe<ScrollTimeline::ComputedTimelineData> ViewTimeline::ComputeTimelineData()

@@ -220,6 +220,7 @@ button:disabled {
   /* Narrow viewports buy width back with padding rather than by shrinking type.
      This selector matches the page itself, and the card's own rules below reach
      into its shadow tree. */
+  /* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
   body:has(net-error-card) {
     @media (max-width: 640px) {
       padding-inline: var(--space-xxlarge);

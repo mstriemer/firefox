@@ -12,6 +12,7 @@
 #include "mozilla/EffectCompositor.h"
 #include "mozilla/ElementAnimationData.h"
 #include "mozilla/ServoStyleSet.h"
+#include "mozilla/StaticPrefs_layout.h"
 #include "mozilla/TimelineCollection.h"
 #include "mozilla/dom/AnimationEffect.h"
 #include "mozilla/dom/Document.h"
@@ -244,9 +245,9 @@ static void UpdateOldAnimationPropertiesWithNew(
   // the scroll-timeline object if their scrollers and axes are the same.
   if (aOld.GetTimeline() != aTimeline) {
     // See `UpdateNamedTimelineAnimation` as to why `SetTimeline` isn't used.
-    animationChanged =
-        animationChanged || aOld.SetTimelineNoUpdate(aTimeline, aTimelineName,
-                                                     Animation::FromJS::No);
+    const bool timelineDidChange = aOld.SetTimelineNoUpdate(
+        aTimeline, aTimelineName, Animation::FromJS::No);
+    animationChanged = animationChanged || timelineDidChange;
   }
 
   if (aOld.GetTimelineRange() != aTimelineRange) {
@@ -300,9 +301,9 @@ static already_AddRefed<dom::AnimationTimeline> GetNamedProgressTimeline(
       return result.forget();
     }
     // We're scoped, or have reached the top.
-    if ((timelineManager &&
-         timelineManager->TimelineNameScopedByElement(element, aName.mName)) ||
-        e == aDocument->GetDocumentElement()) {
+    if (timelineManager &&
+        (timelineManager->TimelineNameScopedByElement(element, aName.mName) ||
+         e->IsRootElement())) {
       return timelineManager->GetNamedTimelineInSubtree(
           element, aName.mName, targetShadowRoot, aDocument);
     }
@@ -313,7 +314,8 @@ static already_AddRefed<dom::AnimationTimeline> GetNamedProgressTimeline(
 
 static already_AddRefed<dom::AnimationTimeline> GetTimeline(
     const StyleAnimationTimeline& aStyleTimeline, nsPresContext* aPresContext,
-    const NonOwningAnimationTarget& aTarget) {
+    const NonOwningAnimationTarget& aTarget,
+    dom::AnimationTimeline* aOldTimeline) {
   switch (aStyleTimeline.tag) {
     case StyleAnimationTimeline::Tag::Timeline: {
       // Check scroll-timeline-name property or view-timeline-property.
@@ -328,11 +330,36 @@ static already_AddRefed<dom::AnimationTimeline> GetTimeline(
     }
     case StyleAnimationTimeline::Tag::Scroll: {
       const auto& scroll = aStyleTimeline.AsScroll();
+      const bool reuseOldTimeline = [&]() {
+        const auto* scrollTimeline =
+            aOldTimeline ? aOldTimeline->AsScrollTimeline() : nullptr;
+        if (!scrollTimeline || scrollTimeline->IsViewTimeline()) {
+          return false;
+        }
+        return scrollTimeline->IsReusableAnonymousTimeline(scroll);
+      }();
+      if (reuseOldTimeline) {
+        // TODO(dshin): Refcount churn. Hopefully this doesn't happen often
+        // enough?
+        return do_AddRef(aOldTimeline);
+      }
       return ScrollTimeline::MakeAnonymous(aPresContext->Document(), aTarget,
                                            scroll.axis, scroll.scroller);
     }
     case StyleAnimationTimeline::Tag::View: {
       const auto& view = aStyleTimeline.AsView();
+      const bool reuseOldTimeline = [&]() {
+        const auto* viewTimeline =
+            aOldTimeline ? aOldTimeline->AsViewTimeline() : nullptr;
+        if (!viewTimeline) {
+          return false;
+        }
+        return viewTimeline->IsReusableAnonymousTimeline(view);
+      }();
+      if (reuseOldTimeline) {
+        // TODO(dshin): Same potential issue as `scroll()` above.
+        return do_AddRef(aOldTimeline);
+      }
       return ViewTimeline::MakeAnonymous(aPresContext->Document(), aTarget,
                                          view.axis, view.inset);
     }
@@ -379,9 +406,14 @@ static already_AddRefed<CSSAnimation> BuildAnimation(
   bool isStylePaused =
       aStyle.GetAnimationPlayState(animIdx) == StyleAnimationPlayState::Paused;
 
+  // Find the matching animation with animation name in the old list
+  // of animations and remove the matched animation from the list.
+  RefPtr<CSSAnimation> oldAnim =
+      PopExistingAnimation(animationName, aCollection);
   const auto& styleTimeline = aStyle.GetTimeline(animIdx);
   RefPtr<dom::AnimationTimeline> timeline =
-      GetTimeline(styleTimeline, aPresContext, aTarget);
+      GetTimeline(styleTimeline, aPresContext, aTarget,
+                  oldAnim ? oldAnim->GetTimeline() : nullptr);
   auto timelineName = [&]() -> dom::ScopedTimelineName {
     if (!styleTimeline.IsTimeline()) {
       return {};
@@ -397,11 +429,6 @@ static already_AddRefed<CSSAnimation> BuildAnimation(
   auto range = dom::AnimationRange{aStyle.GetAnimationRangeStart(animIdx),
                                    aStyle.GetAnimationRangeEnd(animIdx)};
 
-  // Find the matching animation with animation name in the old list
-  // of animations and remove the matched animation from the list.
-  RefPtr<CSSAnimation> oldAnim =
-      PopExistingAnimation(animationName, aCollection);
-
   const auto composition = StyleToDom(aStyle.GetAnimationComposition(animIdx));
   if (oldAnim) {
     // Copy over the start times and (if still paused) pause starts
@@ -414,8 +441,8 @@ static already_AddRefed<CSSAnimation> BuildAnimation(
     // In order to honor what the spec said, we'd copy more data over.
     UpdateOldAnimationPropertiesWithNew(
         *oldAnim, std::move(timing), std::move(keyframes), isStylePaused,
-        oldAnim->PropertiesOverridenByJS(), aBuilder, timeline, timelineName,
-        timingFunction, composition, std::move(range),
+        oldAnim->PropertiesOverridenByJS(), aBuilder, timeline.get(),
+        timelineName, timingFunction, composition, std::move(range),
         aTimelineNamesToAnimationMap);
     // For now, only name-referenced timeline, or `none`, which is represented
     // as IsTimeline with the empty atom, can result in no timeline.
@@ -506,13 +533,14 @@ void nsAnimationManager::UpdateAnimations(
              "document tree");
 
   if (!aComputedStyle ||
-      aComputedStyle->StyleDisplay()->mDisplay == StyleDisplay::None) {
+      (!StaticPrefs::layout_css_display_animations_enabled() &&
+       aComputedStyle->StyleDisplay()->mDisplay == StyleDisplay::None)) {
     // If we are in a display:none subtree we will have no computed values.
     // However, if we are on the root of display:none subtree, the computed
     // values might not have been cleared yet.
-    // In either case, since CSS animations should not run in display:none
-    // subtrees we should stop (actually, destroy) any animations on this
-    // element here.
+    // Stop (actually, destroy) any animations here: either there are no
+    // computed values, or display animations are disabled and this is a
+    // display:none root.
     StopAnimationsForElement(aElement, aPseudoRequest);
     return;
   }

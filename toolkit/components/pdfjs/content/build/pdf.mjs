@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 6.3.66
- * pdfjsBuild = 5f181fd8b
+ * pdfjsVersion = 6.3.72
+ * pdfjsBuild = 71a3c6a89
  */
 
 ;// ./src/shared/util.js
@@ -2062,7 +2062,7 @@ class FloatingToolbar {
 }
 
 ;// ./src/shared/internal_evt.js
-const INTERNAL_EVT = "c45ce53b-200d-49e5-8bc4-f55665784f6f";
+const INTERNAL_EVT = "73d553f8-709f-4713-892b-c46926003d23";
 const internalOpt = Object.freeze({
   internal: INTERNAL_EVT
 });
@@ -9822,7 +9822,6 @@ const MAX_FONT_SIZE = 100;
 const EXECUTION_TIME = 15;
 const EXECUTION_STEPS = 10;
 const FULL_CHUNK_HEIGHT = 16;
-const SCALE_MATRIX = new DOMMatrix();
 const XY = new Float32Array(2);
 function mirrorContextOperations(ctx, destCtx) {
   if (ctx._removeMirroring) {
@@ -10085,6 +10084,7 @@ const LINE_JOIN_STYLES = ["miter", "round", "bevel"];
 const NORMAL_CLIP = {};
 const EO_CLIP = {};
 class CanvasGraphics {
+  static #SCALE_MATRIX = null;
   #knockoutGroupLevel = 0;
   #knockoutElementDepth = 0;
   #knockoutTempCanvasEntry = null;
@@ -12437,6 +12437,7 @@ class CanvasGraphics {
       ctx.stroke(path);
       return;
     }
+    const SCALE_MATRIX = CanvasGraphics.#SCALE_MATRIX ??= new DOMMatrix();
     const dashes = ctx.getLineDash();
     if (saveRestore) {
       ctx.save();
@@ -14352,7 +14353,7 @@ function getDocument(src = {}) {
   }
   const docParams = {
     docId,
-    apiVersion: "6.3.66",
+    apiVersion: "6.3.72",
     data,
     password,
     disableAutoFetch,
@@ -16015,8 +16016,8 @@ class InternalRenderTask {
     }
   }
 }
-const version = "6.3.66";
-const build = "5f181fd8b";
+const version = "6.3.72";
+const build = "71a3c6a89";
 
 ;// ./src/display/editor/color_picker.js
 
@@ -26996,9 +26997,9 @@ globalThis.pdfjsLib = {
   updateUrlHash: updateUrlHash,
   Util: Util,
   VerbosityLevel: VerbosityLevel,
-  version: (/* inlined export .version */"6.3.66"),
+  version: (/* inlined export .version */"6.3.72"),
   XfaLayer: XfaLayer
 };
 
-const __webpack_exports__version = (/* inlined export .version */"6.3.66");
+const __webpack_exports__version = (/* inlined export .version */"6.3.72");
 export { AbortException, AnnotationEditorLayer, AnnotationEditorParamsType, AnnotationEditorType, AnnotationEditorUIManager, AnnotationLayer, AnnotationMode, AnnotationType, CSSConstants, ColorPicker, DOMSVGFactory, DrawLayer, FeatureTest, GlobalWorkerOptions, ImageKind, InvalidPDFException, MathClamp, OPS, OutputScale, PDFDataRangeTransport, PDFDateString, PDFWorker, PasswordException, PasswordResponses, PermissionFlag, PixelsPerInch, RenderingCancelledException, ResponseException, SignatureExtractor, SupportedImageMimeTypes, TextLayer, TextLayerImages, TouchManager, Util, VerbosityLevel, XfaLayer, applyOpacity, build, createValidAbsoluteUrl, fetchData, findContrastColor, getDocument, getFilenameFromUrl, getPdfFilenameFromUrl, getRGB, getRGBA, getUuid, isDataScheme, isPdfFile, isValidExplicitDest, makeArr, makeMap, makeObj, makeSet, noContextMenu, normalizeUnicode, renderRichText, setLayerDimensions, shadow, stopEvent, updateUrlHash, __webpack_exports__version as version };

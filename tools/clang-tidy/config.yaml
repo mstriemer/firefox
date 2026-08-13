@@ -33,6 +33,8 @@ clang_checkers:
     reliability: high
   - name: modernize-use-equals-delete
     reliability: high
+  - name: modernize-use-transparent-functors
+    reliability: high
   - name: readability-redundant-string-cstr
     reliability: high
   - name: readability-redundant-string-init
@@ -71,8 +73,6 @@ clang_checkers:
   - name: performance-inefficient-vector-operation
     reliability: high
   - name: performance-trivially-destructible
-    reliability: high
-  - name: performance-unnecessary-copy-initialization
     reliability: high
   - name: modernize-use-nullptr
     reliability: high

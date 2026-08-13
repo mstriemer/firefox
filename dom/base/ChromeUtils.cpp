@@ -43,6 +43,7 @@
 #include "mozilla/SpinEventLoopUntil.h"
 #include "mozilla/TimeStamp.h"
 #include "mozilla/WheelHandlingHelper.h"
+#include "mozilla/dom/BlobURLProtocolHandler.h"
 #include "mozilla/dom/ContentParent.h"
 #include "mozilla/dom/IdleDeadline.h"
 #include "mozilla/dom/InProcessParent.h"
@@ -1845,9 +1846,11 @@ void ChromeUtils::InvalidateResourceCache(GlobalObject& aGlobal,
 
 void ChromeUtils::GetCachedJavaScriptSource(
     GlobalObject& aGlobal, const nsACString& aKey, const nsACString& aURI,
-    JS::MutableHandle<JS::Value> aRetval, ErrorResult& aRv) {
+    const nsACString& aHintCharset, JS::MutableHandle<JS::Value> aRetval,
+    ErrorResult& aRv) {
   JSContext* cx = aGlobal.Context();
-  if (!SharedScriptCache::GetCachedScriptSource(cx, aKey, aURI, aRetval)) {
+  if (!SharedScriptCache::GetCachedScriptSource(cx, aKey, aURI, aHintCharset,
+                                                aRetval)) {
     aRv.NoteJSContextException(aGlobal.Context());
   }
 }
@@ -3072,6 +3075,12 @@ void ChromeUtils::PredictRemoteTypeForURI(
   }
 
   PredictRemoteTypeForURI(aGlobal, preferredURI, newOptions, aRemoteType, aRv);
+}
+
+bool ChromeUtils::IsBlobURLValid(GlobalObject& aGlobal,
+                                 nsIPrincipal* aPrincipal,
+                                 const nsACString& aURIString) {
+  return BlobURLProtocolHandler::IsBlobURLValid(aPrincipal, aURIString);
 }
 
 }  // namespace mozilla::dom

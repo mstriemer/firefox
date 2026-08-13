@@ -249,6 +249,58 @@ add_task(async function tabHoverTests() {
 });
 
 /**
+ * Verify that closing tabs in a row without moving the pointer keeps
+ * previewing whatever ends up under it, and that the preview is dismissed once
+ * nothing takes the closed tab's place.
+ */
+add_task(async function tabCloseHoverTests() {
+  const titles = ["First Closed", "Second Closed", "Last Closed"];
+  const tabs = [];
+  for (let title of titles) {
+    tabs.push(
+      await addTabTo(
+        gBrowser,
+        `data:text/html,<html><head><title>${title}</title></head><body>Hello</body></html>`
+      )
+    );
+  }
+  const previewContainer = document.getElementById(TAB_PREVIEW_PANEL_ID);
+
+  await openTabPreview(tabs[0]);
+
+  let sawHidden = false;
+  const onHidden = () => {
+    sawHidden = true;
+  };
+  previewContainer.addEventListener("popuphidden", onHidden);
+
+  // No mouse events in between: each close has to hand the hover over to the
+  // tab moving into its place on its own.
+  for (let i = 0; i < 2; i++) {
+    BrowserTestUtils.removeTab(tabs[i]);
+    await TestUtils.waitForCondition(
+      () =>
+        previewContainer.querySelector(".tab-preview-title").innerText ==
+        titles[i + 1],
+      `Preview moved onto ${titles[i + 1]}`
+    );
+    Assert.ok(tabs[i + 1]._hover, `${titles[i + 1]} took over the hover`);
+  }
+  Assert.ok(!sawHidden, "Preview stayed open across the tab closes");
+  previewContainer.removeEventListener("popuphidden", onHidden);
+
+  // The last tab has no successor, so nothing slides under the pointer.
+  const previewHidden = BrowserTestUtils.waitForPopupEvent(
+    previewContainer,
+    "hidden"
+  );
+  BrowserTestUtils.removeTab(tabs[2]);
+  await previewHidden;
+
+  await resetState();
+});
+
+/**
  * Verify the container (contextual identity) indicator:
  *
  * 1. Container tabs show a pill with the container label and identity classes

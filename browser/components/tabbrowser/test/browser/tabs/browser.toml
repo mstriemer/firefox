@@ -64,6 +64,8 @@ tags = "vertical-tabs"
 ["browser_bug_1387976_restore_lazy_tab_browser_muted_state.js"]
 tags = "vertical-tabs"
 
+["browser_closeWindowWithLastTab_contentClose.js"]
+
 ["browser_close_during_beforeunload.js"]
 https_first_disabled = true
 

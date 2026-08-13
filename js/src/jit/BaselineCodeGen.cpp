@@ -5128,7 +5128,7 @@ void BaselineCompilerCodeGen::loadResumeArgsBase(Register dest) {
         dest);
   } else {
     masm.computeEffectiveAddress(
-        Address(FramePointer, JitFrameLayout::offsetOfModuleResumeSlots()),
+        Address(FramePointer, JitFrameLayout::offsetOfModuleResumeArgs()),
         dest);
   }
 }
@@ -5151,7 +5151,7 @@ void BaselineInterpreterCodeGen::loadResumeArgsBase(Register dest) {
   masm.bind(&isModule);
   {
     masm.computeEffectiveAddress(
-        Address(FramePointer, JitFrameLayout::offsetOfModuleResumeSlots()),
+        Address(FramePointer, JitFrameLayout::offsetOfModuleResumeArgs()),
         dest);
   }
   masm.bind(&done);

@@ -18,6 +18,7 @@ const INVOKABLE_CONTENT_ACTIONS = {
   input: new Set(["search", "setValue", "startQuery"]),
   view: new Set([
     "acknowledgeFeedback",
+    "clearTopSitesCache",
     "close",
     "updateResultMenuCommands",
     "startTail150",
@@ -25,6 +26,7 @@ const INVOKABLE_CONTENT_ACTIONS = {
 };
 
 /**
+ * @import {URIFixupPrimitives} from "chrome://browser/content/urlbar/UrlbarShared.mjs"
  * @import {UrlbarParent} from "./UrlbarParent.sys.mjs"
  * @import {UrlbarParentController} from "moz-src:///browser/components/urlbar/UrlbarParentController.sys.mjs"
  * @import {UrlbarChildController} from "chrome://browser/content/urlbar/UrlbarChildController.mjs"
@@ -141,9 +143,15 @@ export class UrlbarChild extends JSWindowActorChild {
         registerChildController: (instanceId, child) =>
           this.registerChildController(instanceId, child),
         whereToOpenLink: event => this.whereToOpenLink(event),
-        getFixupInfo: (searchString, isPrivate) =>
-          Cu.cloneInto(this.getFixupInfo(searchString, isPrivate), win),
+        willLoadInBackground: (where, params) =>
+          this.willLoadInBackground(where, params),
+        getFixupPrimitives: (searchString, isPrivate) =>
+          Cu.cloneInto(this.getFixupPrimitives(searchString, isPrivate), win),
         getDisplaySpec: url => this.getDisplaySpec(url),
+        unEscapeURIForUI: uri => this.unEscapeURIForUI(uri),
+        getSupportUrl: topic => this.getSupportUrl(topic),
+        isTextDirectionRTL: (value, window) =>
+          this.isTextDirectionRTL(value, window),
         getPref: name => Cu.cloneInto(lazy.UrlbarPrefs.get(name), win),
         addPrefObserver: observer => lazy.UrlbarPrefs.addObserver(observer),
         removePrefObserver: observer =>
@@ -206,6 +214,20 @@ export class UrlbarChild extends JSWindowActorChild {
   }
 
   /**
+   * Forwards to `BrowserUtils.willLoadInBackground`, for the same reason
+   * `whereToOpenLink` does: the content-web input can't import `BrowserUtils`.
+   *
+   * @param {string} where
+   *   Where the link will open, as returned by `whereToOpenLink`.
+   * @param {object} params
+   *   The params that will be passed to `openLinkIn`.
+   * @returns {boolean}
+   */
+  willLoadInBackground(where, params) {
+    return lazy.BrowserUtils.willLoadInBackground(where, params);
+  }
+
+  /**
    * Runs URI fixup for a string on behalf of the content-web input, which can't
    * reach `Services.uriFixup`. Returns only the primitives the callers need, so
    * the input never holds an `nsIURIFixupInfo`.
@@ -214,17 +236,35 @@ export class UrlbarChild extends JSWindowActorChild {
    *   The string to fix up.
    * @param {boolean} isPrivate
    *   Whether the fixup runs for a private context.
-   * @returns {?{keywordAsSent: boolean, preferredURIDisplaySpec: ?string}}
+   * @returns {?URIFixupPrimitives}
    *   The fixup primitives, or null if fixup threw.
    */
-  getFixupInfo(searchString, isPrivate) {
-    let info = lazy.UrlbarUtils.getURIFixupInfo(searchString, isPrivate);
-    return info
-      ? {
-          keywordAsSent: info.keywordAsSent,
-          preferredURIDisplaySpec: info.preferredURI?.displaySpec ?? null,
-        }
-      : null;
+  getFixupPrimitives(searchString, isPrivate) {
+    return lazy.UrlbarUtils.getFixupPrimitives(searchString, isPrivate);
+  }
+
+  /**
+   * Returns the SUMO URL for a support topic.
+   *
+   * @param {string} topic
+   *   The support page slug to append to the SUMO base URL.
+   * @returns {string}
+   */
+  getSupportUrl(topic) {
+    return Services.urlFormatter.formatURLPref("app.support.baseURL") + topic;
+  }
+
+  /**
+   * Checks whether a given text has right-to-left direction or not.
+   *
+   * @param {string} value The text which should be check for RTL direction.
+   * @param {Window} window The window where 'value' is going to be displayed.
+   * @returns {boolean} Returns true if text has right-to-left direction and
+   *                    false otherwise.
+   */
+  isTextDirectionRTL(value, window) {
+    let directionality = window.windowUtils.getDirectionFromText(value);
+    return directionality == window.windowUtils.DIRECTION_RTL;
   }
 
   /**
@@ -242,6 +282,20 @@ export class UrlbarChild extends JSWindowActorChild {
     } catch (ex) {
       return null;
     }
+  }
+
+  /**
+   * Unescapes a URI's percent-encoding for display, applying the spoofing
+   * protections `nsITextToSubURI` implements. Lets content-realm code render a
+   * URL without reaching `Services.textToSubURI`.
+   *
+   * @param {string} uri
+   *   The URI fragment to unescape.
+   * @returns {string}
+   *   The unescaped fragment.
+   */
+  unEscapeURIForUI(uri) {
+    return Services.textToSubURI.unEscapeURIForUI(uri);
   }
 
   receiveMessage(message) {
@@ -282,18 +336,6 @@ export class UrlbarChild extends JSWindowActorChild {
         ? lazy.UrlbarQueryContext.fromWire(param.serializedQueryContext)
         : param
     );
-    // The parent ran the query but the input lives here, so let it react to the
-    // first result (search mode, autofill) before the results are shown. If it
-    // takes over (returns true), the results are stale; don't dispatch them.
-    if (name == "onQueryResults") {
-      let queryContext = deserialized[0];
-      if (
-        queryContext.firstResultChanged &&
-        child.input.onFirstResult(queryContext.results[0])
-      ) {
-        return;
-      }
-    }
     child.notify(name, ...deserialized);
   }
 

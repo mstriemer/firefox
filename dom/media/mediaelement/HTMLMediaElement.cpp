@@ -8811,6 +8811,11 @@ bool HTMLMediaElement::IsControllableMediaSource() const {
     return true;
   }
 
+  if (mDecoder && mDecoder->IsLiveStream()) {
+    MEDIACONTROL_LOG("Controllable: live stream");
+    return true;
+  }
+
   // Short sounds (e.g. notifications) are excluded to avoid triggering the OS
   // media-control interface for them.
   const bool meetsThreshold =

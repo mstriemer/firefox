@@ -128,5 +128,10 @@ for var in (
 if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
     CXXFLAGS += CONFIG["MOZ_GTK3_CFLAGS"]
 
+SPHINX_TREES["/widget/windows/shell"] = "docs"
+
+with Files("docs/**"):
+    SCHEDULES.exclusive = ["docs"]
+
 with Files("**"):
     BUG_COMPONENT = ("Firefox", "Shell Integration")

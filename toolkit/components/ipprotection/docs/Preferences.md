@@ -27,6 +27,10 @@ know what you are doing.
 
 : Feature flag enabling the site exceptions capability.
 
+`browser.ipProtection.features.siteInclusions` (boolean, default: `false`)
+
+: Feature flag enabling the site inclusions capability.
+
 `browser.ipProtection.optedOut` (boolean, default: `false`)
 
 : Set when the user has opted out of the service.

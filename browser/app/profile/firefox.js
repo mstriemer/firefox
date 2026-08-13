@@ -483,7 +483,6 @@ pref("browser.urlbar.suggest.quickactions",         true);
 pref("browser.urlbar.allowSearchSuggestionsForSimpleOrigins", true);
 
 pref("browser.urlbar.deduplication.enabled", true);
-pref("browser.urlbar.deduplication.thresholdDays", 0);
 
 pref("browser.urlbar.scotchBonnet.enableOverride", true);
 
@@ -673,6 +672,7 @@ pref("browser.urlbar.maxCharsForSearchSuggestions", 100);
 
 pref("browser.urlbar.trimURLs", true);
 pref("browser.urlbar.trimHttps", false);
+pref("browser.urlbar.trimWww", false);
 pref("browser.urlbar.untrimOnUserInteraction.featureGate", false);
 
 // If changed to true, copying the entire URL from the location bar will put the
@@ -770,11 +770,17 @@ pref("places.semanticHistory.featureGate", true);
 #else
 pref("places.semanticHistory.featureGate", false);
 #endif
-pref("places.semanticHistory.supportedRegions", "[[\"AU\",[\"en-*\"]],[\"CA\",[\"en-*\"]],[\"GB\",[\"en-*\"]],[\"IE\",[\"en-*\"]],[\"NZ\",[\"en-*\"]],[\"PH\",[\"en-*\"]],[\"US\",[\"en-*\"]]]");
+pref("places.semanticHistory.supportedRegions", "[[\"AU\",[\"en-*\"]],[\"CA\",[\"en-*\"]],[\"GB\",[\"en-*\"]],[\"IE\",[\"en-*\"]],[\"NZ\",[\"en-*\"]],[\"PH\",[\"en-*\"]],[\"US\",[\"en-*\"]],[\"FR\",[\"en-*\",\"fr-*\"]]]");
 
 // Embedding family used by Places semantic history. "static" or "contextual".
-// Settable via Nimbus (semanticHistoryEmbeddingType).
-pref("places.semanticHistory.embeddingType", "static");
+// Settable via Nimbus (semanticHistoryEmbeddingType). An empty (or invalid)
+// value lets the family be picked from the home region, the locale and the OS.
+pref("places.semanticHistory.embeddingType", "");
+
+// Region / locale pairs that get multilingual (contextual) embeddings. Same
+// format as supportedRegions, except a "*" region matches any region, so the
+// entries below read as "France in English or French, or French anywhere".
+pref("places.semanticHistory.multilingualEmbeddingRegions", "[[\"FR\",[\"en-*\",\"fr-*\"]],[\"*\",[\"fr-*\"]]]");
 
 // Dev / debug overrides for the contextual engine. Not exposed via Nimbus.
 pref("browser.ml.embedGen.textEmbeddingSize", 384);
@@ -1164,6 +1170,11 @@ pref("browser.tabs.groups.smart.topicModelRevision", "latest");
 pref("browser.tabs.groups.smart.embeddingModelRevision", "latest");
 // value should be <= 1000 to be correctly converted (275 -> 0.275)
 pref("browser.tabs.groups.smart.nearestNeighborThresholdInt", 275);
+// Clustering method: KMEANS or AGGLOMERATIVE (hierarchical, average-linkage).
+pref("browser.tabs.groups.smart.clusterMethod", "AGGLOMERATIVE");
+// AGGLOMERATIVE cosine-distance cutoff in thousandths (825 -> 0.825). Lower is
+// stricter (more, smaller groups); higher is more lenient (fewer, larger).
+pref("browser.tabs.groups.smart.agglomerativeThresholdInt", 825);
 pref("browser.tabs.groups.smart.optin", false);
 
 pref("browser.tabs.dragDrop.createGroup.enabled", true);
@@ -1423,6 +1434,10 @@ pref("mousewheel.with_meta.action", 1);
 
 pref("browser.xul.error_pages.expert_bad_cert", false);
 pref("browser.xul.error_pages.show_safe_browsing_details_on_load", false);
+
+// Enable the one-click search call-to-action on the online dnsNotFound error
+// page. Disabled by default; consumers land in later bugs (meta bug 2055374).
+pref("browser.netError.searchCTA.enabled", false);
 
 // Enable captive portal detection.
 pref("network.captive-portal-service.enabled", true);
@@ -2175,7 +2190,7 @@ pref("browser.aboutwelcome.experimentsGate.maxDisplayMs", 8000);
 // Global Nova enabled pref
 #ifdef NIGHTLY_BUILD
   pref("browser.nova.enabled", true);
-#else 
+#else
   pref("browser.nova.enabled", false);
 #endif
 
@@ -2280,6 +2295,7 @@ pref("sidebar.updatedBookmarks.enabled", false);
 pref("sidebar.openTabsPanel.enabled", false);
 pref("sidebar.openTabsPanel.collapsedWindows", "{}");
 pref("sidebar.openTabsPanel.sortOption", "tabStripOrder");
+pref("sidebar.openTabsPanel.hoverPreview.enabled", true);
 
 pref("sidebar.notification.badge.aichat", false);
 
@@ -2323,7 +2339,7 @@ pref("browser.ml.pageAssist.enabled", false);
 // Smart Window Feature
 pref("browser.smartwindow.enabled", false);
 // Default endpoint for preset models
-pref("browser.smartwindow.endpoint", "https://mlpa-prod-prod-mozilla.global.ssl.fastly.net/v1");
+pref("browser.smartwindow.endpoint", "https://mlpa-prod-prod-mozilla.freetls.fastly.net/v1");
 pref("browser.smartwindow.memories.generateFromHistory", true);
 pref("browser.smartwindow.memories.generateFromConversation", true);
 pref("browser.smartwindow.memories.hasSeenMemories", false);
@@ -2342,7 +2358,7 @@ pref("browser.smartwindow.mistralRelease", true);
 pref("places.semanticHistory.smartwindow.distanceThreshold", "0.6");
 
 // Smart Window: Auto Tab Grouping (bug 2054500).
-pref("browser.smartwindow.autoTabGrouping.enabled", false);
+pref("browser.smartwindow.autoTabGrouping.enabled", true);
 pref("browser.smartwindow.autoTabGrouping.maxGroups", 3);
 pref("browser.smartwindow.autoTabGrouping.minTabsPerGroup", 2);
 pref("browser.smartwindow.autoTabGrouping.minCandidateTabs", 4);
@@ -2357,15 +2373,21 @@ pref("browser.smartwindow.smartformfill.disallowedRegions", "FR");
 
 // Smart Window Agent
 pref("browser.smartwindow.agent.enabled", false);
+pref("browser.smartwindow.agent.supportedRegions", "US,CA");
+
 
 // Smart Window: Merino World Cup Soccer tool call (bug 2038266)
-pref("browser.smartwindow.worldcup.enabled", true);
+pref("browser.smartwindow.worldcup.enabled", false);
 pref("browser.smartwindow.worldcup.endpointURL", "https://merino.services.mozilla.com");
 pref("browser.smartwindow.worldcup.timeoutMs", 2000);
 
 // Smart Window: Exa search endpoint, used by the search_the_web agentic flow (bug 2037948)
-pref("browser.smartwindow.searchQuery.endpointURL", "https://mlpa-prod-prod-mozilla.global.ssl.fastly.net/v1/search");
+pref("browser.smartwindow.searchQuery.endpointURL", "https://mlpa-prod-prod-mozilla.freetls.fastly.net/v1/search");
 pref("browser.smartwindow.searchQuery.apiKey", "");
+
+// Smart Window: when true, search_the_web returns Exa snippets straight to the
+// main assistant instead of generating an answer from background page reads.
+pref("browser.smartwindow.searchTheWebFast", false);
 
 // Smart Window Logging
 pref("browser.smartwindow.chatHistory.loglevel", "Error");
@@ -3457,13 +3479,6 @@ pref("first-startup.category-tasks-enabled", true);
   pref("default-browser-agent.enabled", true);
 #endif
 
-// Test Prefs that do nothing for testing
-#if defined(EARLY_BETA_OR_EARLIER)
-  pref("app.normandy.test-prefs.bool", false);
-  pref("app.normandy.test-prefs.integer", 0);
-  pref("app.normandy.test-prefs.string", "");
-#endif
-
 // Shows 'View Image Info' item in the image context menu
 #ifdef MOZ_DEV_EDITION
   pref("browser.menu.showViewImageInfo", true);
@@ -3642,6 +3657,8 @@ pref("browser.ipProtection.everOpenedPanel", false);
 pref("browser.ipProtection.openedPanelWithLocation", false);
 // Pref to enable support for site exceptions
 pref("browser.ipProtection.features.siteExceptions", true);
+// Pref to enable support for site inclusions
+pref("browser.ipProtection.features.siteInclusions", false);
 // Pref to show confirmation hints for site exceptions
 pref("browser.ipProtection.siteExceptionsHintsEnabled", true);
 pref("browser.ipProtection.log", false);
@@ -3692,6 +3709,9 @@ pref("browser.contentsharing.enabled", false);
 
 // Preferences for the Firefox Referral program #2051647).
 pref("browser.referrals.enabled", false);
+// Set on first run after the referral code has been submitted via the
+// referrals ping.
+pref("browser.referrals.pingSubmitted", false);
 // "browser.referrals.code": Per-profile referral code, locked at runtime once
 // generated. The pref can't be defined here because locking the pref resets
 // the value to the default value and we need the default value to the genereated code.

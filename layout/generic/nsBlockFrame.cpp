@@ -1163,6 +1163,13 @@ static bool IsLineClampRoot(const nsBlockFrame* aFrame) {
   return origDisplay.Inside() == StyleDisplayInside::WebkitBox;
 }
 
+const mozilla::StyleBlockEllipsis* nsBlockFrame::GetLineClampBlockEllipsis()
+    const {
+  const auto* root = GetLineClampRoot();
+  return root ? &root->StyleDisplay()->mWebkitLineClamp.block_ellipsis
+              : nullptr;
+}
+
 nsBlockFrame* nsBlockFrame::GetLineClampRoot() const {
   if (IsLineClampRoot(this)) {
     return const_cast<nsBlockFrame*>(this);

@@ -546,14 +546,16 @@ void SVGSVGElement::SetCurrentView(const nsAString& aCurrentViewID) {
     // schedule attribute mapping now it's being unset.
     if (!IsPendingMappedAttributeEvaluation() &&
         mAttrs.MarkAsPendingPresAttributeEvaluation()) {
-      OwnerDoc()->ScheduleForPresAttrEvaluation(this);
+      if (Document* doc = GetComposedDoc()) {
+        doc->ScheduleForPresAttrEvaluation(this);
+      }
     }
-
-    InvalidateTransformNotifyFrame();
   }
 
   mCurrentViewID = aCurrentViewID;
   mSVGView = nullptr;
+
+  InvalidateTransformNotifyFrame();
 }
 
 void SVGSVGElement::SetViewSpec(std::unique_ptr<SVGView> aSVGView) {
@@ -565,7 +567,9 @@ void SVGSVGElement::SetViewSpec(std::unique_ptr<SVGView> aSVGView) {
   // schedule attribute mapping.
   if (!IsPendingMappedAttributeEvaluation() &&
       mAttrs.MarkAsPendingPresAttributeEvaluation()) {
-    OwnerDoc()->ScheduleForPresAttrEvaluation(this);
+    if (Document* doc = GetComposedDoc()) {
+      doc->ScheduleForPresAttrEvaluation(this);
+    }
   }
 
   mSVGView = std::move(aSVGView);

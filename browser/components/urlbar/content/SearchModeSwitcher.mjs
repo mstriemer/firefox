@@ -83,8 +83,6 @@ export class SearchModeSwitcher {
       "nsISupportsWeakReference",
     ]);
 
-    UrlbarPrefs.addObserver(this);
-
     this.#panelList = input.querySelector(".searchmode-switcher-panel-list");
     this.#button = input.querySelector(".searchmode-switcher");
     this.#closebutton = input.querySelector(".searchmode-switcher-close");
@@ -104,10 +102,25 @@ export class SearchModeSwitcher {
       this.#panelList.replaceWith(panel);
       panel.appendChild(this.#panelList);
     }
+  }
 
-    if (this.#isEnabled) {
+  /**
+   * Called when the input is connected.
+   */
+  connect() {
+    UrlbarPrefs.addObserver(this);
+
+    if (this.#isEnabled()) {
       this.#enableObservers();
     }
+  }
+
+  /**
+   * Called when the input is disconnected.
+   */
+  disconnect() {
+    UrlbarPrefs.removeObserver(this);
+    this.#disableObservers();
   }
 
   #isEnabled() {
@@ -323,12 +336,7 @@ export class SearchModeSwitcher {
   }
 
   onSearchEngineUpdate = (modifiedType, _engine) => {
-    if (
-      !this.#input.window ||
-      this.#input.window.closed ||
-      // TODO bug 2005783 stop observing when input is disconnected.
-      !this.#input.isConnected
-    ) {
+    if (!this.#input.window || this.#input.window.closed) {
       return;
     }
 
@@ -694,7 +702,7 @@ export class SearchModeSwitcher {
     menuitem.setAttribute("data-l10n-attrs", "accesskey");
     this.#input.document.l10n.setAttributes(
       menuitem,
-      Services.prefs.getBoolPref("browser.nova.enabled", false)
+      UrlbarPrefs.get("browser.nova.enabled")
         ? "urlbar-searchmode-popup-settings"
         : "urlbar-searchmode-popup-search-settings"
     );

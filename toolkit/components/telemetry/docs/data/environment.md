@@ -380,9 +380,6 @@ The following is a partial list of [collected preferences](https://searchfox.org
 - `security.tls.version.enable-deprecated`: True if deprecated versions of TLS (1.0 and 1.1) have been enabled by the user. Defaults to false.
 - `privacy.firstparty.isolate`: True if the user has changed the (unsupported, hidden) First Party Isolation preference. Defaults to false.
 - `privacy.resistFingerprinting`: True if the user has changed the (unsupported, hidden) Resist Fingerprinting preference. Defaults to false.
-- `app.normandy.test-prefs.bool`: Test pref that will help troubleshoot uneven unenrollment in experiments. Defaults to false.
-- `app.normandy.test-prefs.integer`: Test pref that will help troubleshoot uneven unenrollment in experiments. Defaults to 0.
-- `app.normandy.test-prefs.string`: Test pref that will help troubleshoot uneven unenrollment in experiments. Defaults to "".
 - `network.trr.mode`: User-set DNS over HTTPS mode. Defaults to 0.
 - `network.trr.strict_native_fallback`: Whether strict fallback mode is enabled for DoH mode 2. Defaults to true on Nightly, false elsewhere.
 - `extensions.InstallTrigger.enabled`: Whether the InstallTrigger property should be enabled (or completely hidden).

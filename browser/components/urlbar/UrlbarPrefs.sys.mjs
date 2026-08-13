@@ -282,6 +282,12 @@ const PREF_URLBAR_DEFAULTS = /** @type {PreferenceDefinition[]} */ ([
   // should be opened in new tabs by default.
   ["openintab", false],
 
+  // The cached name of the (private) default engine.
+  // This is used to initialize the placeholder of the
+  // urlbar before the search engine store is ready.
+  ["placeholderName", ""],
+  ["placeholderName.private", ""],
+
   // If disabled, QuickActions will not be included in either the default search
   // mode or the QuickActions search mode.
   ["quickactions.enabled", true],
@@ -618,9 +624,6 @@ const PREF_URLBAR_DEFAULTS = /** @type {PreferenceDefinition[]} */ ([
   // will be deduplicated.
   ["deduplication.enabled", true],
 
-  // How old history results have to be to be deduplicated.
-  ["deduplication.thresholdDays", 0],
-
   // semanticHistory search query minLength threshold to be enabled.
   ["suggest.semanticHistory.minLength", 5],
 
@@ -666,6 +669,9 @@ const PREF_URLBAR_DEFAULTS = /** @type {PreferenceDefinition[]} */ ([
 
   // Remove redundant portions from URLs.
   ["trimURLs", true],
+
+  // Remove leading 'www.' from url displayed in the urlbar.
+  ["trimWww", false],
 
   // Enable the updated design combining the privacy and shield icon
   // and panels in the Urlbar.
@@ -752,6 +758,7 @@ const PREF_URLBAR_DEFAULTS_MAP = new Map(PREF_URLBAR_DEFAULTS);
 const PREF_OTHER_DEFAULTS = /** @type {PreferenceDefinition[]} */ ([
   ["browser.fixup.dns_first_for_single_words", false],
   ["browser.ml.enable", false],
+  ["browser.nova.enabled", false],
   ["browser.search.openintab", false],
   ["browser.search.suggest.enabled", true],
   ["browser.search.suggest.enabled.private", false],

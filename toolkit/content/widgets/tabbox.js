@@ -344,6 +344,31 @@
       Glean.splitview.resize.record({ width: widthPercentage });
     }
 
+    /**
+     * Reflect the column of the currently selected split view panel onto the
+     * root element, so that chrome outside of the tabbox (e.g. the sidebar
+     * splitters) can react to it without needing an expensive :has() selector.
+     */
+    #updateSelectedSplitViewColumn() {
+      const panel = this.selectedPanel;
+      const column =
+        this.hasAttribute("splitview") &&
+        panel?.classList.contains("split-view-panel")
+          ? panel.getAttribute("column")
+          : null;
+      const root = this.ownerDocument.documentElement;
+      if (column === null) {
+        root.removeAttribute("splitview-selected-column");
+      } else {
+        root.setAttribute("splitview-selected-column", column);
+      }
+    }
+
+    updateSelectedIndex(...args) {
+      super.updateSelectedIndex(...args);
+      this.#updateSelectedSplitViewColumn();
+    }
+
     handleEvent(e) {
       const validBrowserTargetSelector =
         "browser:not(.devtools-toolbox-iframe)";
@@ -610,6 +635,7 @@
       // Ensure that selected index stays up to date, in case the splitter
       // offsets it.
       this.selectedPanel = selectedPanel;
+      this.#updateSelectedSplitViewColumn();
       // Update aria attributes
       this.#splitterAriaUpdateTask.arm();
     }

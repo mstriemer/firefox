@@ -422,7 +422,7 @@ libraries were not included in a deployed APK. Avoid this by setting
 In projects that don’t have first-class support for dependency
 substitution already, you can do the substitution yourself. See the
 documentation in
-[substitue-local-geckoview.gradle](https://hg.mozilla.org/mozilla-central/file/tip/substitute-local-geckoview.gradle),
+[substitute-local-geckoview.gradle](https://searchfox.org/firefox-main/source/substitute-local-geckoview.gradle),
 but roughly: in each Gradle project that consumes GeckoView, i.e., in
 each `build.gradle` with a
 `dependencies { ... 'org.mozilla.geckoview:geckoview-...' }` block,

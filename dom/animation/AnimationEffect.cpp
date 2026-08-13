@@ -396,6 +396,14 @@ void AnimationEffect::GetComputedTimingAsDict(
 
 void AnimationEffect::UpdateTiming(const OptionalEffectTiming& aTiming,
                                    ErrorResult& aRv) {
+  const bool isFiniteTimeline =
+      mAnimation ? mAnimation->HasFiniteTimeline() : false;
+
+  if (isFiniteTimeline && aTiming.mIterations.WasPassed() &&
+      aTiming.mIterations.Value() >= double(UINT64_MAX)) {
+    aRv.ThrowTypeError("Infinite iterations for finite timeline");
+    return;
+  }
   TimingParams timing =
       TimingParams::MergeOptionalEffectTiming(mTiming, aTiming, aRv);
   if (aRv.Failed()) {

@@ -891,10 +891,6 @@ features:
         description: Whether to show the new AppLinksPromptFragment dialog when an app link is detected. If false, the old dialog is used.
         type: Boolean
         default: true
-    defaults:
-      - channel: release
-        value:
-          show-new-prompt: false
 
   tab-management-enhancements:
     description: Control the visibility of the tab management enhancements.
@@ -1310,6 +1306,14 @@ features:
     variables:
       enabled:
         description: If true, the OLED theme option is shown.
+        type: Boolean
+        default: false
+
+  pdf-viewer:
+    description: Feature for the PDF viewer tools for users on Firefox for Android.
+    variables:
+      android-ui-tools:
+        description: If true, the Android PDF UI tools are shown.
         type: Boolean
         default: false
 

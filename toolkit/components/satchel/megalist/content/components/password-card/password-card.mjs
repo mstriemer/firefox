@@ -18,8 +18,8 @@ export class PasswordCard extends MozLitElement {
   /**
    * Hardcoded heights of the password card component.
    */
-  static DEFAULT_PASSWORD_CARD_HEIGHT = 217 + 13; // 13px top + bottom margin
-  static WITH_ALERT_PASSWORD_CARD_HEIGHT = 268 + 13; // alert adds 51px
+  static DEFAULT_PASSWORD_CARD_HEIGHT = 215 + 13; // 13px top + bottom margin
+  static WITH_ALERT_PASSWORD_CARD_HEIGHT = 266 + 13; // alert adds 51px
 
   static properties = {
     origin: { type: Object },

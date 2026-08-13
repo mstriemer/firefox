@@ -26,6 +26,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SwipeToDismissBoxDefaults
+import androidx.compose.material3.SwipeToDismissBoxState
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -77,6 +80,7 @@ import org.mozilla.fenix.tabstray.TabsTrayTestTag
 import org.mozilla.fenix.tabstray.browser.compose.TabItemInteractionState
 import org.mozilla.fenix.tabstray.data.TabsTrayItem
 import org.mozilla.fenix.theme.FirefoxTheme
+import kotlin.math.abs
 import mozilla.components.ui.icons.R as iconsR
 
 // Rounded corner shape used by all tab items
@@ -231,6 +235,7 @@ val gridItemAspectRatio: Float
  * @param onDeleteTabGroupClick Invoked when the user clicks on delete tab group.
  * @param onEditTabGroupClick Invoked when the user clicks to edit the selected tab group.
  * @param onCloseTabGroupClick Invoked when the user clicks to close the tab group.
+ * @param onShareTabGroupClick Invoked when the user clicks to share the tab group.
  * @param onUngroupTabGroupClick Invoked when the user clicks to ungroup the tab group.
  */
 @Composable
@@ -241,6 +246,7 @@ fun TabGroupMenuButton(
     onDeleteTabGroupClick: () -> Unit,
     onEditTabGroupClick: () -> Unit,
     onCloseTabGroupClick: () -> Unit,
+    onShareTabGroupClick: () -> Unit,
     onUngroupTabGroupClick: () -> Unit,
 ) {
     var showDropdownMenu by remember { mutableStateOf(false) }
@@ -264,10 +270,11 @@ fun TabGroupMenuButton(
             expanded = showDropdownMenu,
             onDismissRequest = { showDropdownMenu = false },
             menuItems = generateTabGroupMenuItems(
+                includeCloseOption = includeCloseOption,
                 editTabGroup = onEditTabGroupClick,
                 closeTabGroup = onCloseTabGroupClick,
+                shareTabGroup = onShareTabGroupClick,
                 deleteTabGroup = onDeleteTabGroupClick,
-                includeCloseOption = includeCloseOption,
                 includeUngroupOption = includeUngroupOption &&
                     LocalTabManagementFeatureHelper.current.ungroupTabGroupEnabled,
                 ungroupTabGroup = onUngroupTabGroupClick,
@@ -308,6 +315,7 @@ private fun generateTabGroupMenuItems(
     includeUngroupOption: Boolean = false,
     editTabGroup: () -> Unit,
     closeTabGroup: () -> Unit,
+    shareTabGroup: () -> Unit,
     deleteTabGroup: () -> Unit,
     ungroupTabGroup: () -> Unit,
 ): List<MenuItem> {
@@ -329,6 +337,12 @@ private fun generateTabGroupMenuItems(
         testTag = TabsTrayTestTag.UNGROUP_TAB_GROUP,
         onClick = ungroupTabGroup,
     )
+    val shareItem = MenuItem.IconItem(
+        text = Text.Resource(R.string.tab_group_three_dot_menu_share),
+        drawableRes = iconsR.drawable.mozac_ic_share_android_24,
+        testTag = TabsTrayTestTag.SHARE_TAB_GROUP,
+        onClick = shareTabGroup,
+    )
     val deleteItem = MenuItem.IconItem(
         text = Text.Resource(R.string.tab_group_three_dot_menu_delete),
         drawableRes = iconsR.drawable.mozac_ic_delete_24,
@@ -341,6 +355,7 @@ private fun generateTabGroupMenuItems(
         if (includeCloseOption) {
             add(closeItem)
         }
+        add(shareItem)
         if (includeUngroupOption) {
             add(ungroupItem)
         }
@@ -422,6 +437,7 @@ fun tabGridItemContainerColor(selectionState: TabsTrayItemSelectionState): Color
 object Alpha {
     const val TAB_ITEM_DRAGGED = 0.7f
     const val TAB_ITEM_NO_INTERACTION = 1f
+    const val TAB_ITEM_MIN_SWIPE_FADE = 0.1f
 }
 
 /**
@@ -759,6 +775,61 @@ fun Modifier.defaultListItemAnimation(
         },
         fadeInSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
     )
+}
+
+/**
+ * Creates a [SwipeToDismissBoxState] for the tab item identified by [tabId].
+ *
+ * Deliberately not [androidx.compose.material3.rememberSwipeToDismissBoxState], which saves its
+ * current value: a lazy layout keeps an item's saved state around after the item leaves the list,
+ * so a tab restored through the undo snackbar would return as swiped away
+ * and be dismissed again on its first composition.
+ *
+ * @param tabId The id of the tab the state belongs to.
+ */
+@Composable
+fun rememberTabSwipeToDismissBoxState(tabId: String): SwipeToDismissBoxState {
+    val positionalThreshold = SwipeToDismissBoxDefaults.positionalThreshold
+
+    return remember(tabId) {
+        SwipeToDismissBoxState(
+            initialValue = SwipeToDismissBoxValue.Settled,
+            positionalThreshold = positionalThreshold,
+        )
+    }
+}
+
+/**
+ * Custom modifier that fades an item to transparent as it is swiped to dismiss.
+ * The minimum alpha is 10%, so the item will at least be 10% visible.
+ */
+fun Modifier.fadeOnSwipeToDismiss(state: SwipeToDismissBoxState) = graphicsLayer {
+    // state.progress is tied to targetValue which has a fixed threshold,
+    // so we need to pull the offset to get a linear fade animation.
+    val offset = try {
+        if (state.dismissDirection == SwipeToDismissBoxValue.Settled) {
+        0f
+        } else {
+            state.requireOffset()
+        }
+    } catch (e: IllegalStateException) {
+        e.printStackTrace()
+        // It should be safe to call requireOffset() here, but there's no
+        // reason to risk a crash for a fade animation.
+        0f
+    }
+    alpha = swipeFadeAlpha(offset = offset, width = size.width)
+}
+
+internal fun swipeFadeAlpha(offset: Float, width: Float): Float {
+    return if (width <= 0f || offset.isNaN()) {
+        Alpha.TAB_ITEM_NO_INTERACTION
+    } else {
+        maxOf(
+            Alpha.TAB_ITEM_MIN_SWIPE_FADE,
+            Alpha.TAB_ITEM_NO_INTERACTION - (abs(offset) / width).coerceIn(0f, 1f),
+        )
+    }
 }
 
 /**

@@ -217,9 +217,6 @@ void WindowGlobalParent::Init() {
   if (!IsInProcess()) {
     cp = static_cast<ContentParent*>(Manager()->Manager());
     processId = cp->ChildID();
-
-    // Ensure the content process has permissions for this principal.
-    cp->TransmitPermissionsForPrincipal(mDocumentPrincipal);
   }
 
   MOZ_DIAGNOSTIC_ASSERT(
@@ -629,8 +626,9 @@ IPCResult WindowGlobalParent::RecvUpdateDocumentCspSettings(
 
 mozilla::ipc::IPCResult WindowGlobalParent::RecvSetClientInfo(
     const IPCClientInfo& aIPCClientInfo) {
-  if (!ClientIsValidPrincipalInfo(aIPCClientInfo.principalInfo(),
-                                  GetRemoteType())) {
+  if (!ClientIsValidPrincipalInfo(
+          aIPCClientInfo.principalInfo(),
+          GetContentParent() ? GetContentParent()->LoadedOrigins() : nullptr)) {
     return IPC_FAIL(this, "SetClientInfo principal not valid for remote type");
   }
   mClientInfo = Some(ClientInfo(aIPCClientInfo));
@@ -886,19 +884,64 @@ already_AddRefed<nsIChannel> WindowGlobalParent::GetFailedChannel() {
 }
 
 dom::NoCorsMediaRequestState WindowGlobalParent::NoCorsMediaRequestState(
-    nsIURI* aURI) const {
+    nsIURI* aURI) {
   nsCString uri;
   return (NS_SUCCEEDED(aURI->GetSpecIgnoringRef(uri)) &&
-          mNoCorsMediaRequestURIs.Contains(uri))
+          EnsureKnownAllowedSubsequentRequests()
+              ->mNoCorsMediaRequestURIs.Contains(uri))
              ? dom::NoCorsMediaRequestState::Subsequent
              : dom::NoCorsMediaRequestState::Initial;
 }
 
+StaticAutoPtr<WindowGlobalParent::AllKnownAllowedSubsequentRequests>
+    WindowGlobalParent::sAllKnownSubsequentRequests;
+
+/* static */ WindowGlobalParent::AllKnownAllowedSubsequentRequests&
+WindowGlobalParent::GetAllKnownAllowedSubsequentRequests() {
+  if (!sAllKnownSubsequentRequests) {
+    sAllKnownSubsequentRequests =
+        new nsTHashMap<PrincipalHashKey,
+                       WeakPtr<KnownAllowedSubsequentRequests>>;
+  }
+
+  return *sAllKnownSubsequentRequests;
+}
+
+WindowGlobalParent::KnownAllowedSubsequentRequests::
+    ~KnownAllowedSubsequentRequests() {
+  if (!sAllKnownSubsequentRequests) {
+    return;
+  }
+
+  auto& allKnownRequests = GetAllKnownAllowedSubsequentRequests();
+  allKnownRequests.Remove(mPrincipal);
+}
+
+WindowGlobalParent::KnownAllowedSubsequentRequests*
+WindowGlobalParent::EnsureKnownAllowedSubsequentRequests() {
+  if (!mKnownAllowedSubsequentRequests) {
+    auto& allKnownRequests = GetAllKnownAllowedSubsequentRequests();
+    RefPtr<KnownAllowedSubsequentRequests> knownAllowedSubsequentRequests;
+    mKnownAllowedSubsequentRequests = allKnownRequests.LookupOrInsertWith(
+        mDocumentPrincipal, [knownAllowedSubsequentRequests,
+                             principal = mDocumentPrincipal]() mutable {
+          knownAllowedSubsequentRequests =
+              MakeAndAddRef<KnownAllowedSubsequentRequests>();
+          knownAllowedSubsequentRequests->mPrincipal = principal;
+          return knownAllowedSubsequentRequests;
+        });
+  }
+
+  return mKnownAllowedSubsequentRequests;
+}
+
 void WindowGlobalParent::RecordSubsequentNoCorsRequestState(nsIURI* aURI) {
   nsCString uri;
-  if (NS_SUCCEEDED(aURI->GetSpecIgnoringRef(uri)) && !uri.IsEmpty()) {
-    mNoCorsMediaRequestURIs.PutEntry(uri);
+  if (NS_FAILED(aURI->GetSpecIgnoringRef(uri)) || uri.IsEmpty()) {
+    return;
   }
+
+  EnsureKnownAllowedSubsequentRequests()->mNoCorsMediaRequestURIs.PutEntry(uri);
 }
 
 mozilla::ipc::IPCResult WindowGlobalParent::RecvShare(
@@ -1256,7 +1299,7 @@ void WindowGlobalParent::PermitUnloadChildNavigables(
 
 already_AddRefed<mozilla::dom::Promise> WindowGlobalParent::DrawSnapshot(
     const DOMRect* aRect, double aScale, const nsACString& aBackgroundColor,
-    bool aResetScrollPosition, mozilla::ErrorResult& aRv) {
+    const DrawSnapshotOptions& aOptions, mozilla::ErrorResult& aRv) {
   nsIGlobalObject* global = GetParentObject();
   RefPtr<Promise> promise = Promise::Create(global, aRv);
   if (NS_WARN_IF(aRv.Failed())) {
@@ -1273,10 +1316,10 @@ already_AddRefed<mozilla::dom::Promise> WindowGlobalParent::DrawSnapshot(
 
   gfx::CrossProcessPaintFlags flags =
       gfx::CrossProcessPaintFlags::UseHighQualityScaling;
-  if (!aRect) {
+  if (!aRect || aOptions.mDrawView) {
     // If no explicit Rect was passed, we want the currently visible viewport.
     flags |= gfx::CrossProcessPaintFlags::DrawView;
-  } else if (aResetScrollPosition) {
+  } else if (aOptions.mResetScrollPosition) {
     flags |= gfx::CrossProcessPaintFlags::ResetScrollPosition;
   }
 

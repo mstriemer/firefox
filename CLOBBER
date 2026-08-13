@@ -22,4 +22,4 @@
 # changes to stick? As of bug 928195, this shouldn't be necessary! Please
 # don't change CLOBBER for WebIDL changes any more.
 
-Renamed .cpp file to .mm, leaving stale build dependencies - Bug 2058990 - Make GpuFenceMTLSharedEvent call Metal APIs directly rather than via wgpu
+Merge day clobber 2026-08-13

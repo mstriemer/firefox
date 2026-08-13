@@ -579,14 +579,14 @@ bool InvokeFromInterpreterStub(JSContext* cx,
   RootedFunction fun(cx, CalleeTokenToFunction(token));
   RootedValue rval(cx);
 
-  if (jsFrame->descriptor().isResumingGenerator()) {
+  if (jsFrame->isResumingGenerator()) {
     // Resuming a suspended generator. The ResumeFrameArgs are stored after the
     // formals with numActualArgs == 0.
 
     MOZ_RELEASE_ASSERT(fun->isGenerator());
     MOZ_ASSERT(numActualArgs == 0);
 
-    Value* resumeArgs = &argv[1 + fun->nargs()];
+    Value* resumeArgs = jsFrame->resumeArgs();
     Rooted<AbstractGeneratorObject*> genObj(
         cx, &resumeArgs[ResumeFrameArgs::GeneratorSlot]
                  .toObject()

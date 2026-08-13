@@ -234,7 +234,7 @@ RegisterVoicesRunnable::Run() {
     return rv;
   }
 
-  for (OSXVoice voice : mVoices) {
+  for (const OSXVoice& voice : mVoices) {
     rv = registry->AddVoice(mSpeechService, voice.mUri, voice.mName,
                             voice.mLocale, true, false);
     if (NS_WARN_IF(NS_FAILED(rv))) {

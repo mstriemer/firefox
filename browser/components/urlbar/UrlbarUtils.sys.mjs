@@ -8,6 +8,7 @@
  */
 
 /**
+ * @import {URIFixupPrimitives} from "chrome://browser/content/urlbar/UrlbarShared.mjs"
  * @import {Query} from "./UrlbarProvidersManager.sys.mjs"
  * @import {SearchEngine} from "moz-src:///toolkit/components/search/SearchEngine.sys.mjs"
  * @import {SmartbarInput} from "chrome://browser/content/urlbar/SmartbarInput.mjs"
@@ -19,7 +20,6 @@ import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 const lazy = XPCOMUtils.declareLazy({
   AIWindow:
     "moz-src:///browser/components/aiwindow/ui/modules/AIWindow.sys.mjs",
-  BrowserUIUtils: "resource:///modules/BrowserUIUtils.sys.mjs",
   ContextualIdentityService:
     "moz-src:///toolkit/components/contextualidentity/ContextualIdentityService.sys.mjs",
   CustomizableUI:
@@ -37,12 +37,6 @@ const lazy = XPCOMUtils.declareLazy({
   SearchSuggestionController:
     "moz-src:///toolkit/components/search/SearchSuggestionController.sys.mjs",
   UrlbarPrefs: "moz-src:///browser/components/urlbar/UrlbarPrefs.sys.mjs",
-  UrlbarProviderInterventions:
-    "moz-src:///browser/components/urlbar/UrlbarProviderInterventions.sys.mjs",
-  UrlbarProviderSearchTips:
-    "moz-src:///browser/components/urlbar/UrlbarProviderSearchTips.sys.mjs",
-  UrlbarSearchUtils:
-    "moz-src:///browser/components/urlbar/UrlbarSearchUtils.sys.mjs",
   UrlUtils: "resource://gre/modules/UrlUtils.sys.mjs",
   clearTimeout: "resource://gre/modules/Timer.sys.mjs",
   setTimeout: "resource://gre/modules/Timer.sys.mjs",
@@ -187,146 +181,6 @@ export var UrlbarUtils = {
     mimeStream.addHeader("Content-Type", type);
     mimeStream.setData(dataStream);
     return mimeStream.QueryInterface(Ci.nsIInputStream);
-  },
-
-  _compareIgnoringDiacritics: null,
-
-  /**
-   * Returns a list of all the token substring matches in a string.  Matching is
-   * case insensitive.  Each match in the returned list is a tuple: [matchIndex,
-   * matchLength].  matchIndex is the index in the string of the match, and
-   * matchLength is the length of the match.
-   *
-   * @param {Array} tokens The tokens to search for.
-   * @param {string} str The string to match against.
-   * @param {Values<typeof UrlbarShared.HIGHLIGHT>} highlightType
-   *   One of the HIGHLIGHT values:
-   *     TYPED: match ranges matching the tokens; or
-   *     SUGGESTED: match ranges for words not matching the tokens and the
-   *                endings of words that start with a token.
-   *     ALL: match all ranges of str.
-   * @returns {Array} An array: [
-   *            [matchIndex_0, matchLength_0],
-   *            [matchIndex_1, matchLength_1],
-   *            ...
-   *            [matchIndex_n, matchLength_n]
-   *          ].
-   *          The array is sorted by match indexes ascending.
-   */
-  getTokenMatches(tokens, str, highlightType) {
-    if (highlightType == UrlbarShared.HIGHLIGHT.ALL) {
-      return [[0, str.length]];
-    }
-
-    if (!tokens?.length) {
-      return [];
-    }
-
-    // Only search a portion of the string, because not more than a certain
-    // amount of characters are visible in the UI, matching over what is visible
-    // would be expensive and pointless.
-    str = str.substring(0, UrlbarShared.MAX_TEXT_LENGTH).toLocaleLowerCase();
-    // To generate non-overlapping ranges, we start from a 0-filled array with
-    // the same length of the string, and use it as a collision marker, setting
-    // 1 where the text should be highlighted.
-    let hits = new Array(str.length).fill(
-      highlightType == UrlbarShared.HIGHLIGHT.SUGGESTED ? 1 : 0
-    );
-    let compareIgnoringDiacritics;
-    for (let i = 0, totalTokensLength = 0; i < tokens.length; i++) {
-      const { lowerCaseValue: needle } = tokens[i];
-
-      // Ideally we should never hit the empty token case, but just in case
-      // the `needle` check protects us from an infinite loop.
-      if (!needle) {
-        continue;
-      }
-      let index = 0;
-      let found = false;
-      // First try a diacritic-sensitive search.
-      for (;;) {
-        index = str.indexOf(needle, index);
-        if (index < 0) {
-          break;
-        }
-
-        if (highlightType == UrlbarShared.HIGHLIGHT.SUGGESTED) {
-          // We de-emphasize the match only if it's preceded by a space, thus
-          // it's a perfect match or the beginning of a longer word.
-          let previousSpaceIndex = str.lastIndexOf(" ", index) + 1;
-          if (index != previousSpaceIndex) {
-            index += needle.length;
-            // We found the token but we won't de-emphasize it, because it's not
-            // after a word boundary.
-            found = true;
-            continue;
-          }
-        }
-
-        hits.fill(
-          highlightType == UrlbarShared.HIGHLIGHT.SUGGESTED ? 0 : 1,
-          index,
-          index + needle.length
-        );
-        index += needle.length;
-        found = true;
-      }
-      // If that fails to match anything, try a (computationally intensive)
-      // diacritic-insensitive search.
-      if (!found) {
-        if (!compareIgnoringDiacritics) {
-          if (!this._compareIgnoringDiacritics) {
-            // Diacritic insensitivity in the search engine follows a set of
-            // general rules that are not locale-dependent, so use a generic
-            // English collator for highlighting matching words instead of a
-            // collator for the user's particular locale.
-            this._compareIgnoringDiacritics = new Intl.Collator("en", {
-              sensitivity: "base",
-            }).compare;
-          }
-          compareIgnoringDiacritics = this._compareIgnoringDiacritics;
-        }
-        index = 0;
-        while (index < str.length) {
-          let hay = str.substr(index, needle.length);
-          if (compareIgnoringDiacritics(needle, hay) === 0) {
-            if (highlightType == UrlbarShared.HIGHLIGHT.SUGGESTED) {
-              let previousSpaceIndex = str.lastIndexOf(" ", index) + 1;
-              if (index != previousSpaceIndex) {
-                index += needle.length;
-                continue;
-              }
-            }
-            hits.fill(
-              highlightType == UrlbarShared.HIGHLIGHT.SUGGESTED ? 0 : 1,
-              index,
-              index + needle.length
-            );
-            index += needle.length;
-          } else {
-            index++;
-          }
-        }
-      }
-
-      totalTokensLength += needle.length;
-      if (totalTokensLength > UrlbarShared.MAX_TEXT_LENGTH) {
-        // Limit the number of tokens to reduce calculate time.
-        break;
-      }
-    }
-    // Starting from the collision array, generate [start, len] tuples
-    // representing the ranges to be highlighted.
-    let ranges = [];
-    for (let index = hits.indexOf(1); index >= 0 && index < hits.length; ) {
-      let len = 0;
-      // eslint-disable-next-line no-empty
-      for (let j = index; j < hits.length && hits[j]; ++j, ++len) {}
-      ranges.push([index, len]);
-      // Move to the next 1.
-      index = hits.indexOf(1, index + len);
-    }
-    return ranges;
   },
 
   /**
@@ -657,70 +511,25 @@ export var UrlbarUtils = {
   },
 
   /**
-   * Sanitize and process data retrieved from the clipboard
+   * Returns the parts of a string's URI fixup info that a consumer which can't
+   * hold an XPCOM object can use, notably the content realm, which is served
+   * across the `UrlbarChild` actor boundary.
    *
-   * @param {string} clipboardData
-   *   The original data retrieved from the clipboard.
-   * @returns {string}
-   *   The sanitized paste data, ready to use.
+   * @param {string} searchString
+   *   The string to fix up.
+   * @param {boolean} isPrivate
+   *   Whether the fixup runs for a private context.
+   * @returns {?URIFixupPrimitives}
+   *   The fixup primitives, or null if fixup threw.
    */
-  sanitizeTextFromClipboard(clipboardData) {
-    let fixedURI, keywordAsSent;
-    try {
-      ({ fixedURI, keywordAsSent } = Services.uriFixup.getFixupURIInfo(
-        clipboardData,
-        Ci.nsIURIFixup.FIXUP_FLAG_FIX_SCHEME_TYPOS |
-          Ci.nsIURIFixup.FIXUP_FLAG_ALLOW_KEYWORD_LOOKUP
-      ));
-    } catch (e) {}
-
-    let pasteData;
-    if (keywordAsSent) {
-      // For performance reasons, we don't want to beautify a long string.
-      if (clipboardData.length < 500) {
-        // For only keywords, replace any white spaces including line break
-        // with white space.
-        pasteData = clipboardData.replace(/\s/g, " ");
-      } else {
-        pasteData = clipboardData;
-      }
-    } else if (
-      fixedURI?.scheme == "data" &&
-      !fixedURI.spec.match(/^data:.+;base64,/)
-    ) {
-      // For data url without base64, replace line break with white space.
-      pasteData = clipboardData.replace(/[\r\n]/g, " ");
-    } else {
-      // For normal url or data url having basic64, or if fixup failed, just
-      // remove line breaks.
-      pasteData = clipboardData.replace(/[\r\n]/g, "");
-    }
-
-    return this.stripUnsafeProtocolOnPaste(pasteData);
-  },
-
-  /**
-   * Used to filter out the javascript protocol from URIs, since we don't
-   * support LOAD_FLAGS_DISALLOW_INHERIT_PRINCIPAL for those.
-   *
-   * @param {string} pasteData The data to check for javacript protocol.
-   * @returns {string} The modified paste data.
-   */
-  stripUnsafeProtocolOnPaste(pasteData) {
-    for (;;) {
-      let scheme = "";
-      try {
-        scheme = Services.io.extractScheme(pasteData);
-      } catch (ex) {
-        // If it throws, this is not a javascript scheme.
-      }
-      if (scheme != "javascript") {
-        break;
-      }
-
-      pasteData = pasteData.substring(pasteData.indexOf(":") + 1);
-    }
-    return pasteData;
+  getFixupPrimitives(searchString, isPrivate) {
+    let info = this.getURIFixupInfo(searchString, isPrivate);
+    return info
+      ? {
+          keywordAsSent: info.keywordAsSent,
+          preferredURIDisplaySpec: info.preferredURI?.displaySpec ?? null,
+        }
+      : null;
   },
 
   /**
@@ -839,7 +648,7 @@ export var UrlbarUtils = {
    *   Epoch timestamp in ms after which the block expires.
    */
   async blockAutofill(url, blockUntilMs) {
-    if (this.isOriginUrl(url)) {
+    if (UrlbarShared.isOriginUrl(url)) {
       await this.blockOriginAutofill(url, blockUntilMs);
     } else {
       await this.blockOriginPageAutofill(url, blockUntilMs);
@@ -1069,7 +878,7 @@ export var UrlbarUtils = {
     }
     let basehost = origin.host.replace(/^www\./, "");
     let scope = /** @type {"origin" | "page"} */ (
-      this.isOriginUrl(url) ? "origin" : "page"
+      UrlbarShared.isOriginUrl(url) ? "origin" : "page"
     );
     return `${scope}:${basehost}`;
   },
@@ -1169,7 +978,7 @@ export var UrlbarUtils = {
       return null;
     }
     /** @type {"origin" | "url"} */
-    let level = this.isOriginUrl(url) ? "origin" : "url";
+    let level = UrlbarShared.isOriginUrl(url) ? "origin" : "url";
     return { blockedAt: entry.blockedAt, level };
   },
 
@@ -1187,20 +996,59 @@ export var UrlbarUtils = {
   },
 
   /**
-   * Returns whether a URL is an origin URL, i.e. it has no path beyond "/",
-   * no query string, and no hash.
+   * Dismisses an autofill result, either by blocking the autofill pairing for
+   * `autoFill.dismissalBlockDurationMs` or by removing the URL from history
+   * entirely, and clears the URL's backspace bookkeeping either way. Failures
+   * are reported and swallowed so a caller can still re-run its query.
    *
    * @param {string} url
-   *   The URL to check.
-   * @returns {boolean}
-   *   True if the URL is an origin URL, false if it has a path, query, hash,
-   *   or is unparseable.
+   *   The dismissed autofill result's URL.
+   * @param {object} [options]
+   *   Options object.
+   * @param {boolean} [options.removeFromHistory]
+   *   Whether to remove the URL from history instead of blocking autofill
+   *   for it.
    */
-  isOriginUrl(url) {
-    let parsed = URL.parse(url);
-    return (
-      !!parsed && parsed.pathname === "/" && !parsed.search && !parsed.hash
-    );
+  async dismissAutofill(url, { removeFromHistory = false } = {}) {
+    if (removeFromHistory) {
+      await lazy.PlacesUtils.history.remove(url).catch(console.error);
+    } else {
+      await this.blockAutofill(
+        url,
+        Date.now() + lazy.UrlbarPrefs.get("autoFill.dismissalBlockDurationMs")
+      ).catch(console.error);
+    }
+
+    this.clearAutofillBackspaceEntryForUrl(url);
+  },
+
+  /**
+   * Re-integrates an autofill URL the user navigated to anyway: clears the
+   * URL's autofill block and its backspace bookkeeping, and reports what
+   * happened so the caller can record re-integration telemetry.
+   *
+   * @param {string} url
+   *   The URL being re-integrated.
+   * @returns {Promise<{wasBlocked: boolean, level: "origin" | "url", backspaceBlock: ?{blockedAt: number, level: "origin" | "url"}}>}
+   *   `wasBlocked` is whether a database block was actually cleared, `level`
+   *   the scope it was cleared at, and `backspaceBlock` the consumed backspace
+   *   block, if the URL had one.
+   */
+  async reintegrateAutofill(url) {
+    let isOrigin = UrlbarShared.isOriginUrl(url);
+    let wasBlocked = isOrigin
+      ? await this.clearOriginAutofillBlock(url)
+      : await this.clearOriginPageAutofillBlock(url);
+
+    // getBackspaceBlock reads and removes the {blockedAt} entry for telemetry.
+    // clearAutofillBackspaceEntryForUrl then removes any remaining
+    // sub-threshold {count} entry. Together they always clear the in-memory
+    // counter — visiting the url is a positive signal regardless of whether a
+    // database block existed.
+    let backspaceBlock = this.getBackspaceBlock(url);
+    this.clearAutofillBackspaceEntryForUrl(url);
+
+    return { wasBlocked, level: isOrigin ? "origin" : "url", backspaceBlock };
   },
 
   /**
@@ -1285,13 +1133,14 @@ export var UrlbarUtils = {
    * Add the search to form history.  This also updates any existing form
    * history for the search.
    *
-   * @param {UrlbarInput} input The UrlbarInput object requesting the addition.
+   * @param {boolean} isPrivate
+   *   Whether the search is private is in a private window.
    * @param {string} value The value to add.
    * @param {string} [source] The source of the addition, usually
    *        the name of the engine the search was made with.
    * @returns {Promise<void>} resolved once the operation is complete
    */
-  addToFormHistory(input, value, source) {
+  async addToFormHistory(isPrivate, value, source) {
     // If the user types a search engine alias without a search string,
     // we have an empty search string and we can't bump it.
     // We also don't want to add history in private browsing mode.
@@ -1299,13 +1148,13 @@ export var UrlbarUtils = {
     // particularly useful to the user.
     if (
       !value ||
-      input.isPrivate ||
+      isPrivate ||
       value.length >
         lazy.SearchSuggestionController.SEARCH_HISTORY_MAX_VALUE_LENGTH
     ) {
-      return Promise.resolve();
+      return;
     }
-    return lazy.FormHistory.update({
+    await lazy.FormHistory.update({
       op: "bump",
       fieldname: lazy.DEFAULT_FORM_HISTORY_PARAM,
       value,
@@ -1323,81 +1172,6 @@ export var UrlbarUtils = {
       op: "remove",
       fieldname: lazy.DEFAULT_FORM_HISTORY_PARAM,
     });
-  },
-
-  /**
-   * Unescape the given uri to use as UI.
-   * NOTE: If the length of uri is over MAX_TEXT_LENGTH,
-   *       return the given uri as it is.
-   *
-   * @param {string} uri will be unescaped.
-   * @returns {string} Unescaped uri.
-   */
-  unEscapeURIForUI(uri) {
-    return uri.length > UrlbarShared.MAX_TEXT_LENGTH
-      ? uri
-      : Services.textToSubURI.unEscapeURIForUI(uri);
-  },
-
-  /**
-   * Checks whether a given text has right-to-left direction or not.
-   *
-   * @param {string} value The text which should be check for RTL direction.
-   * @param {Window} window The window where 'value' is going to be displayed.
-   * @returns {boolean} Returns true if text has right-to-left direction and
-   *                    false otherwise.
-   */
-  isTextDirectionRTL(value, window) {
-    let directionality = window.windowUtils.getDirectionFromText(value);
-    return directionality == window.windowUtils.DIRECTION_RTL;
-  },
-
-  /**
-   * Unescape, decode punycode, and trim (both protocol and trailing slash)
-   * the URL. Use for displaying purposes only!
-   *
-   * @param {string|URL} url The url that should be prepared for display.
-   * @param {object} [options] Preparation options.
-   * @param {boolean} [options.trimURL] Whether the displayed URL should be
-   *                  trimmed or not.
-   * @param {boolean} [options.schemeless] Trim `http(s)://`.
-   * @returns {string} Prepared url.
-   */
-  prepareUrlForDisplay(url, { trimURL = true, schemeless = false } = {}) {
-    // Some domains are encoded in punycode. The following ensures we display
-    // the url in utf-8.
-    let displayString;
-    if (typeof url == "string") {
-      try {
-        displayString = new URL(url).URI.displaySpec;
-      } catch {
-        // In some cases url is not a valid url, so we fallback to using the
-        // string as-is.
-        displayString = url;
-      }
-    } else {
-      displayString = url.URI.displaySpec;
-    }
-
-    if (displayString) {
-      if (schemeless) {
-        displayString = UrlbarShared.stripPrefixAndTrim(displayString, {
-          stripHttp: true,
-          stripHttps: true,
-        })[0];
-      } else if (trimURL && lazy.UrlbarPrefs.get("trimURLs")) {
-        displayString =
-          lazy.BrowserUIUtils.removeSingleTrailingSlashFromURL(displayString);
-        if (displayString.startsWith("https://")) {
-          displayString = displayString.substring(8);
-          if (displayString.startsWith("www.")) {
-            displayString = displayString.substring(4);
-          }
-        }
-      }
-    }
-
-    return this.unEscapeURIForUI(displayString);
   },
 
   /**
@@ -1472,167 +1246,6 @@ export var UrlbarUtils = {
     return result.heuristic ? "heuristic" : "unknown";
   },
 
-  /**
-   * Extracts a type for search engagement telemetry from a result.
-   *
-   * @param {UrlbarResult} result The result to analyze.
-   * @param {string} [selType] An optional parameter for the selected type.
-   * @returns {string} Type as string.
-   */
-  searchEngagementTelemetryType(result, selType = null) {
-    if (!result) {
-      return selType === "oneoff" ? "search_shortcut_button" : "input_field";
-    }
-
-    // While product doesn't use experimental addons anymore, tests may still do
-    // for testing purposes.
-    if (
-      result.providerType === UrlbarShared.PROVIDER_TYPE.EXTENSION &&
-      result.providerName != "UrlbarProviderOmnibox"
-    ) {
-      return "experimental_addon";
-    }
-
-    if (result.providerName == "UrlbarProviderQuickSuggest") {
-      return this._getQuickSuggestTelemetryType(result);
-    }
-
-    // Appends subtype to certain result types.
-    function checkForSubType(type, res) {
-      if (res.providerName == "UrlbarProviderInputHistory") {
-        type += "_adaptive";
-      } else if (res.providerName == "UrlbarProviderSemanticHistorySearch") {
-        type += "_semantic";
-      }
-      if (
-        lazy.UrlbarSearchUtils.resultIsSERP(res, [
-          UrlbarShared.RESULT_SOURCE.BOOKMARKS,
-          UrlbarShared.RESULT_SOURCE.HISTORY,
-          UrlbarShared.RESULT_SOURCE.TABS,
-        ])
-      ) {
-        type += "_serp";
-      }
-      return type;
-    }
-
-    switch (result.type) {
-      case UrlbarShared.RESULT_TYPE.DYNAMIC:
-        switch (result.providerName) {
-          case "UrlbarProviderCalculator":
-            return "calc";
-          case "UrlbarProviderTabToSearch":
-            return "tab_to_search";
-          case "UrlbarProviderUnitConversion":
-            return "unit";
-          case "UrlbarProviderQuickSuggestContextualOptIn":
-            return "fxsuggest_data_sharing_opt_in";
-          case "UrlbarProviderGlobalActions":
-          case "UrlbarProviderActionsSearchMode":
-            return "action";
-        }
-        break;
-      case UrlbarShared.RESULT_TYPE.KEYWORD:
-        return "keyword";
-      case UrlbarShared.RESULT_TYPE.OMNIBOX:
-        return "addon";
-      case UrlbarShared.RESULT_TYPE.REMOTE_TAB:
-        return "remote_tab";
-      case UrlbarShared.RESULT_TYPE.SEARCH:
-        if (result.providerName === "UrlbarProviderTabToSearch") {
-          return "tab_to_search";
-        }
-        if (result.source == UrlbarShared.RESULT_SOURCE.HISTORY) {
-          return result.providerName == "UrlbarProviderRecentSearches"
-            ? "recent_search"
-            : "search_history";
-        }
-        if (result.providerName === "UrlbarProviderAiChat") {
-          return "ai_search_fallback";
-        }
-        if (result.payload.suggestion) {
-          let type = result.payload.trending
-            ? "trending_search"
-            : "search_suggest";
-          if (result.isRichSuggestion) {
-            type += "_rich";
-          }
-          return type;
-        }
-        return "search_engine";
-      case UrlbarShared.RESULT_TYPE.TAB_SWITCH:
-        return checkForSubType("tab", result);
-      case UrlbarShared.RESULT_TYPE.TIP:
-        if (result.providerName === "UrlbarProviderInterventions") {
-          switch (result.payload.type) {
-            case lazy.UrlbarProviderInterventions.TIP_TYPE.CLEAR:
-              return "intervention_clear";
-            case lazy.UrlbarProviderInterventions.TIP_TYPE.REFRESH:
-              return "intervention_refresh";
-            case lazy.UrlbarProviderInterventions.TIP_TYPE.UPDATE_ASK:
-            case lazy.UrlbarProviderInterventions.TIP_TYPE.UPDATE_CHECKING:
-            case lazy.UrlbarProviderInterventions.TIP_TYPE.UPDATE_REFRESH:
-            case lazy.UrlbarProviderInterventions.TIP_TYPE.UPDATE_RESTART:
-            case lazy.UrlbarProviderInterventions.TIP_TYPE.UPDATE_WEB:
-              return "intervention_update";
-            default:
-              return "intervention_unknown";
-          }
-        }
-        switch (result.payload.type) {
-          case lazy.UrlbarProviderSearchTips.TIP_TYPE.ONBOARD:
-            return "tip_onboard";
-          case lazy.UrlbarProviderSearchTips.TIP_TYPE.REDIRECT:
-            return "tip_redirect";
-          case "dismissalAcknowledgment":
-            return "tip_dismissal_acknowledgment";
-          default:
-            return "tip_unknown";
-        }
-      case UrlbarShared.RESULT_TYPE.URL:
-        if (
-          result.source === UrlbarShared.RESULT_SOURCE.OTHER_LOCAL &&
-          result.heuristic
-        ) {
-          return "url";
-        }
-        if (result.autofill) {
-          return `autofill_${result.autofill.type ?? "unknown"}`;
-        }
-        if (result.providerName === "UrlbarProviderTopSites") {
-          return "top_site";
-        }
-        if (result.providerName === "UrlbarProviderClipboard") {
-          return "clipboard";
-        }
-        if (result.payload.isAutofillFallback) {
-          return "history_autofill_fallback_origin";
-        }
-        if (result.source === UrlbarShared.RESULT_SOURCE.BOOKMARKS) {
-          return checkForSubType("bookmark", result);
-        }
-        return checkForSubType("history", result);
-      case UrlbarShared.RESULT_TYPE.RESTRICT:
-        if (result.payload.keyword === UrlbarShared.RESTRICT_TOKENS.BOOKMARK) {
-          return "restrict_keyword_bookmarks";
-        }
-        if (result.payload.keyword === UrlbarShared.RESTRICT_TOKENS.OPENPAGE) {
-          return "restrict_keyword_tabs";
-        }
-        if (result.payload.keyword === UrlbarShared.RESTRICT_TOKENS.HISTORY) {
-          return "restrict_keyword_history";
-        }
-        if (result.payload.keyword === UrlbarShared.RESTRICT_TOKENS.ACTION) {
-          return "restrict_keyword_actions";
-        }
-        break;
-      case UrlbarShared.RESULT_TYPE.AI_CHAT:
-        return "ai_chat";
-    }
-
-    return "unknown";
-  },
-
   searchEngagementTelemetryAction(result, pickedActionKey = null) {
     if (result.providerName != "UrlbarProviderGlobalActions") {
       return result.payload.action?.key ?? "none";
@@ -1641,15 +1254,6 @@ export var UrlbarUtils = {
       return pickedActionKey;
     }
     return result.payload.actionsResults.map(({ key }) => key).join(",");
-  },
-
-  _getQuickSuggestTelemetryType(result) {
-    if (result.payload.telemetryType == "weather") {
-      // Return "weather" without the usual source prefix for consistency with
-      // past reporting of weather suggestions.
-      return "weather";
-    }
-    return result.payload.source + "_" + result.payload.telemetryType;
   },
 
   /**

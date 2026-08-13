@@ -7299,6 +7299,11 @@ function WidgetSingleWrapper(aWidget, aNode) {
   });
 
   this.__defineGetter__("overflowed", function () {
+    // A widget that isn't built in this window (e.g. showInPrivateBrowsing:false
+    // in a private window) can't be overflowed.
+    if (!aNode) {
+      return false;
+    }
     return aNode.getAttribute("overflowedItem") == "true";
   });
 

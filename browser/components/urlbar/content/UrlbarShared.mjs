@@ -9,6 +9,7 @@
  * its own copy of the module).
  */
 
+import UrlbarContentURIUtils from "chrome://browser/content/urlbar/UrlbarContentURIUtils.mjs";
 import UrlbarPrefs from "chrome://browser/content/urlbar/UrlbarContentPrefs.mjs";
 
 /**
@@ -31,6 +32,19 @@ import UrlbarPrefs from "chrome://browser/content/urlbar/UrlbarContentPrefs.mjs"
  *   Has a value and an accesskey attribute.
  */
 
+/**
+ * @typedef {object} URIFixupPrimitives
+ *   The parts of an `nsIURIFixupInfo` that survive the actor boundary, so a
+ *   content-realm consumer never holds an XPCOM object. Produced by
+ *   `UrlbarUtils.getFixupPrimitives()`.
+ *
+ * @property {string} keywordAsSent
+ *   The keyword the string was turned into, empty if it wasn't a keyword
+ *   search.
+ * @property {?string} preferredURIDisplaySpec
+ *   The display spec of the preferred URI, if there is one.
+ */
+
 // The userContextId used in the moz_openpages_temp table for tabs in private
 // windows. Real container ids are non-negative, so -1 is a safe sentinel.
 const PRIVATE_USER_CONTEXT_ID = -1;
@@ -47,8 +61,16 @@ export const UrlbarShared = {
   // them identically without the child reaching into the parent module.
   NOTIFICATIONS: Object.freeze({
     QUERY_STARTED: "onQueryStarted",
+    // Fires when the first result changed, before QUERY_RESULTS, so the input
+    // can react to it (enter search mode, apply autofill) before the results
+    // are shown.
+    QUERY_FIRST_RESULT: "onFirstResult",
     QUERY_RESULTS: "onQueryResults",
     QUERY_RESULT_REMOVED: "onQueryResultRemoved",
+    // Fires when no further results will reach the listeners. The parent
+    // cancels a query when a new one supersedes it and when the view closes or
+    // freezes its rows; the child controller cancels one whose results it
+    // withholds.
     QUERY_CANCELLED: "onQueryCancelled",
     QUERY_FINISHED: "onQueryFinished",
     VIEW_OPEN: "onViewOpen",
@@ -196,6 +218,43 @@ export const UrlbarShared = {
     EXTENSION: 4,
   }),
 
+  // The tip types UrlbarProviderInterventions can show, i.e. the `type` in the
+  // payload of its results.
+  INTERVENTION_TIP_TYPE: Object.freeze({
+    NONE: "",
+    CLEAR: "intervention_clear",
+    REFRESH: "intervention_refresh",
+
+    // There's an update available, but the user's pref says we should ask them
+    // to download and apply it.
+    UPDATE_ASK: "intervention_update_ask",
+
+    // The updater is currently checking.  We don't actually show a tip for this,
+    // but we use it to tell whether we should wait for the check to complete in
+    // startQuery.  See startQuery for details.
+    UPDATE_CHECKING: "intervention_update_checking",
+
+    // The user's browser is up to date, but they triggered the update
+    // intervention. We show this special refresh intervention instead.
+    UPDATE_REFRESH: "intervention_update_refresh",
+
+    // There's an update and it's been downloaded and applied. The user needs to
+    // restart to finish.
+    UPDATE_RESTART: "intervention_update_restart",
+
+    // We can't update the browser or possibly even check for updates for some
+    // reason, so the user should download the latest version from the web.
+    UPDATE_WEB: "intervention_update_web",
+  }),
+
+  // The tip types UrlbarProviderSearchTips can show, i.e. the `type` in the
+  // payload of its results.
+  SEARCH_TIP_TYPE: Object.freeze({
+    NONE: "",
+    ONBOARD: "searchTip_onboard",
+    REDIRECT: "searchTip_redirect",
+  }),
+
   // Per-result exposure telemetry.
   EXPOSURE_TELEMETRY: {
     // Exposure telemetry will not be recorded for the result.
@@ -305,7 +364,7 @@ export const UrlbarShared = {
       {
         source: this.RESULT_SOURCE.TABS,
         restrict: this.RESTRICT_TOKENS.OPENPAGE,
-        icon: "chrome://browser/skin/tabs.svg",
+        icon: "chrome://browser/skin/open-tabs.svg",
         pref: "shortcuts.tabs",
         telemetryLabel: "tabs",
         uiLabel: "urlbar-searchmode-tabs3",
@@ -321,7 +380,7 @@ export const UrlbarShared = {
       {
         source: this.RESULT_SOURCE.ACTIONS,
         restrict: this.RESTRICT_TOKENS.ACTION,
-        icon: "chrome://browser/skin/quickactions.svg",
+        icon: "chrome://browser/skin/lightning-bolt.svg",
         pref: "shortcuts.actions",
         telemetryLabel: "actions",
         uiLabel: "urlbar-searchmode-actions3",
@@ -472,6 +531,23 @@ export const UrlbarShared = {
   },
 
   /**
+   * Returns whether a URL is an origin URL, i.e. it has no path beyond "/",
+   * no query string, and no hash.
+   *
+   * @param {string} url
+   *   The URL to check.
+   * @returns {boolean}
+   *   True if the URL is an origin URL, false if it has a path, query, hash,
+   *   or is unparseable.
+   */
+  isOriginUrl(url) {
+    let parsed = URL.parse(url);
+    return (
+      !!parsed && parsed.pathname === "/" && !parsed.search && !parsed.hash
+    );
+  },
+
+  /**
    * Gets a default icon for a URL.
    *
    * @param {string|URL} url
@@ -574,6 +650,62 @@ export const UrlbarShared = {
   },
 
   /**
+   * Unescape the given uri to use as UI.
+   * NOTE: If the length of uri is over MAX_TEXT_LENGTH,
+   *       return the given uri as it is.
+   *
+   * @param {string} uri will be unescaped.
+   * @returns {string} Unescaped uri.
+   */
+  unEscapeURIForUI(uri) {
+    return uri.length > this.MAX_TEXT_LENGTH
+      ? uri
+      : UrlbarContentURIUtils.unEscapeURIForUI(uri);
+  },
+
+  /**
+   * Unescape, decode punycode, and trim (both protocol and trailing slash)
+   * the URL. Use for displaying purposes only!
+   *
+   * @param {string|URL} url The url that should be prepared for display.
+   * @param {object} [options] Preparation options.
+   * @param {boolean} [options.trimURL] Whether the displayed URL should be
+   *                  trimmed or not.
+   * @param {boolean} [options.schemeless] Trim `http(s)://`.
+   * @returns {string} Prepared url.
+   */
+  prepareUrlForDisplay(url, { trimURL = true, schemeless = false } = {}) {
+    // Some domains are encoded in punycode. The following ensures we display
+    // the url in utf-8. If the url can't be parsed we fall back to using the
+    // string as-is.
+    let spec = typeof url == "string" ? url : url.href;
+    let displayString = UrlbarContentURIUtils.getDisplaySpec(spec) ?? spec;
+
+    if (displayString) {
+      if (schemeless) {
+        displayString = this.stripPrefixAndTrim(displayString, {
+          stripHttp: true,
+          stripHttps: true,
+        })[0];
+      } else if (trimURL && UrlbarPrefs.get("trimURLs")) {
+        // Remove a single trailing slash for http/https/ftp URLs.
+        displayString = displayString.replace(
+          /^((?:http|https|ftp):\/\/[^/]+)\/$/,
+          "$1"
+        );
+        if (displayString.startsWith("https://")) {
+          displayString = displayString.substring(8);
+          if (displayString.startsWith("www.")) {
+            displayString = displayString.substring(4);
+          }
+        }
+      }
+    }
+
+    return this.unEscapeURIForUI(displayString);
+  },
+
+  /**
    * Returns whether a URL can be autofilled from a candidate string. This
    * function is specifically designed for origin and up-to-the-next-slash URL
    * autofill. It should not be used for other types of autofill.
@@ -656,6 +788,60 @@ export const UrlbarShared = {
   },
 
   /**
+   * Sanitize and process data retrieved from the clipboard
+   *
+   * @param {string} clipboardData
+   *   The original data retrieved from the clipboard.
+   * @param {?URIFixupPrimitives} fixupInfo
+   *   Fixup info for `clipboardData`, or null if it couldn't be fixed up. URI
+   *   fixup is parent-only, so the caller supplies it, either from
+   *   `UrlbarUtils.getFixupPrimitives()` or, from an input, from
+   *   `controller.getFixupPrimitives()`.
+   * @returns {string}
+   *   The sanitized paste data, ready to use.
+   */
+  sanitizeTextFromClipboard(clipboardData, fixupInfo) {
+    let url = URL.parse(clipboardData);
+    let pasteData;
+    if (fixupInfo?.keywordAsSent) {
+      // For performance reasons, we don't want to beautify a long string.
+      if (clipboardData.length < 500) {
+        // For only keywords, replace any white spaces including line break
+        // with white space.
+        pasteData = clipboardData.replace(/\s/g, " ");
+      } else {
+        pasteData = clipboardData;
+      }
+    } else if (
+      url?.protocol == "data:" &&
+      !url.href.match(/^data:.+;base64,/)
+    ) {
+      // For data url without base64, replace line break with white space.
+      pasteData = clipboardData.replace(/[\r\n]/g, " ");
+    } else {
+      // For normal url or data url having basic64, or if fixup failed, just
+      // remove line breaks.
+      pasteData = clipboardData.replace(/[\r\n]/g, "");
+    }
+
+    return this.stripUnsafeProtocolOnPaste(pasteData);
+  },
+
+  /**
+   * Used to filter out the javascript protocol from URIs, since we don't
+   * support LOAD_FLAGS_DISALLOW_INHERIT_PRINCIPAL for those.
+   *
+   * @param {string} pasteData The data to check for javacript protocol.
+   * @returns {string} The modified paste data.
+   */
+  stripUnsafeProtocolOnPaste(pasteData) {
+    while (URL.parse(pasteData)?.protocol == "javascript:") {
+      pasteData = pasteData.substring(pasteData.indexOf(":") + 1);
+    }
+    return pasteData;
+  },
+
+  /**
    * Gets the number of rows a result should span in the view.
    *
    * @param {UrlbarResult} result
@@ -686,6 +872,317 @@ export const UrlbarShared = {
   },
 
   /**
+   * Extracts a type for search engagement telemetry from a result.
+   *
+   * @param {UrlbarResult} result The result to analyze.
+   * @param {string} [selType] An optional parameter for the selected type.
+   * @returns {string} Type as string.
+   */
+  searchEngagementTelemetryType(result, selType = null) {
+    if (!result) {
+      return selType === "oneoff" ? "search_shortcut_button" : "input_field";
+    }
+
+    // While product doesn't use experimental addons anymore, tests may still do
+    // for testing purposes.
+    if (
+      result.providerType === UrlbarShared.PROVIDER_TYPE.EXTENSION &&
+      result.providerName != "UrlbarProviderOmnibox"
+    ) {
+      return "experimental_addon";
+    }
+
+    if (result.providerName == "UrlbarProviderQuickSuggest") {
+      return this._getQuickSuggestTelemetryType(result);
+    }
+
+    // Appends subtype to certain result types.
+    function checkForSubType(type, res) {
+      if (res.providerName == "UrlbarProviderInputHistory") {
+        type += "_adaptive";
+      } else if (res.providerName == "UrlbarProviderSemanticHistorySearch") {
+        type += "_semantic";
+      }
+      if (
+        res.isSERP &&
+        [
+          UrlbarShared.RESULT_SOURCE.BOOKMARKS,
+          UrlbarShared.RESULT_SOURCE.HISTORY,
+          UrlbarShared.RESULT_SOURCE.TABS,
+        ].includes(res.source)
+      ) {
+        type += "_serp";
+      }
+      return type;
+    }
+
+    switch (result.type) {
+      case UrlbarShared.RESULT_TYPE.DYNAMIC:
+        switch (result.providerName) {
+          case "UrlbarProviderCalculator":
+            return "calc";
+          case "UrlbarProviderTabToSearch":
+            return "tab_to_search";
+          case "UrlbarProviderUnitConversion":
+            return "unit";
+          case "UrlbarProviderQuickSuggestContextualOptIn":
+            return "fxsuggest_data_sharing_opt_in";
+          case "UrlbarProviderGlobalActions":
+          case "UrlbarProviderActionsSearchMode":
+            return "action";
+        }
+        break;
+      case UrlbarShared.RESULT_TYPE.KEYWORD:
+        return "keyword";
+      case UrlbarShared.RESULT_TYPE.OMNIBOX:
+        return "addon";
+      case UrlbarShared.RESULT_TYPE.REMOTE_TAB:
+        return "remote_tab";
+      case UrlbarShared.RESULT_TYPE.SEARCH:
+        if (result.providerName === "UrlbarProviderTabToSearch") {
+          return "tab_to_search";
+        }
+        if (result.source == UrlbarShared.RESULT_SOURCE.HISTORY) {
+          return result.providerName == "UrlbarProviderRecentSearches"
+            ? "recent_search"
+            : "search_history";
+        }
+        if (result.providerName === "UrlbarProviderAiChat") {
+          return "ai_search_fallback";
+        }
+        if (result.payload.suggestion) {
+          let type = result.payload.trending
+            ? "trending_search"
+            : "search_suggest";
+          if (result.isRichSuggestion) {
+            type += "_rich";
+          }
+          return type;
+        }
+        return "search_engine";
+      case UrlbarShared.RESULT_TYPE.TAB_SWITCH:
+        return checkForSubType("tab", result);
+      case UrlbarShared.RESULT_TYPE.TIP:
+        if (result.providerName === "UrlbarProviderInterventions") {
+          switch (result.payload.type) {
+            case UrlbarShared.INTERVENTION_TIP_TYPE.CLEAR:
+              return "intervention_clear";
+            case UrlbarShared.INTERVENTION_TIP_TYPE.REFRESH:
+              return "intervention_refresh";
+            case UrlbarShared.INTERVENTION_TIP_TYPE.UPDATE_ASK:
+            case UrlbarShared.INTERVENTION_TIP_TYPE.UPDATE_CHECKING:
+            case UrlbarShared.INTERVENTION_TIP_TYPE.UPDATE_REFRESH:
+            case UrlbarShared.INTERVENTION_TIP_TYPE.UPDATE_RESTART:
+            case UrlbarShared.INTERVENTION_TIP_TYPE.UPDATE_WEB:
+              return "intervention_update";
+            default:
+              return "intervention_unknown";
+          }
+        }
+        switch (result.payload.type) {
+          case UrlbarShared.SEARCH_TIP_TYPE.ONBOARD:
+            return "tip_onboard";
+          case UrlbarShared.SEARCH_TIP_TYPE.REDIRECT:
+            return "tip_redirect";
+          case "dismissalAcknowledgment":
+            return "tip_dismissal_acknowledgment";
+          default:
+            return "tip_unknown";
+        }
+      case UrlbarShared.RESULT_TYPE.URL:
+        if (
+          result.source === UrlbarShared.RESULT_SOURCE.OTHER_LOCAL &&
+          result.heuristic
+        ) {
+          return "url";
+        }
+        if (result.autofill) {
+          return `autofill_${result.autofill.type ?? "unknown"}`;
+        }
+        if (result.providerName === "UrlbarProviderTopSites") {
+          return "top_site";
+        }
+        if (result.providerName === "UrlbarProviderClipboard") {
+          return "clipboard";
+        }
+        if (result.payload.isAutofillFallback) {
+          return "history_autofill_fallback_origin";
+        }
+        if (result.source === UrlbarShared.RESULT_SOURCE.BOOKMARKS) {
+          return checkForSubType("bookmark", result);
+        }
+        return checkForSubType("history", result);
+      case UrlbarShared.RESULT_TYPE.RESTRICT:
+        if (result.payload.keyword === UrlbarShared.RESTRICT_TOKENS.BOOKMARK) {
+          return "restrict_keyword_bookmarks";
+        }
+        if (result.payload.keyword === UrlbarShared.RESTRICT_TOKENS.OPENPAGE) {
+          return "restrict_keyword_tabs";
+        }
+        if (result.payload.keyword === UrlbarShared.RESTRICT_TOKENS.HISTORY) {
+          return "restrict_keyword_history";
+        }
+        if (result.payload.keyword === UrlbarShared.RESTRICT_TOKENS.ACTION) {
+          return "restrict_keyword_actions";
+        }
+        break;
+      case UrlbarShared.RESULT_TYPE.AI_CHAT:
+        return "ai_chat";
+    }
+
+    return "unknown";
+  },
+
+  _getQuickSuggestTelemetryType(result) {
+    if (result.payload.telemetryType == "weather") {
+      // Return "weather" without the usual source prefix for consistency with
+      // past reporting of weather suggestions.
+      return "weather";
+    }
+    return result.payload.source + "_" + result.payload.telemetryType;
+  },
+
+  _compareIgnoringDiacritics: null,
+
+  /**
+   * Returns a list of all the token substring matches in a string.  Matching is
+   * case insensitive.  Each match in the returned list is a tuple: [matchIndex,
+   * matchLength].  matchIndex is the index in the string of the match, and
+   * matchLength is the length of the match.
+   *
+   * @param {Array} tokens The tokens to search for.
+   * @param {string} str The string to match against.
+   * @param {Values<typeof UrlbarShared.HIGHLIGHT>} highlightType
+   *   One of the HIGHLIGHT values:
+   *     TYPED: match ranges matching the tokens; or
+   *     SUGGESTED: match ranges for words not matching the tokens and the
+   *                endings of words that start with a token.
+   *     ALL: match all ranges of str.
+   * @returns {Array} An array: [
+   *            [matchIndex_0, matchLength_0],
+   *            [matchIndex_1, matchLength_1],
+   *            ...
+   *            [matchIndex_n, matchLength_n]
+   *          ].
+   *          The array is sorted by match indexes ascending.
+   */
+  getTokenMatches(tokens, str, highlightType) {
+    if (highlightType == UrlbarShared.HIGHLIGHT.ALL) {
+      return [[0, str.length]];
+    }
+
+    if (!tokens?.length) {
+      return [];
+    }
+
+    // Only search a portion of the string, because not more than a certain
+    // amount of characters are visible in the UI, matching over what is visible
+    // would be expensive and pointless.
+    str = str.substring(0, UrlbarShared.MAX_TEXT_LENGTH).toLocaleLowerCase();
+    // To generate non-overlapping ranges, we start from a 0-filled array with
+    // the same length of the string, and use it as a collision marker, setting
+    // 1 where the text should be highlighted.
+    let hits = new Array(str.length).fill(
+      highlightType == UrlbarShared.HIGHLIGHT.SUGGESTED ? 1 : 0
+    );
+    let compareIgnoringDiacritics;
+    for (let i = 0, totalTokensLength = 0; i < tokens.length; i++) {
+      const { lowerCaseValue: needle } = tokens[i];
+
+      // Ideally we should never hit the empty token case, but just in case
+      // the `needle` check protects us from an infinite loop.
+      if (!needle) {
+        continue;
+      }
+      let index = 0;
+      let found = false;
+      // First try a diacritic-sensitive search.
+      for (;;) {
+        index = str.indexOf(needle, index);
+        if (index < 0) {
+          break;
+        }
+
+        if (highlightType == UrlbarShared.HIGHLIGHT.SUGGESTED) {
+          // We de-emphasize the match only if it's preceded by a space, thus
+          // it's a perfect match or the beginning of a longer word.
+          let previousSpaceIndex = str.lastIndexOf(" ", index) + 1;
+          if (index != previousSpaceIndex) {
+            index += needle.length;
+            // We found the token but we won't de-emphasize it, because it's not
+            // after a word boundary.
+            found = true;
+            continue;
+          }
+        }
+
+        hits.fill(
+          highlightType == UrlbarShared.HIGHLIGHT.SUGGESTED ? 0 : 1,
+          index,
+          index + needle.length
+        );
+        index += needle.length;
+        found = true;
+      }
+      // If that fails to match anything, try a (computationally intensive)
+      // diacritic-insensitive search.
+      if (!found) {
+        if (!compareIgnoringDiacritics) {
+          if (!this._compareIgnoringDiacritics) {
+            // Diacritic insensitivity in the search engine follows a set of
+            // general rules that are not locale-dependent, so use a generic
+            // English collator for highlighting matching words instead of a
+            // collator for the user's particular locale.
+            this._compareIgnoringDiacritics = new Intl.Collator("en", {
+              sensitivity: "base",
+            }).compare;
+          }
+          compareIgnoringDiacritics = this._compareIgnoringDiacritics;
+        }
+        index = 0;
+        while (index < str.length) {
+          let hay = str.substr(index, needle.length);
+          if (compareIgnoringDiacritics(needle, hay) === 0) {
+            if (highlightType == UrlbarShared.HIGHLIGHT.SUGGESTED) {
+              let previousSpaceIndex = str.lastIndexOf(" ", index) + 1;
+              if (index != previousSpaceIndex) {
+                index += needle.length;
+                continue;
+              }
+            }
+            hits.fill(
+              highlightType == UrlbarShared.HIGHLIGHT.SUGGESTED ? 0 : 1,
+              index,
+              index + needle.length
+            );
+            index += needle.length;
+          } else {
+            index++;
+          }
+        }
+      }
+
+      totalTokensLength += needle.length;
+      if (totalTokensLength > UrlbarShared.MAX_TEXT_LENGTH) {
+        // Limit the number of tokens to reduce calculate time.
+        break;
+      }
+    }
+    // Starting from the collision array, generate [start, len] tuples
+    // representing the ranges to be highlighted.
+    let ranges = [];
+    for (let index = hits.indexOf(1); index >= 0 && index < hits.length; ) {
+      let len = 0;
+      // eslint-disable-next-line no-empty
+      for (let j = index; j < hits.length && hits[j]; ++j, ++len) {}
+      ranges.push([index, len]);
+      // Move to the next 1.
+      index = hits.indexOf(1, index + len);
+    }
+    return ranges;
+  },
+
+  /**
    * Adds text content to a node, placing substrings that should be highlighted
    * inside <strong> nodes.
    *
@@ -694,7 +1191,7 @@ export const UrlbarShared = {
    * @param {string} textContent
    *   The text content to give the node.
    * @param {Array} highlights
-   *   Array of highlights as returned by `UrlbarUtils.getTokenMatches()` or
+   *   Array of highlights as returned by `UrlbarShared.getTokenMatches()` or
    *   `UrlbarResult.getDisplayableValueAndHighlights()`.
    */
   addTextContentWithHighlights(parentNode, textContent, highlights) {

@@ -35,7 +35,6 @@ export class SmartwindowGroupTabsCard extends MozLitElement {
     computing: { type: Boolean },
     suggestions: { attribute: false },
     recent: { attribute: false },
-    ungrouped: { type: Number },
     duplicates: { type: Number },
   };
 
@@ -44,7 +43,6 @@ export class SmartwindowGroupTabsCard extends MozLitElement {
     this.computing = false;
     this.suggestions = [];
     this.recent = [];
-    this.ungrouped = 0;
     this.duplicates = 0;
     this.addEventListener("keydown", e => this.#onKeyDown(e));
   }
@@ -116,6 +114,17 @@ export class SmartwindowGroupTabsCard extends MozLitElement {
     event.preventDefault();
   }
 
+  #onSuggestionFocus(event, suggestion) {
+    if (event.currentTarget.hasAttribute("refocused-by-panel")) {
+      return;
+    }
+    this.#emit("preview", {
+      id: suggestion.id,
+      anchor: event.currentTarget,
+      source: "focus",
+    });
+  }
+
   #onSuggestionKeyDown(event, suggestion) {
     if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
       event.preventDefault();
@@ -142,12 +151,7 @@ export class SmartwindowGroupTabsCard extends MozLitElement {
           anchor: e.currentTarget,
           source: "hover",
         })}
-      @focus=${e =>
-        this.#emit("preview", {
-          id: suggestion.id,
-          anchor: e.currentTarget,
-          source: "focus",
-        })}
+      @focus=${e => this.#onSuggestionFocus(e, suggestion)}
       @mouseleave=${() => this.#emit("preview-end")}
       @blur=${() => this.#emit("preview-end")}
       @keydown=${e => this.#onSuggestionKeyDown(e, suggestion)}
@@ -174,10 +178,9 @@ export class SmartwindowGroupTabsCard extends MozLitElement {
     const hasRecent = !this.computing && !!this.recent.length;
     let note = null;
     if (!this.computing && !hasSuggestions) {
-      note =
-        hasRecent && !this.ungrouped
-          ? "smartwindow-group-tabs-all-sorted"
-          : "smartwindow-group-tabs-empty";
+      note = hasRecent
+        ? "smartwindow-group-tabs-all-sorted"
+        : "smartwindow-group-tabs-empty";
     }
 
     return [

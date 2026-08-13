@@ -15,10 +15,12 @@ import androidx.test.uiautomator.By
 import androidx.test.uiautomator.Until
 import mozilla.components.compose.browser.toolbar.concept.BrowserToolbarTestTags.ADDRESSBAR_URL
 import org.junit.Assert.assertTrue
+import org.mozilla.fenix.ext.components
 import org.mozilla.fenix.helpers.HomeActivityIntentTestRule
 import org.mozilla.fenix.helpers.TestAssetHelper.waitingTime
 import org.mozilla.fenix.helpers.TestAssetHelper.waitingTimeLong
 import org.mozilla.fenix.helpers.TestAssetHelper.waitingTimeShort
+import org.mozilla.fenix.helpers.TestHelper.appContext
 import org.mozilla.fenix.helpers.TestHelper.mDevice
 import org.mozilla.fenix.helpers.TestHelper.packageName
 import org.mozilla.fenix.helpers.ext.waitNotNull
@@ -27,6 +29,7 @@ import org.mozilla.fenix.ui.efficiency.helpers.Selector
 import org.mozilla.fenix.ui.efficiency.navigation.NavigationRegistry
 import org.mozilla.fenix.ui.efficiency.navigation.NavigationStep
 import org.mozilla.fenix.ui.efficiency.selectors.BrowserPageSelectors
+import org.mozilla.fenix.ui.efficiency.selectors.DownloadsSelectors
 import org.mozilla.fenix.ui.efficiency.selectors.HomeSelectors
 import org.mozilla.fenix.ui.efficiency.selectors.MainMenuSelectors
 import org.mozilla.fenix.ui.efficiency.selectors.SearchBarSelectors
@@ -146,16 +149,47 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
         return this
     }
 
+    fun verifyTranslationSheetIsDisplayed(): BrowserPage {
+        // The "translate from/to" dropdowns render a beat after the sheet frame, title and
+        // buttons because they depend on the async page-settings fetch. mozVerifyElementsByGroup
+        // is a single-shot check, so firing it the instant the sheet animates in can miss the
+        // dropdowns and fail spuriously. Gate on the last-rendered dropdown before the group check.
+        mozVerify(BrowserPageSelectors.TRANSLATION_SHEET_TRANSLATE_TO, timeout = waitingTimeLong)
+        mozVerifyElementsByGroup("notTranslatedPageTranslationSheet")
+        return this
+    }
+
+    // Reload-based recovery for the page-load auto-prompt path, where reloading the page re-triggers
+    // the sheet. The menu-opened path (isPageLoadTranslationsPromptEnabled = false) must NOT use this:
+    // a reload there dismisses the sheet with no way to bring it back -- call
+    // verifyTranslationSheetIsDisplayed() directly instead.
     fun verifyTranslationSheetWithReload(url: String, attempts: Int = 3): BrowserPage {
         for (attempt in 1..attempts) {
             try {
-                mozVerify(BrowserPageSelectors.TRANSLATION_SHEET, timeout = waitingTimeLong)
-                mozVerifyElementsByGroup("notTranslatedPageTranslationSheet")
-                return this
+                return verifyTranslationSheetIsDisplayed()
             } catch (e: AssertionError) {
                 if (attempt == attempts) throw e
                 Log.i("BrowserPage", "verifyTranslationSheetWithReload: translation sheet absent on attempt $attempt, reloading")
                 navigateToPage(url, forceNavigation = true)
+            }
+        }
+        return this
+    }
+
+    fun translatePageFromSheet(attempts: Int = 3): BrowserPage {
+        mozClick(BrowserPageSelectors.TRANSLATION_SHEET_TRANSLATE_BUTTON)
+        // A first-time translation downloads a language model (tens of MB) before it can finish
+        // and dismiss the sheet, so on a slow or briefly-dropped network a single wait window
+        // isn't enough. Retry the wait -- the download keeps progressing in the background -- rather
+        // than failing the first time it overruns. This mirrors the legacy TranslationsRobot's
+        // RETRY_COUNT x waitingTimeLong budget.
+        for (attempt in 1..attempts) {
+            try {
+                mozWaitUntilAbsent(BrowserPageSelectors.TRANSLATION_SHEET_TRANSLATE_BUTTON, timeout = waitingTimeLong)
+                return this
+            } catch (e: AssertionError) {
+                if (attempt == attempts) throw e
+                Log.i("BrowserPage", "translatePageFromSheet: sheet still up after attempt $attempt, waiting again")
             }
         }
         return this
@@ -183,6 +217,87 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
         return this
     }
 
+    /**
+     * Click a web-content element and wait for [expectedContent] to render, reloading [url] and
+     * re-clicking between attempts. Mirrors the legacy clickPageObject retry-with-refresh: a tap can
+     * land before GeckoView has wired up the page's DOM handlers, in which case the click is a silent
+     * no-op and waiting on the same document never recovers it.
+     */
+    fun clickPageObjectUntilContent(
+        selector: Selector,
+        url: String,
+        expectedContent: String,
+        attempts: Int = 3,
+    ): BrowserPage {
+        for (attempt in 1..attempts) {
+            mozClick(selector)
+            try {
+                return verifyPageContent(expectedContent)
+            } catch (e: AssertionError) {
+                if (attempt == attempts) throw e
+                Log.i("BrowserPage", "clickPageObjectUntilContent: '$expectedContent' absent on attempt $attempt, reloading")
+                navigateToPage(url, forceNavigation = true)
+            }
+        }
+        return this
+    }
+
+    // --- Downloads from a web page ---
+
+    /**
+     * Click the download link named [fileName] and wait for the download prompt, reloading [url]
+     * between attempts.
+     *
+     * Mirrors the legacy BrowserRobot.clickDownloadLink, which retried the click three times with a
+     * page refresh in between: the link can be tapped before the page is fully interactive, in which
+     * case the tap lands but no prompt opens — waiting longer on the same document never helps.
+     */
+    fun clickDownloadLink(fileName: String, url: String, attempts: Int = 3): BrowserPage {
+        for (attempt in 1..attempts) {
+            try {
+                mozClick(DownloadsSelectors.DOWNLOAD_LINK(fileName))
+                mozVerify(DownloadsSelectors.DOWNLOAD_DIALOG_TITLE, timeout = waitingTimeLong)
+                return this
+            } catch (e: AssertionError) {
+                if (attempt == attempts) throw e
+                Log.i("BrowserPage", "clickDownloadLink: no download prompt for '$fileName' on attempt $attempt, reloading")
+                navigateToPage(url, forceNavigation = true)
+            }
+        }
+        return this
+    }
+
+    /**
+     * Assert the full download prompt, not just its title: legacy verifyDownloadPrompt checked the
+     * dialog, its Cancel button and its Download button were all displayed.
+     */
+    fun verifyDownloadPrompt(): BrowserPage {
+        mozVerify(DownloadsSelectors.DOWNLOAD_DIALOG_TITLE, timeout = waitingTimeLong)
+        mozVerify(DownloadsSelectors.DOWNLOAD_DIALOG_CANCEL_BUTTON)
+        mozVerify(DownloadsSelectors.DOWNLOAD_DIALOG_CONFIRM_BUTTON)
+        return this
+    }
+
+    /** Confirm the download prompt, starting the download. */
+    fun clickDownloadPromptConfirmButton(): BrowserPage {
+        mozClick(DownloadsSelectors.DOWNLOAD_DIALOG_CONFIRM_BUTTON)
+        return this
+    }
+
+    /**
+     * Assert the "Download completed" snackbar for [fileName] — the completion text, the "Open"
+     * action (tag and label) and the file name itself, as legacy verifyDownloadCompleteSnackbar did.
+     */
+    fun verifyDownloadCompleteSnackbar(fileName: String): BrowserPage {
+        // The snackbar only appears once the file has actually transferred, so this waits on the
+        // network, not on rendering.
+        mozVerify(DownloadsSelectors.DOWNLOAD_COMPLETE_SNACKBAR, timeout = waitingTimeLong)
+        mozVerify(DownloadsSelectors.DOWNLOAD_SNACK_BAR_OPEN_BUTTON)
+        mozVerify(DownloadsSelectors.DOWNLOAD_SNACK_BAR_OPEN_ACTION_LABEL)
+        mozVerify(DownloadsSelectors.FILE_NAME_TEXT(fileName))
+        return this
+    }
+
     fun clickSubmitLoginButton(): BrowserPage {
         mozClick(BrowserPageSelectors.SUBMIT_LOGIN_BUTTON)
         return this
@@ -200,6 +315,21 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
 
     fun continueToHttpSite(): BrowserPage {
         return clickPageContent("Continue to HTTP Site")
+    }
+
+    fun verifyOpenLinkInAppPrompt(appName: String): BrowserPage {
+        mozVerify(BrowserPageSelectors.OPEN_IN_APP_PROMPT(appName), timeout = waitingTimeLong)
+        return this
+    }
+
+    fun clickOpenLinkInAppPromptOpenButton(): BrowserPage {
+        mozClick(BrowserPageSelectors.OPEN_IN_APP_PROMPT_BUTTON)
+        return this
+    }
+
+    fun clickStayInBrowserPromptButton(): BrowserPage {
+        mozClick(BrowserPageSelectors.STAY_IN_FIREFOX_PROMPT_BUTTON)
+        return this
     }
 
     /**
@@ -247,11 +377,11 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
         return this
     }
 
-    fun verifyUrl(url: String): BrowserPage {
+    fun verifyUrl(url: String, timeout: Long = waitingTimeShort): BrowserPage {
         val expectedText = url.replace("http://", "")
         val textMatcher = hasText(expectedText, substring = true, ignoreCase = true)
         try {
-            composeRule.waitUntil(waitingTimeShort) {
+            composeRule.waitUntil(timeout) {
                 composeRule.onAllNodesWithTag(ADDRESSBAR_URL, useUnmergedTree = true)
                     .fetchSemanticsNodes()
                     .any { textMatcher.matches(it) }
@@ -262,6 +392,22 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
                 .mapNotNull { it.config.getOrNull(SemanticsProperties.Text)?.joinToString("") }
             throw AssertionError("Expected URL to contain '$expectedText' but found: $actual")
         }
+        return this
+    }
+
+    /**
+     * Assert the Gecko engine's font-size factor matches [textSizePercentage], mirroring the legacy
+     * checkTextSizeOnWebsite: the accessibility slider ultimately drives engine.settings.fontSizeFactor,
+     * so this reads the applied engine setting rather than measuring rendered text. The step math
+     * (MIN_VALUE/STEP_SIZE/DECIMAL_CONVERSION) is copied from the legacy accessibility robot.
+     */
+    fun verifyTextSizeOnWebsite(textSizePercentage: Int): BrowserPage {
+        val steps = (textSizePercentage - FONT_SIZE_MIN_VALUE) / FONT_SIZE_STEP_SIZE
+        val expectedFactor = ((steps * FONT_SIZE_STEP_SIZE) + FONT_SIZE_MIN_VALUE).toFloat() / FONT_SIZE_DECIMAL_CONVERSION
+        assertTrue(
+            "Text size on website was not set to: $textSizePercentage",
+            appContext.components.core.engine.settings.fontSizeFactor == expectedFactor,
+        )
         return this
     }
 
@@ -327,5 +473,8 @@ class BrowserPage(composeRule: AndroidComposeTestRule<HomeActivityIntentTestRule
     private companion object {
         const val HTTPS_ERROR_GO_BACK = "Go Back (Recommended)"
         const val AUTOFILL_RETRY_COUNT = 3
+        const val FONT_SIZE_STEP_SIZE = 5
+        const val FONT_SIZE_MIN_VALUE = 50
+        const val FONT_SIZE_DECIMAL_CONVERSION = 100f
     }
 }

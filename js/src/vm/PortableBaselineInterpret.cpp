@@ -9375,7 +9375,10 @@ bool PortablebaselineInterpreterStackCheck(JSContext* cx, RunState& state,
   StackVal* base = reinterpret_cast<StackVal*>(pbs.base);
   StackVal* top = reinterpret_cast<StackVal*>(pbs.top);
   ssize_t margin = kStackMargin / sizeof(StackVal);
-  ssize_t needed = numActualArgs + state.script()->nslots() + margin;
+  size_t numFormals =
+      state.isInvoke() ? state.script()->function()->nargs() : 0;
+  ssize_t needed =
+      std::max(numActualArgs, numFormals) + state.script()->nslots() + margin;
   return (top - base) >= needed;
 }
 

@@ -75,9 +75,6 @@ run-if = [
 ["browser_ext_themes_separators.js"]
 
 ["browser_ext_themes_sidebars.js"]
-skip-if = [
-  "nova", # Bug 2057933
-]
 
 ["browser_ext_themes_static_onUpdated.js"]
 

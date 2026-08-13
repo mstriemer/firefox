@@ -36,7 +36,6 @@ class ExpandedTabGroupTest {
         override val openingAnimationEnabled: Boolean = false
         override val tabGroupsEnabled: Boolean = true
         override val tabGroupsDragAndDropEnabled: Boolean = false
-        override val shareTabGroupEnabled: Boolean = true
         override val ungroupTabGroupEnabled: Boolean = true
         override val tabGroupsOnboardingEnabled: Boolean = false
         override val tabGroupsLiveReorderEnabled: Boolean = false
@@ -59,8 +58,6 @@ class ExpandedTabGroupTest {
             }
         }
         composeTestRule.onNodeWithTag(TabsTrayTestTag.TAB_GROUP_BOTTOM_SHEET_ROOT)
-            .assertIsDisplayed()
-        composeTestRule.onNodeWithTag(TabsTrayTestTag.BOTTOM_SHEET_SHARE_BUTTON)
             .assertIsDisplayed()
         composeTestRule.onNodeWithTag(TabsTrayTestTag.BOTTOM_SHEET_ADD_TAB_BUTTON)
             .assertIsDisplayed()
@@ -327,6 +324,7 @@ class ExpandedTabGroupTest {
         onEditTabGroupClick: () -> Unit = {},
         onCloseTabGroupClick: () -> Unit = {},
         onAddNewTabClick: (() -> Unit)? = {},
+        onShareTabGroupClick: () -> Unit = {},
     ) = ExpandedTabGroupActions(
         onItemClick = onItemClick,
         onTabClose = onTabClose,
@@ -334,5 +332,6 @@ class ExpandedTabGroupTest {
         onEditTabGroupClick = onEditTabGroupClick,
         onCloseTabGroupClick = onCloseTabGroupClick,
         onAddNewTabClick = onAddNewTabClick,
+        onShareTabGroupClick = onShareTabGroupClick,
     )
 }

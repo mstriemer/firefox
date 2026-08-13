@@ -783,6 +783,10 @@ PresShell::~PresShell() {
 
   MOZ_ASSERT(!mAllocatedPointers || mAllocatedPointers->IsEmpty(),
              "Some pres arena objects were not freed");
+  MOZ_ASSERT(mContentVisibilityAutoFrames.IsEmpty(),
+             "All content-visibility:auto frames should be unregistered");
+  MOZ_ASSERT(mContentVisibilityHiddenCount == 0,
+             "All content-visibility:hidden frames should be unregistered");
 
   mFrameConstructor = nullptr;
 }

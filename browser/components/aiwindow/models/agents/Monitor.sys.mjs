@@ -568,7 +568,7 @@ export function trimAndFilterWatchUrls(urls) {
   return urls.map(url => String(url ?? "").trim()).filter(isAllowedWatchUrl);
 }
 
-function isAllowedWatchUrl(urlString) {
+export function isAllowedWatchUrl(urlString) {
   const url = URL.parse(urlString);
   return !!url && ["http:", "https:"].includes(url.protocol);
 }

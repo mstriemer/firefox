@@ -8985,9 +8985,10 @@ bool nsDocShell::CanLoadInParentProcess(nsIURI* aURI) {
       break;
     }
   }
-  // Allow about: URIs, and allow moz-extension ones if we're running
-  // extension content in the parent process.
-  if (!uri || uri->SchemeIs("about") ||
+  // Allow about: URIs, execept about:srcdoc, which can include arbitrary code.
+  // And allow moz-extension ones if we're running extension content in the
+  // parent process.
+  if (!uri || (uri->SchemeIs("about") && !NS_IsAboutSrcdoc(uri)) ||
       (!StaticPrefs::extensions_webextensions_remote() &&
        uri->SchemeIs("moz-extension"))) {
     return true;
@@ -9473,13 +9474,13 @@ bool nsDocShell::ShouldDoInitialAboutBlankSyncLoad(
         mDocumentViewer->GetDocument()->NodePrincipal()->GetIsNullPrincipal(),
         "Load looks like first load but does not want principal inheritance.");
   } else {
-    if (XRE_IsContentProcess() &&
-        !ValidatePrincipalCouldPotentiallyBeLoadedBy(
-            aPrincipalToInherit, ContentChild::GetSingleton()->GetRemoteType(),
-            {})) {
-      // Principal doesn't match our remote type, so the we need the normal
-      // load path to do a process switch.
-      return false;
+    if (XRE_IsContentProcess()) {
+      RefPtr<LoadedOriginSet> loadedOrigins = CurrentLoadedOriginSet();
+      if (!loadedOrigins->ValidatePrincipal(aPrincipalToInherit)) {
+        // We can't directly load this principal, so we need the normal load
+        // path to do a process switch.
+        return false;
+      }
     }
 
     // If a page opens about:blank, it will have a content principal.

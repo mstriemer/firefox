@@ -31,7 +31,6 @@ class FeatureSettingsHelperDelegate : FeatureSettingsHelper {
         isPocketEnabled = settings.showPocketRecommendationsFeature,
         isRecentTabsFeatureEnabled = settings.showRecentTabsFeature,
         isRecentlyVisitedFeatureEnabled = settings.historyMetadataUIFeature,
-        isPWAsPromptEnabled = !settings.userKnowsAboutPwas,
         isWallpaperOnboardingEnabled = settings.showWallpaperOnboarding,
         isDeleteSitePermissionsEnabled = settings.deleteSitePermissions,
         isOpenInAppBannerEnabled = settings.shouldShowOpenInAppBanner,
@@ -48,6 +47,7 @@ class FeatureSettingsHelperDelegate : FeatureSettingsHelper {
         shakeToSummarizeFeatureFlagEnabled = settings.shakeToSummarizeFeatureFlagEnabled,
         isPrivateModeAndStoriesEntryPointEnabled = settings.privateModeAndStoriesEntryPointEnabled,
         shouldUseExpandedToolbar = settings.shouldUseExpandedToolbar,
+        isTabStripEnabled = settings.isTabStripEnabled,
         nativeShareSheetEnabled = settings.nativeShareSheetEnabled,
         showVoiceSearchInDisplayToolbar = settings.showVoiceSearchInDisplayToolbar,
         isHomepageTrendingRecentSearchEnabled = settings.enableHomepageTrendingRecentSearch,
@@ -62,7 +62,6 @@ class FeatureSettingsHelperDelegate : FeatureSettingsHelper {
     override var isWallpaperOnboardingEnabled: Boolean by updatedFeatureFlags::isWallpaperOnboardingEnabled
     override var isRecentTabsFeatureEnabled: Boolean by updatedFeatureFlags::isRecentTabsFeatureEnabled
     override var isRecentlyVisitedFeatureEnabled: Boolean by updatedFeatureFlags::isRecentlyVisitedFeatureEnabled
-    override var isPWAsPromptEnabled: Boolean by updatedFeatureFlags::isPWAsPromptEnabled
     override var isOpenInAppBannerEnabled: Boolean by updatedFeatureFlags::isOpenInAppBannerEnabled
     override var etpPolicy: ETPPolicy by updatedFeatureFlags::etpPolicy
     override var isLocationPermissionEnabled: SitePermissionsRules.Action by updatedFeatureFlags::isLocationPermissionEnabled
@@ -77,6 +76,7 @@ class FeatureSettingsHelperDelegate : FeatureSettingsHelper {
     override var shakeToSummarizeFeatureFlagEnabled: Boolean by updatedFeatureFlags::shakeToSummarizeFeatureFlagEnabled
     override var isPrivateModeAndStoriesEntryPointEnabled: Boolean by updatedFeatureFlags::isPrivateModeAndStoriesEntryPointEnabled
     override var shouldUseExpandedToolbar: Boolean by updatedFeatureFlags::shouldUseExpandedToolbar
+    override var isTabStripEnabled: Boolean by updatedFeatureFlags::isTabStripEnabled
     override var nativeShareSheetEnabled: Boolean by updatedFeatureFlags::nativeShareSheetEnabled
     override var showVoiceSearchInDisplayToolbar: Boolean by updatedFeatureFlags::showVoiceSearchInDisplayToolbar
     override var isHomepageTrendingRecentSearchEnabled: Boolean by updatedFeatureFlags::isHomepageTrendingRecentSearchEnabled
@@ -99,7 +99,6 @@ class FeatureSettingsHelperDelegate : FeatureSettingsHelper {
         settings.showPocketRecommendationsFeature = featureFlags.isPocketEnabled
         settings.showRecentTabsFeature = featureFlags.isRecentTabsFeatureEnabled
         settings.historyMetadataUIFeature = featureFlags.isRecentlyVisitedFeatureEnabled
-        settings.userKnowsAboutPwas = !featureFlags.isPWAsPromptEnabled
         settings.showWallpaperOnboarding = featureFlags.isWallpaperOnboardingEnabled
         settings.deleteSitePermissions = featureFlags.isDeleteSitePermissionsEnabled
         settings.shouldShowOpenInAppBanner = featureFlags.isOpenInAppBannerEnabled
@@ -116,6 +115,7 @@ class FeatureSettingsHelperDelegate : FeatureSettingsHelper {
         settings.shakeToSummarizeFeatureFlagEnabled = featureFlags.shakeToSummarizeFeatureFlagEnabled
         settings.privateModeAndStoriesEntryPointEnabled = featureFlags.isPrivateModeAndStoriesEntryPointEnabled
         settings.shouldUseExpandedToolbar = featureFlags.shouldUseExpandedToolbar
+        settings.isTabStripEnabled = featureFlags.isTabStripEnabled
         settings.nativeShareSheetEnabled = featureFlags.nativeShareSheetEnabled
         settings.showVoiceSearchInDisplayToolbar = featureFlags.showVoiceSearchInDisplayToolbar
         settings.enableHomepageTrendingRecentSearch = featureFlags.isHomepageTrendingRecentSearchEnabled
@@ -126,7 +126,6 @@ private data class FeatureFlags(
     var isPocketEnabled: Boolean,
     var isRecentTabsFeatureEnabled: Boolean,
     var isRecentlyVisitedFeatureEnabled: Boolean,
-    var isPWAsPromptEnabled: Boolean,
     var isWallpaperOnboardingEnabled: Boolean,
     var isDeleteSitePermissionsEnabled: Boolean,
     var isOpenInAppBannerEnabled: Boolean,
@@ -143,6 +142,7 @@ private data class FeatureFlags(
     var shakeToSummarizeFeatureFlagEnabled: Boolean,
     var isPrivateModeAndStoriesEntryPointEnabled: Boolean,
     var shouldUseExpandedToolbar: Boolean,
+    var isTabStripEnabled: Boolean,
     var nativeShareSheetEnabled: Boolean,
     var showVoiceSearchInDisplayToolbar: Boolean,
     var isHomepageTrendingRecentSearchEnabled: Boolean,

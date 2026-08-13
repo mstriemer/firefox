@@ -217,6 +217,9 @@
       "chrome://browser/content/multilineeditor/multiline-editor.mjs": [
         "../../../browser/components/multilineeditor/multiline-editor.mjs"
       ],
+      "chrome://browser/content/multilineeditor/plugins/CommandsPlugin.mjs": [
+        "../../../browser/components/multilineeditor/plugins/CommandsPlugin.mjs"
+      ],
       "chrome://browser/content/multilineeditor/plugins/MentionsPlugin.mjs": [
         "../../../browser/components/multilineeditor/plugins/MentionsPlugin.mjs"
       ],
@@ -396,6 +399,9 @@
       ],
       "chrome://browser/content/urlbar/UrlbarContentPrefs.mjs": [
         "../../../browser/components/urlbar/content/UrlbarContentPrefs.mjs"
+      ],
+      "chrome://browser/content/urlbar/UrlbarContentURIUtils.mjs": [
+        "../../../browser/components/urlbar/content/UrlbarContentURIUtils.mjs"
       ],
       "chrome://browser/content/urlbar/UrlbarEventBufferer.mjs": [
         "../../../browser/components/urlbar/content/UrlbarEventBufferer.mjs"

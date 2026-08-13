@@ -144,12 +144,12 @@ BEGIN_TEST(testPrintError_UncaughtObjectPreview) {
   // "uncaught exception: Object".
   CHECK(!execDontReport("throw {reason: 'boom'};", __FILE__, __LINE__));
   CHECK(StealUncaughtToString(cx, ListNames) ==
-        "uncaught exception: Object (reason)");
+        "uncaught exception: Object { reason }");
 
   CHECK(!execDontReport("throw {name: 'foo', message: 'bar'};", __FILE__,
                         __LINE__));
   CHECK(StealUncaughtToString(cx, ListNames) ==
-        "uncaught exception: Object (message, name)");
+        "uncaught exception: Object { message, name }");
 
   // An object with no own string-keyed properties falls back to the bare name.
   CHECK(!execDontReport("throw {};", __FILE__, __LINE__));
@@ -159,7 +159,11 @@ BEGIN_TEST(testPrintError_UncaughtObjectPreview) {
   CHECK(!execDontReport("throw {get reason() { return 'boom'; }};", __FILE__,
                         __LINE__));
   CHECK(StealUncaughtToString(cx, ListNames) ==
-        "uncaught exception: Object (reason)");
+        "uncaught exception: Object { reason }");
+
+  // Uses object's ClassName when there are no properties.
+  CHECK(!execDontReport("throw new Map();", __FILE__, __LINE__));
+  CHECK(StealUncaughtToString(cx, ListNames) == "uncaught exception: Map");
 
   // NoSideEffects keeps reporting the bare class name: that string is exposed
   // to web content through window.onerror.

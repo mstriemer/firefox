@@ -573,6 +573,15 @@ bool SharedContextWebgl::Initialize() {
     return false;
   }
 
+  // Our shaders are written to be provoking vertex agnostic, therefore if this
+  // extension is available we should request FirstVertex convention,
+  // potentially allowing the driver to avoid expensive emulation.
+  constexpr auto provokingVertexExt = WebGLExtensionID::WEBGL_provoking_vertex;
+  if (mWebgl->IsExtensionSupported(provokingVertexExt)) {
+    mWebgl->RequestExtension(provokingVertexExt);
+    mWebgl->ProvokingVertex(webgl::ProvokingVertex::FirstVertex);
+  }
+
   mMaxTextureSize = initResult.limits.maxTex2dSize;
 
   if (kIsMacOS) {

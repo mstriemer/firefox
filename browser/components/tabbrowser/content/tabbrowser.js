@@ -5700,6 +5700,28 @@
       this.removeTab(this.selectedTab, aParams);
     }
 
+    /**
+     * A tab which never showed anything but a blank page and has no history
+     * only existed for the load which has been moved away, so close it rather
+     * than leave it behind empty. Closing the last tab of a window is left out:
+     * that would close the window.
+     *
+     * @param {MozBrowser} aBrowser The browser the load started in.
+     */
+    maybeCloseTabForRetargetedLoad(aBrowser) {
+      let tab = this.getTabForBrowser(aBrowser);
+      if (
+        !tab ||
+        tab.pinned ||
+        this.tabs.length === 1 ||
+        !tab.isEmptyIgnoringLoad
+      ) {
+        return;
+      }
+
+      this.removeTab(tab, { skipPermitUnload: true });
+    }
+
     removeTab(
       aTab,
       {
@@ -5818,6 +5840,19 @@
     }
 
     /**
+     * Whether closing the window's last tab should close the window rather
+     * than leave a new empty tab behind.
+     *
+     * @returns {boolean}
+     */
+    get #shouldCloseWindowWithLastTab() {
+      return (
+        !window.toolbar.visible ||
+        Services.prefs.getBoolPref("browser.tabs.closeWindowWithLastTab")
+      );
+    }
+
+    /**
      * Returns `true` if `tab` is the last tab in this window. This logic is
      * intended for cases like determining if a window should close due to `tab`
      * being closed, therefore hidden tabs are not considered in this function.
@@ -5916,10 +5951,7 @@
       var newTab = false;
       if (this.#isLastTabInWindow(aTab)) {
         closeWindow =
-          closeWindowWithLastTab != null
-            ? closeWindowWithLastTab
-            : !window.toolbar.visible ||
-              Services.prefs.getBoolPref("browser.tabs.closeWindowWithLastTab");
+          closeWindowWithLastTab ?? this.#shouldCloseWindowWithLastTab;
 
         if (closeWindow) {
           // We've already called beforeunload on all the relevant tabs if we get here,
@@ -5980,8 +6012,14 @@
       this._removingTabs.add(aTab);
       this.tabContainer._invalidateCachedTabs();
 
-      // Invalidate hovered tab state tracking for this closing tab.
+      // Invalidate hovered tab state tracking for this closing tab. The pointer
+      // stays put while the tab goes away, so hand the hover over to the tab
+      // moving into its place: no mouseover event is guaranteed to report it.
+      let wasHovered = aTab._hover;
       aTab._mouseleave();
+      if (wasHovered) {
+        this.#tabTakingPlaceOf(aTab)?._mouseenter();
+      }
 
       if (newTab) {
         this.addTrustedTab(BROWSER_NEW_TAB_URL, {
@@ -6067,6 +6105,23 @@
       browser.removeAttribute("primary");
 
       return true;
+    }
+
+    /**
+     * @param {MozTabbrowserTab} closingTab
+     * @returns {MozTabbrowserTab|null}
+     *   The tab moving into `closingTab`'s spot in the tab strip, or null if a
+     *   tab group label takes it or there's nothing after it.
+     */
+    #tabTakingPlaceOf(closingTab) {
+      // Closing tabs are excluded from `ariaFocusableItems`, so the first item
+      // following `closingTab` is the one moving up into its spot.
+      let item = this.tabContainer.ariaFocusableItems.find(
+        candidate =>
+          closingTab.compareDocumentPosition(candidate) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+      );
+      return this.isTab(item) ? item : null;
     }
 
     _endRemoveTab(aTab) {
@@ -8877,7 +8932,7 @@
           browser = event.target.docShell.chromeEventHandler;
         }
 
-        if (this.tabs.length == 1) {
+        if (this.tabs.length == 1 && this.#shouldCloseWindowWithLastTab) {
           // We already did PermitUnload in the content process
           // for this tab (the only one in the window). So we don't
           // need to do it again for any tabs.
@@ -8901,6 +8956,10 @@
           // saying we took care of this close request by closing the tab.
           event.preventDefault();
         }
+      });
+
+      this.addEventListener("BrowserLoadRetargeted", event => {
+        this.maybeCloseTabForRetargetedLoad(event.target);
       });
 
       this.addEventListener("pagetitlechanged", event => {

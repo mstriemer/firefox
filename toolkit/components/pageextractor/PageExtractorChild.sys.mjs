@@ -104,6 +104,11 @@ export class PageExtractorChild extends JSWindowActorChild {
         timeout: MAX_REQUEST_IDLE_CALLBACK_DELAY_MS,
       });
     });
+
+    if (doc.hidden) {
+      return;
+    }
+
     await new Promise(resolve => {
       win.requestAnimationFrame(() => win.requestAnimationFrame(resolve));
     });

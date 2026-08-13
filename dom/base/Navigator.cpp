@@ -23,7 +23,6 @@
 #include "nsIClassOfService.h"
 #include "nsIContentPolicy.h"
 #include "nsIHttpProtocolHandler.h"
-#include "nsIPrivateAttributionService.h"
 #include "nsISupportsPriority.h"
 #include "nsIWebProtocolHandlerRegistrar.h"
 #include "nsIXULAppInfo.h"
@@ -58,7 +57,6 @@
 #include "mozilla/dom/ModelContext.h"
 #include "mozilla/dom/NavigatorLogin.h"
 #include "mozilla/dom/Permissions.h"
-#include "mozilla/dom/PrivateAttribution.h"
 #include "mozilla/dom/ServiceWorkerContainer.h"
 #include "mozilla/dom/StorageManager.h"
 #include "mozilla/dom/TCPSocket.h"
@@ -161,7 +159,6 @@ NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN(Navigator)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mLocks)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mLogin)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mModelContext)
-  NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mPrivateAttribution)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mUserActivation)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mWakeLock)
 
@@ -261,8 +258,6 @@ void Navigator::Invalidate() {
   mLogin = nullptr;
 
   mModelContext = nullptr;
-
-  mPrivateAttribution = nullptr;
 
   mUserActivation = nullptr;
 
@@ -1175,7 +1170,7 @@ class BeaconStreamListener final : public nsIStreamListener {
   ~BeaconStreamListener() = default;
 
  public:
-  BeaconStreamListener() : mLoadGroup(nullptr) {}
+  BeaconStreamListener() = default;
 
   void SetLoadGroup(nsILoadGroup* aLoadGroup) { mLoadGroup = aLoadGroup; }
 
@@ -1184,7 +1179,7 @@ class BeaconStreamListener final : public nsIStreamListener {
   NS_DECL_NSIREQUESTOBSERVER
 
  private:
-  nsCOMPtr<nsILoadGroup> mLoadGroup;
+  nsCOMPtr<nsILoadGroup> mLoadGroup{};
 };
 
 NS_IMPL_ISUPPORTS(BeaconStreamListener, nsIStreamListener, nsIRequestObserver)
@@ -2354,30 +2349,23 @@ dom::ModelContext* Navigator::ModelContext() {
   return mModelContext;
 }
 
-dom::PrivateAttribution* Navigator::PrivateAttribution() {
-  if (!mPrivateAttribution) {
-    mPrivateAttribution = new dom::PrivateAttribution(GetWindow()->AsGlobal());
-  }
-  return mPrivateAttribution;
-}
-
 /* static */
 bool Navigator::Webdriver() {
 #ifdef ENABLE_WEBDRIVER
   nsCOMPtr<nsIMarionette> marionette = do_GetService(NS_MARIONETTE_CONTRACTID);
   if (marionette) {
-    bool marionetteRunning = false;
-    marionette->GetRunning(&marionetteRunning);
-    if (marionetteRunning) {
+    bool isBrowserAutomationRunning = false;
+    marionette->GetIsBrowserAutomationRunning(&isBrowserAutomationRunning);
+    if (isBrowserAutomationRunning) {
       return true;
     }
   }
 
   nsCOMPtr<nsIRemoteAgent> agent = do_GetService(NS_REMOTEAGENT_CONTRACTID);
   if (agent) {
-    bool remoteAgentRunning = false;
-    agent->GetRunning(&remoteAgentRunning);
-    if (remoteAgentRunning) {
+    bool isBrowserAutomationRunning = false;
+    agent->GetIsBrowserAutomationRunning(&isBrowserAutomationRunning);
+    if (isBrowserAutomationRunning) {
       return true;
     }
   }

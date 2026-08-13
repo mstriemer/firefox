@@ -147,7 +147,9 @@ add_task(async function topSites_changed() {
     for (let j = 0; j < TOP_SITES_VISIT_COUNT; j++) {
       await PlacesTestUtils.addVisits(newURL);
     }
+    let cacheCleared = promiseTopSitesCacheCleared(win);
     await updateTopSitesAndAwaitChanged(TEST_URLS_COUNT + 1);
+    await cacheCleared;
 
     // Open the view. It should *not* open synchronously and the cached
     // top-sites context should not be used.
@@ -173,8 +175,10 @@ add_task(async function topSites_changed() {
     } else {
       changedPromise = TestUtils.topicObserved("newtab-top-sites-changed");
     }
+    cacheCleared = promiseTopSitesCacheCleared(win);
     await PlacesUtils.history.remove([newURL]);
     await changedPromise;
+    await cacheCleared;
 
     // Open the view. It should *not* open synchronously and the cached
     // top-sites context should not be used.
@@ -253,7 +257,9 @@ add_task(async function topSites_disabled_1() {
     await openViewAndAssertCached({ win, cached: false });
 
     // Disable `browser.urlbar.suggest.topsites`.
+    let cacheCleared = promiseTopSitesCacheCleared(win);
     UrlbarPrefs.set("suggest.topsites", false);
+    await cacheCleared;
 
     // Open the view. It should *not* open synchronously and the cached
     // top-sites context should not be used.
@@ -264,7 +270,9 @@ add_task(async function topSites_disabled_1() {
     });
 
     // Clear the pref, open the view to show top sites, and close it.
+    cacheCleared = promiseTopSitesCacheCleared(win);
     UrlbarPrefs.clear("suggest.topsites");
+    await cacheCleared;
     await openViewAndAssertCached({ win, cached: false });
 
     // Open the view. It should open synchronously and the cached top-sites
@@ -279,10 +287,12 @@ add_task(async function topSites_disabled_2() {
     await openViewAndAssertCached({ win, cached: false });
 
     // Disable `browser.newtabpage.activity-stream.feeds.system.topsites`.
+    let cacheCleared = promiseTopSitesCacheCleared(win);
     Services.prefs.setBoolPref(
       "browser.newtabpage.activity-stream.feeds.system.topsites",
       false
     );
+    await cacheCleared;
 
     // Open the view. It should *not* open synchronously and the cached
     // top-sites context should not be used.
@@ -293,9 +303,11 @@ add_task(async function topSites_disabled_2() {
     });
 
     // Clear the pref, open the view to show top sites, and close it.
+    cacheCleared = promiseTopSitesCacheCleared(win);
     Services.prefs.clearUserPref(
       "browser.newtabpage.activity-stream.feeds.system.topsites"
     );
+    await cacheCleared;
     await openViewAndAssertCached({ win, cached: false });
 
     // Open the view. It should open synchronously and the cached top-sites
@@ -475,6 +487,24 @@ async function openViewAndAssertCached({
   await win.gURLBar.lastQueryContextPromise;
   if (!keepOpen) {
     await UrlbarTestUtils.promisePopupClose(win);
+  }
+}
+
+/**
+ * @param {window} win
+ * @returns {Promise}
+ *   Resolves when the top sites cache of the urlbar view has been invalidated.
+ */
+async function promiseTopSitesCacheCleared(win) {
+  let sandbox = sinon.createSandbox();
+  let spy = sandbox.spy(win.gURLBar.view, "clearTopSitesCache");
+  try {
+    await TestUtils.waitForCondition(
+      () => spy.called,
+      "Waiting for the top sites cache to be cleared"
+    );
+  } finally {
+    sandbox.restore();
   }
 }
 

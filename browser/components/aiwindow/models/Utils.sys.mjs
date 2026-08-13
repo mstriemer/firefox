@@ -91,6 +91,7 @@ export const DEFAULT_ENGINE_ID = "smart-openai";
  */
 export const MODEL_FEATURES = Object.freeze({
   CHAT: "chat",
+  SMART_FORM_FILL: "smart-form-fill",
   TITLE_GENERATION: "title-generation",
   CONVERSATION_STARTERS_SIDEBAR_SYSTEM: "conversation-starters-sidebar-system",
   CONVERSATION_SUGGESTIONS_SIDEBAR_STARTER:
@@ -99,6 +100,8 @@ export const MODEL_FEATURES = Object.freeze({
   CONVERSATION_SUGGESTIONS_ASSISTANT_LIMITATIONS:
     "conversation-suggestions-assistant-limitations",
   CONVERSATION_SUGGESTIONS_MEMORIES: "conversation-suggestions-memories",
+  RESUME_ACTIVITY_CONVERSATION_STARTER: "resume-activity-conversation-starter",
+  RESUME_ACTIVITY_CONVERSATION: "resume-activity-conversation",
   // memories generation features
   MEMORIES_INITIAL_GENERATION_SYSTEM: "memories-initial-generation-system",
   MEMORIES_INITIAL_GENERATION_USER: "memories-initial-generation-user",
@@ -106,8 +109,7 @@ export const MODEL_FEATURES = Object.freeze({
     "memories-quality-and-sensitivity-filter-system",
   MEMORIES_QUALITY_AND_SENSITIVITY_FILTER_USER:
     "memories-quality-and-sensitivity-filter-user",
-  MEMORIES_DEDUPLICATION_SYSTEM: "memories-deduplication-system",
-  MEMORIES_DEDUPLICATION_USER: "memories-deduplication-user",
+  MEMORIES_MERGE: "memories-merge",
   // memories usage features
   MEMORIES_MESSAGE_CLASSIFICATION_SYSTEM:
     "memories-message-classification-system",
@@ -139,6 +141,7 @@ export const SERVICE_TYPES = Object.freeze({
  */
 export const PURPOSES = Object.freeze({
   CHAT: "chat",
+  SMART_FORM_FILL: "smart-form-fill",
   TITLE_GENERATION: "title-generation",
   CONVERSATION_STARTERS_SIDEBAR: "convo-starters-sidebar",
   MEMORY_GENERATION: "memory-generation",
@@ -160,17 +163,19 @@ export const FEATURE_MAJOR_VERSIONS = Object.freeze({
   get [MODEL_FEATURES.CHAT]() {
     return Services.prefs.getBoolPref(MISTRAL_RELEASE_PREF, false) ? 11 : 10;
   },
+  [MODEL_FEATURES.SMART_FORM_FILL]: 1,
   [MODEL_FEATURES.TITLE_GENERATION]: 1,
   [MODEL_FEATURES.CONVERSATION_STARTERS_SIDEBAR_SYSTEM]: 1,
   [MODEL_FEATURES.CONVERSATION_SUGGESTIONS_SIDEBAR_STARTER]: 3,
   [MODEL_FEATURES.CONVERSATION_SUGGESTIONS_FOLLOWUP]: 1,
   [MODEL_FEATURES.CONVERSATION_SUGGESTIONS_ASSISTANT_LIMITATIONS]: 1,
   [MODEL_FEATURES.CONVERSATION_SUGGESTIONS_MEMORIES]: 1,
+  [MODEL_FEATURES.RESUME_ACTIVITY_CONVERSATION_STARTER]: 1,
+  [MODEL_FEATURES.RESUME_ACTIVITY_CONVERSATION]: 1,
   // memories generation feature versions
   [MODEL_FEATURES.MEMORIES_INITIAL_GENERATION_SYSTEM]: 3,
   [MODEL_FEATURES.MEMORIES_INITIAL_GENERATION_USER]: 4,
-  [MODEL_FEATURES.MEMORIES_DEDUPLICATION_SYSTEM]: 1,
-  [MODEL_FEATURES.MEMORIES_DEDUPLICATION_USER]: 1,
+  [MODEL_FEATURES.MEMORIES_MERGE]: 1,
   [MODEL_FEATURES.MEMORIES_QUALITY_AND_SENSITIVITY_FILTER_SYSTEM]: 1,
   [MODEL_FEATURES.MEMORIES_QUALITY_AND_SENSITIVITY_FILTER_USER]: 1,
   // memories usage feature versions
@@ -663,6 +668,43 @@ export function parseAndExtractJSON(response, fallback) {
       `Unexpected error parsing JSON from LLM response: ${e.message}`
     );
   }
+}
+
+/**
+ * Normalizes an inference result id into an integer, tolerating numeric strings
+ * such as "0".
+ *
+ * @param {*} value - Raw id from an inference result
+ * @returns {?number} Integer id, or null if invalid
+ */
+export function toIntegerId(value) {
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? value : null;
+  }
+  if (typeof value === "string" && value.trim() !== "") {
+    const n = Number(value);
+    return Number.isInteger(n) ? n : null;
+  }
+  return null;
+}
+
+/**
+ * Indexes inference results by the id the model echoes, allowing each output
+ * to be matched to its input regardless of output order. Results without a
+ * valid integer id are ignored. Keeps the first result for duplicate ids.
+ *
+ * @param {Array<object>} results - Parsed inference results
+ * @returns {Map<number, object>} Results keyed by id
+ */
+export function indexInferenceResultsById(results) {
+  const resultsById = new Map();
+  for (const result of results) {
+    const id = toIntegerId(result?.id);
+    if (id !== null && !resultsById.has(id)) {
+      resultsById.set(id, result);
+    }
+  }
+  return resultsById;
 }
 
 /**

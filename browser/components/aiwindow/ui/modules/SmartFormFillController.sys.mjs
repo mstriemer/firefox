@@ -18,12 +18,12 @@ ChromeUtils.defineESModuleGetters(lazy, {
 /** @typedef {import("moz-src:///browser/components/aiwindow/models/SmartFormFillModel.sys.mjs").ClassificationResponse} ClassificationResponse */
 /** @typedef {import("moz-src:///browser/components/aiwindow/models/SmartFormFillModel.sys.mjs").ClassifyFieldsRequestBody} ClassifyFieldsRequestBody */
 /** @typedef {import("moz-src:///browser/components/aiwindow/models/SmartFormFillModel.sys.mjs").FieldData} FieldData */
+/** @typedef {import("moz-src:///browser/components/aiwindow/models/SmartFormFillModel.sys.mjs").FieldDataForClassification} FieldDataForClassification */
 /** @typedef {import("moz-src:///browser/components/aiwindow/models/SmartFormFillModel.sys.mjs").GenerateFormValuesResponse} GenerateFormValuesResponse */
 /** @typedef {import("moz-src:///browser/components/aiwindow/models/SmartFormFillModel.sys.mjs").PageInfo} PageInfo */
 /** @typedef {import("moz-src:///browser/components/aiwindow/models/SmartFormFillModel.sys.mjs").RelevantTabsResponse} RelevantTabsResponse */
 /** @typedef {import("moz-src:///browser/components/aiwindow/models/SmartFormFillModel.sys.mjs").RelevantTabRequestBody} RelevantTabRequestBody */
 /** @typedef {import("moz-src:///browser/components/aiwindow/models/SmartFormFillModel.sys.mjs").TabData} TabData */
-/** @typedef {import("moz-src:///browser/components/aiwindow/models/SmartFormFillModel.sys.mjs").FieldClassification} FieldClassification */
 /** @typedef {import("moz-src:///browser/components/aiwindow/models/SmartFormFillModel.sys.mjs").RelevantTab} RelevantTab */
 /** @typedef {import("moz-src:///browser/components/aiwindow/ui/modules/SmartFormFillDocument.sys.mjs").FormData} FormData */
 
@@ -295,17 +295,15 @@ export class SmartFormFillController {
     //const memories = this.#getMemories(page, fields);
     const memories = [];
 
-    const relevantTabs = selectedTabs
-      .filter(selectedTab => this.#tabsById.has(selectedTab.id))
-      .map(selectedTab => {
-        const { title, url } = this.#tabsById.get(selectedTab.id);
+    const relevantTabs = selectedTabs.map(selectedTab => {
+      const { title, url } = this.#tabsById.get(selectedTab.id);
 
-        return {
-          title,
-          url,
-          tabContent: tabContentById.get(selectedTab.id) ?? "",
-        };
-      });
+      return {
+        title,
+        url,
+        tabContent: tabContentById.get(selectedTab.id) ?? "",
+      };
+    });
 
     const context = { pageText, relevantTabs, memories };
 
@@ -317,21 +315,19 @@ export class SmartFormFillController {
         {
           task,
           page,
-          fields: fields.map(f => {
-            const classification = classifications.get(f.id);
-            const confidence = f.localConfidence;
-            let classificationConfidence = null;
-            if (confidence > 0.6) {
+          fields: this.#getFieldDataForClassification(fields).map(field => {
+            const classification = classifications.get(field.id);
+            const { localGuess, localConfidence, ...fieldData } = field;
+            let classificationConfidence = "low";
+            if (localConfidence > 0.6) {
               classificationConfidence = "high";
-            } else if (confidence > 0.3) {
+            } else if (localConfidence > 0.3) {
               classificationConfidence = "medium";
-            } else if (confidence > 0) {
-              classificationConfidence = "low";
             }
 
             return {
-              ...f,
-              type: classification?.type ?? f.localGuess ?? null,
+              ...fieldData,
+              type: classification?.type ?? localGuess ?? "unknown",
               classificationConfidence:
                 classification?.confidence ?? classificationConfidence,
             };
@@ -592,6 +588,32 @@ export class SmartFormFillController {
   }
 
   /**
+   * Returns relevant tabs with valid, unique IDs.
+   *
+   * @param {Array<RelevantTab>} selectedTabs
+   * @returns {Array<RelevantTab>}
+   */
+  #getValidRelevantTabs(selectedTabs) {
+    if (!Array.isArray(selectedTabs)) {
+      return [];
+    }
+
+    const seen = new Set();
+
+    return selectedTabs
+      .filter(tab => {
+        const id = tab?.id;
+        if (!this.#tabsById.has(id) || seen.has(id)) {
+          return false;
+        }
+
+        seen.add(id);
+        return true;
+      })
+      .slice(0, MAX_SELECTED_TABS);
+  }
+
+  /**
    * Starts relevant-tab requests for all forms.
    *
    * @returns {Array<Promise<RelevantTabsResponse>>}
@@ -606,8 +628,14 @@ export class SmartFormFillController {
         this.#getRelevantTabRequestBody(fields),
         { signal: abortCtrl.signal }
       )
-        .then(relevantTabs => {
+        .then(relevantTabCandidates => {
           abortCtrl.signal.throwIfAborted();
+
+          const relevantTabs = {
+            selectedTabs: this.#getValidRelevantTabs(
+              relevantTabCandidates?.selectedTabs
+            ),
+          };
           this.#relevantTabsByFormId.set(id, relevantTabs);
 
           return relevantTabs;
@@ -662,6 +690,29 @@ export class SmartFormFillController {
   }
 
   /**
+   * Builds model-facing field data for classification and tab selection.
+   *
+   * @param {Array<FieldData>} fields
+   * @returns {Array<FieldDataForClassification>}
+   */
+  #getFieldDataForClassification(fields) {
+    return fields.map(field => ({
+      id: field.id,
+      label: field.label,
+      name: field.name,
+      inputType: field.inputType,
+      placeholder: field.placeholder,
+      autocomplete: field.autocomplete,
+      maxlength: field.maxlength,
+      options: field.options,
+      textBefore: field.textBefore,
+      textAfter: field.textAfter,
+      localGuess: field.localGuess,
+      localConfidence: field.localConfidence,
+    }));
+  }
+
+  /**
    * Builds a field-classification request.
    *
    * @param {Array<FieldData>} fields
@@ -671,8 +722,9 @@ export class SmartFormFillController {
     const task = "classify";
     const enumVersion = "sff-fieldtypes-1";
     const page = this.#pageInfo;
+    const classificationFields = this.#getFieldDataForClassification(fields);
 
-    return { task, enumVersion, page, fields };
+    return { task, enumVersion, page, fields: classificationFields };
   }
 
   /**
@@ -686,8 +738,15 @@ export class SmartFormFillController {
     const page = this.#pageInfo;
     const tabs = this.#tabList;
     const maxSelectedTabs = MAX_SELECTED_TABS;
+    const classificationFields = this.#getFieldDataForClassification(fields);
 
-    return { task, page, maxSelectedTabs, tabs, fields };
+    return {
+      task,
+      page,
+      maxSelectedTabs,
+      tabs,
+      fields: classificationFields,
+    };
   }
 
   /**

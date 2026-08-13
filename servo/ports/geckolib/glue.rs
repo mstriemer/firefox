@@ -156,6 +156,7 @@ use style::values::generics::Optional;
 use style::values::resolved;
 use style::values::resolved::ToResolvedValue;
 use style::values::specified::align::AlignFlags;
+use style::values::specified::calc::{CalcNodeParseInPlaceOperations, PercentageContext};
 use style::values::specified::intersection_observer::IntersectionObserverMargin;
 use style::values::specified::position::PositionTryFallbacksItem;
 use style::values::specified::source_size_list::SourceSizeList;
@@ -7581,8 +7582,9 @@ pub extern "C" fn Servo_GetComputedKeyframeValues(
                     debug_assert!(!property.is_logical());
                     debug_assert!(property.is_animatable());
 
-                    // 'display' is only animatable from SMIL
-                    if property == PropertyDeclarationId::Longhand(LonghandId::Display) {
+                    if property == PropertyDeclarationId::Longhand(LonghandId::Display)
+                        && !static_prefs::pref!("layout.css.display-animations.enabled")
+                    {
                         return;
                     }
 
@@ -7891,9 +7893,10 @@ pub unsafe extern "C" fn Servo_StyleSet_GetKeyframesForName(
             (timing_function, composition)
         };
     let is_not_animatable = |id: &PropertyDeclarationId| {
-        // Skip non-animatable properties, including the 'display' property because although it is
-        // animatable from SMIL, it should not be animatable from CSS Animations.
-        !id.is_animatable() || id == &PropertyDeclarationId::Longhand(LonghandId::Display)
+        // Skip non-animatable properties.
+        !id.is_animatable()
+            || (id == &PropertyDeclarationId::Longhand(LonghandId::Display)
+                && !static_prefs::pref!("layout.css.display-animations.enabled"))
     };
     let make_declaration_pair = |declaration: &PropertyDeclaration| {
         let id = declaration.id().to_physical(writing_mode);
@@ -11512,7 +11515,7 @@ pub unsafe extern "C" fn Servo_GetComputationSteps(
     raw_data: &PerDocumentStyleData,
     out: &mut nsTArray<nsString>,
 ) {
-    use style::values::generics::calc::{CalcUnits, SimplificationResult};
+    use style::values::generics::calc::SimplificationResult;
     use style::values::specified::calc::{CalcNode, CalcParseFlags, Leaf};
 
     let parser_context = ParserContext::new(
@@ -11552,8 +11555,11 @@ pub unsafe extern "C" fn Servo_GetComputationSteps(
         },
     };
 
-    let mut flags = CalcParseFlags::new(CalcUnits::ALL);
-    flags = flags.new_without_in_place_operations();
+    let flags = CalcParseFlags {
+        percentage_context: PercentageContext::allowed(),
+        in_place_operations: CalcNodeParseInPlaceOperations::No,
+        ..Default::default()
+    };
     // Initial parsing
     let mut node = match CalcNode::parse(&parser_context, &mut parser, math_func, flags) {
         Ok(n) => n,

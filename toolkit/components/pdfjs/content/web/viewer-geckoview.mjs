@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 6.3.66
- * pdfjsBuild = 5f181fd8b
+ * pdfjsVersion = 6.3.72
+ * pdfjsBuild = 71a3c6a89
  */
 
 ;// ./web/ui_utils.js
@@ -904,7 +904,7 @@ const {
 } = globalThis.pdfjsLib;
 
 ;// ./web/internal_evt.js
-const INTERNAL_EVT = "c45ce53b-200d-49e5-8bc4-f55665784f6f";
+const INTERNAL_EVT = "73d553f8-709f-4713-892b-c46926003d23";
 const internalOpt = Object.freeze({
   internal: INTERNAL_EVT
 });
@@ -8643,7 +8643,7 @@ class PDFViewer {
   #savedPageViews = null;
   #deletedPageNumbers = null;
   constructor(options) {
-    const viewerVersion = "6.3.66";
+    const viewerVersion = "6.3.72";
     if (version !== viewerVersion) {
       throw new Error(`The API version "${version}" does not match the Viewer version "${viewerVersion}".`);
     }
@@ -11482,7 +11482,7 @@ const PDFViewerApplication = {
     let triggerAutoPrint = openAction?.get("action") === "Print";
     if (jsActions) {
       console.warn("Warning: JavaScript support is not enabled");
-      for (const name in jsActions) {
+      for (const [name, actions] of jsActions) {
         if (triggerAutoPrint) {
           break;
         }
@@ -11494,7 +11494,7 @@ const PDFViewerApplication = {
           case "DidPrint":
             continue;
         }
-        triggerAutoPrint = jsActions[name].some(js => AutoPrintRegExp.test(js));
+        triggerAutoPrint = actions.some(js => AutoPrintRegExp.test(js));
       }
     }
     if (triggerAutoPrint) {

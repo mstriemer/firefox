@@ -18,6 +18,10 @@
     --tab-group-label-size: var(--tab-min-height);
   }
 
+  @media (-moz-native-theme) {
+    --tab-box-shadow-selected: var(--box-shadow-level-1);
+  }
+
   @media not -moz-pref("browser.nova.enabled") {
     --tab-min-height: 36px;
     --tab-group-label-size: 24px;
@@ -925,10 +929,6 @@ tab-split-view-wrapper[dragtarget] {
   outline: var(--tab-outline);
   outline-offset: var(--tab-outline-offset);
 
-  @media -moz-pref("browser.nova.enabled") {
-    border: 1px solid transparent;
-  }
-
   .tabbrowser-tab:hover > .tab-stack > &:not([selected], [multiselected]) {
     background-color: var(--tab-background-color-hover);
     outline-color: var(--tab-hover-outline-color);
@@ -940,11 +940,14 @@ tab-split-view-wrapper[dragtarget] {
     box-shadow: var(--tab-box-shadow-selected);
   }
 
-  &:is([selected]:not([multiselected])) {
+  @media -moz-pref("browser.nova.enabled") {
+    border: 1px solid transparent;
+    background-clip: border-box;
+
     /* The below lines are required for dark, light, and
       system themes to achieve the gradient border appearance */
-    @media (not (prefers-contrast)) and (-moz-pref("browser.nova.enabled")) {
-      :root[theme-in-app] & {
+    @media not ((prefers-contrast) or (-moz-native-theme)) {
+      :root[theme-in-app] &:is([selected]:not([multiselected])) {
         background:
           var(--tab-border-color-accent) border-box border-area,
           var(--tab-background-color-selected) padding-box;
@@ -1347,6 +1350,8 @@ tab-group > tab-split-view-wrapper {
     }
   }
 
+  /* Small-ish subtree, but probably should be removed */
+  /* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
   &:has(tab:is([muted], [soundplaying], [activemedia-blocked])) {
     min-width: 200px;
   }
@@ -2494,6 +2499,8 @@ tab-group {
     scrollbar-width: thin;
     scrollbar-color: var(--tab-vertical-scrollbar-color);
     overscroll-behavior-y: contain;
+    /* A wheel notch, an arrow key and a scrollbar arrow button move rows. */
+    -moz-line-scroll-amount: var(--tab-height-with-margin-padding);
   }
 }
 
@@ -2584,6 +2591,8 @@ tab-group {
     scrollbar-width: thin;
     scrollbar-color: var(--tab-vertical-scrollbar-color);
     overscroll-behavior-y: contain;
+    /* A wheel notch, an arrow key and a scrollbar arrow button move rows. */
+    -moz-line-scroll-amount: var(--tab-height-with-margin-padding);
   }
 
   .tabbrowser-tab:not(:hover) > .tab-stack > .tab-background:not([selected], [multiselected]) {
@@ -2854,7 +2863,7 @@ tab-group {
 
   /* The below lines are required for dark, light, and
       system themes to achieve the gradient border appearance */
-  @media (not (prefers-contrast)) and (-moz-pref("browser.nova.enabled")) {
+  @media -moz-pref("browser.nova.enabled") and (not ((prefers-contrast) or (-moz-native-theme))) {
     :root[theme-in-app] & {
       border: 1px solid transparent;
       background:

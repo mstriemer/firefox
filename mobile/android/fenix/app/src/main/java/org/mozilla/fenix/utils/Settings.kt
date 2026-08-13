@@ -9,7 +9,6 @@ import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Context.MODE_PRIVATE
 import android.content.SharedPreferences
-import android.content.pm.ShortcutManager
 import android.content.res.Resources
 import android.os.Environment
 import android.view.accessibility.AccessibilityManager
@@ -31,6 +30,7 @@ import mozilla.components.support.ktx.android.content.doesDeviceHaveHinge
 import mozilla.components.support.ktx.android.content.floatPreference
 import mozilla.components.support.ktx.android.content.intPreference
 import mozilla.components.support.ktx.android.content.longPreference
+import mozilla.components.support.ktx.android.content.pixelSizeFor
 import mozilla.components.support.ktx.android.content.stringPreference
 import mozilla.components.support.ktx.android.content.stringSetPreference
 import mozilla.components.support.locale.LocaleManager
@@ -55,7 +55,6 @@ import org.mozilla.fenix.ext.TALL_SCREEN_HEIGHT_DP
 import org.mozilla.fenix.ext.WIDE_SCREEN_WIDTH_DP
 import org.mozilla.fenix.ext.components
 import org.mozilla.fenix.ext.getPreferenceKey
-import org.mozilla.fenix.ext.pixelSizeFor
 import org.mozilla.fenix.home.pocket.ContentRecommendationsFeatureHelper
 import org.mozilla.fenix.home.topsites.TopSitesConfigConstants.TOP_SITES_MAX_COUNT
 import org.mozilla.fenix.nimbus.DefaultBrowserPrompt
@@ -119,8 +118,9 @@ class Settings(
 
         /**
          * The minimum number a search groups should contain.
+         *
+         * Mutable so that tests can lower the threshold.
          */
-        @VisibleForTesting
         internal var searchGroupMinimumSites: Int = 2
 
         private fun Action.toInt() = when (this) {
@@ -504,6 +504,15 @@ class Settings(
 
     var isUserSkyflagAttributed by booleanPreference(
         appContext.getPreferenceKey(R.string.pref_key_is_user_skyflag_attributed),
+        default = false,
+    )
+
+    /**
+     * Whether the `referrals` ping has already been submitted for this profile. A referral code
+     * must only ever be reported once.
+     */
+    var referralPingSubmitted by booleanPreference(
+        appContext.getPreferenceKey(R.string.pref_key_referral_ping_submitted),
         default = false,
     )
 
@@ -1681,40 +1690,6 @@ class Settings(
 
     var showSearchSuggestionsInPrivateOnboardingFinished by booleanPreference(
         appContext.getPreferenceKey(R.string.pref_key_show_search_suggestions_in_private_onboarding),
-        default = false,
-    )
-
-    fun incrementVisitedInstallableCount() = pwaInstallableVisitCount.increment()
-
-    @VisibleForTesting(otherwise = PRIVATE)
-    internal val pwaInstallableVisitCount = counterPreference(
-        appContext.getPreferenceKey(R.string.pref_key_install_pwa_visits),
-        maxCount = 3,
-    )
-
-    private val userNeedsToVisitInstallableSites: Boolean
-        get() = pwaInstallableVisitCount.underMaxCount()
-
-    val shouldShowPwaCfr: Boolean
-        get() {
-            if (!canShowCfr || !inAppMessagesEnabled || continuousOnboardingFeatureEnabled) return false
-            // We only want to show this on the 3rd time a user visits a site
-            if (userNeedsToVisitInstallableSites) return false
-
-            // ShortcutManager::pinnedShortcuts is only available on Oreo+
-            if (!userKnowsAboutPwas) {
-                val manager = appContext.getSystemService(ShortcutManager::class.java)
-                val alreadyHavePwaInstalled = manager != null && manager.pinnedShortcuts.size > 0
-
-                // Users know about PWAs onboarding if they already have PWAs installed.
-                userKnowsAboutPwas = alreadyHavePwaInstalled
-            }
-            // Show dialog only if user does not know abut PWAs
-            return !userKnowsAboutPwas
-        }
-
-    var userKnowsAboutPwas by booleanPreference(
-        appContext.getPreferenceKey(R.string.pref_key_user_knows_about_pwa),
         default = false,
     )
 
@@ -3315,5 +3290,13 @@ class Settings(
     var enableHomepageTrendingRecentSearch by booleanPreference(
         key = appContext.getPreferenceKey(R.string.pref_key_enable_homepage_trending_recent_search),
         default = { FxNimbus.features.homepageTrendingRecentSearch.value().enabled },
+    )
+
+    /**
+     * Indicates if the Android PDF tools are enabled for the PDF viewer.
+     */
+    var enablePdfTools by booleanPreference(
+        key = appContext.getPreferenceKey(R.string.pref_key_enable_pdf_tools),
+        default = { FxNimbus.features.pdfViewer.value().androidUiTools },
     )
 }

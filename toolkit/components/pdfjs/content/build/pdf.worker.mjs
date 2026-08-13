@@ -21,8 +21,8 @@
  */
 
 /**
- * pdfjsVersion = 6.3.66
- * pdfjsBuild = 5f181fd8b
+ * pdfjsVersion = 6.3.72
+ * pdfjsBuild = 71a3c6a89
  */
 
 ;// ./src/shared/util.js
@@ -52729,6 +52729,7 @@ class XFAFactory {
 
 
 
+
 class AnnotationFactory {
   static createGlobals(pdfManager) {
     return Promise.all([pdfManager.ensureCatalog("acroForm"), pdfManager.ensureDoc("xfaDatasets"), pdfManager.ensureCatalog("structTreeRoot"), pdfManager.ensureCatalog("baseUrl"), pdfManager.ensureCatalog("attachments"), pdfManager.ensureCatalog("globalColorSpaceCache")]).then(([acroForm, xfaDatasets, structTreeRoot, baseUrl, attachments, globalColorSpaceCache]) => ({
@@ -55265,10 +55266,7 @@ class ChoiceWidgetAnnotation extends WidgetAnnotation {
     if (valueIndices.length > 0) {
       const minIndex = Math.min(...valueIndices);
       const maxIndex = Math.max(...valueIndices);
-      firstIndex = Math.max(0, maxIndex - numberOfVisibleLines + 1);
-      if (firstIndex > minIndex) {
-        firstIndex = minIndex;
-      }
+      firstIndex = MathClamp(maxIndex - numberOfVisibleLines + 1, 0, minIndex);
     }
     const end = Math.min(firstIndex + numberOfVisibleLines + 1, lineCount);
     const buf = ["/Tx BMC q", `1 1 ${totalWidth} ${totalHeight} re W n`];
@@ -64154,7 +64152,7 @@ class WorkerMessageHandler {
       docId,
       apiVersion
     } = docParams;
-    const workerVersion = "6.3.66";
+    const workerVersion = "6.3.72";
     if (apiVersion !== workerVersion) {
       throw new Error(`The API version "${apiVersion}" does not match ` + `the Worker version "${workerVersion}".`);
     }

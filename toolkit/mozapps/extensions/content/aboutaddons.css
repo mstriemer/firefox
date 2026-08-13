@@ -240,6 +240,8 @@ addon-list addon-card > .addon.card {
   margin: 8px calc(var(--card-padding) * -1) calc(var(--card-padding) * -1);
 }
 
+/* Small-ish subtree */
+/* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
 addon-card[expanded] .addon-card-message,
 addon-card[expanded] .update-postponed-bar,
 .update-postponed-bar:has(+ .addon-card-message:not([hidden])) {
@@ -247,6 +249,8 @@ addon-card[expanded] .update-postponed-bar,
   margin-bottom: 0;
 }
 
+/* Small-ish subtree */
+/* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
 .update-postponed-bar:has(+ .addon-card-message:not([hidden])) {
   border-bottom: none;
 }

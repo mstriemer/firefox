@@ -12,6 +12,7 @@
 #include "js/PropertySpec.h"
 #include "vm/AsyncFunction.h"
 #include "vm/AsyncIteration.h"
+#include "vm/BytecodeUtil.h"   // js::SuspendPCForAfterYield
 #include "vm/FunctionFlags.h"  // js::FunctionFlags
 #include "vm/GlobalObject.h"
 #include "vm/Interpreter.h"  // js::GeneratorResumeState, js::RunScript
@@ -482,17 +483,8 @@ bool AbstractGeneratorObject::isAfterYieldOrAwait(JSOp op) {
     return false;
   }
 
-  static_assert(JSOpLength_Yield == JSOpLength_InitialYield,
-                "JSOp::Yield and JSOp::InitialYield must have the same length");
-  static_assert(JSOpLength_Yield == JSOpLength_Await,
-                "JSOp::Yield and JSOp::Await must have the same length");
-
-  uint32_t offset = nextOffset - JSOpLength_Yield;
-  JSOp prevOp = JSOp(code[offset]);
-  MOZ_ASSERT(prevOp == JSOp::InitialYield || prevOp == JSOp::Yield ||
-             prevOp == JSOp::Await);
-
-  return prevOp == op;
+  jsbytecode* suspendPC = SuspendPCForAfterYield(code + nextOffset);
+  return JSOp(*suspendPC) == op;
 }
 
 template <>

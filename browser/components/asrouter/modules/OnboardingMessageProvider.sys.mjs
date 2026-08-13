@@ -21,6 +21,7 @@ const { AppConstants } = ChromeUtils.importESModule(
 import { FeatureCalloutMessages } from "resource:///modules/asrouter/FeatureCalloutMessages.sys.mjs";
 import {
   WIN_OS_PIN_PROMPT_ENABLED,
+  SET_DEFAULT_OS_PROMPT_ENABLED,
   FXA_NOT_SIGNED_IN,
 } from "resource:///modules/asrouter/MessagingTargetingConstants.sys.mjs";
 
@@ -2263,7 +2264,30 @@ const BASE_MESSAGES = () => [
         type: "PIN_FIREFOX_TO_TASKBAR",
       },
     },
-    targeting: `!('browser.bypassAutoTriggerActions' | preferenceValue) && source == 'startup' && !previousSessionEnd && doesAppNeedPin && ${WIN_OS_PIN_PROMPT_ENABLED} && (unhandledCampaignAction != 'PIN_FIREFOX_TO_TASKBAR') && (unhandledCampaignAction != 'PIN_AND_DEFAULT')`,
+    targeting: `source == 'startup' && !previousSessionEnd && doesAppNeedPin && ${WIN_OS_PIN_PROMPT_ENABLED} && (unhandledCampaignAction != 'PIN_FIREFOX_TO_TASKBAR') && (unhandledCampaignAction != 'PIN_AND_DEFAULT')`,
+    trigger: {
+      id: "defaultBrowserCheck",
+    },
+    frequency: {
+      lifetime: 1,
+    },
+  },
+  {
+    // Silently triggers set default for users on Mac, and on Windows when
+    // one-click set default isn't available (so this falls back to Windows'
+    // own "Choose default apps" settings UI), in lieu of the AW_EASY_SETUP
+    // default checkbox. Never fired when one-click set default IS available,
+    // since that would silently rewrite the UserChoice registry with no
+    // consent surface at all.
+    id: "SET_DEFAULT_MAC_AND_WINDOWS_OS_PROMPT",
+    template: "action_only",
+    skip_in_tests: "it silently triggers a real OS-level set default request",
+    content: {
+      action: {
+        type: "SET_DEFAULT_BROWSER",
+      },
+    },
+    targeting: `source == 'newtab' && !previousSessionEnd && 'browser.shell.checkDefaultBrowser'|preferenceValue && !isDefaultBrowser && ${SET_DEFAULT_OS_PROMPT_ENABLED} && (unhandledCampaignAction != 'SET_DEFAULT_BROWSER') && (unhandledCampaignAction != 'PIN_AND_DEFAULT')`,
     trigger: {
       id: "defaultBrowserCheck",
     },
@@ -2895,34 +2919,6 @@ const BASE_MESSAGES = () => [
     frequency: {
       lifetime: 3,
     },
-    groups: [],
-  },
-  {
-    id: "SIDEBAR_CHATBOT_PROMO",
-    template: "sidebar_chatbot_promo",
-    content: {
-      type: "default",
-      heading: "Give your AI the full picture",
-      message:
-        "In Smart Window, AI reads every page and tab you have open, not just this sidebar. Skip the copy-paste and just ask.",
-      primary_button: {
-        label: "Try Smart Window",
-        action: {
-          type: "FXA_AIWINDOW_SIGNIN_FLOW",
-        },
-      },
-      additional_button: {
-        label: "Dismiss",
-        action: {
-          type: "CANCEL",
-        },
-      },
-    },
-    trigger: {
-      id: "sidebarToolOpened",
-    },
-    targeting: "view == 'viewGenaiChatSidebar'",
-    frequency: {},
     groups: [],
   },
   {

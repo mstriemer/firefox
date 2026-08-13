@@ -193,6 +193,32 @@ declare const isDefaultBrowser: boolean;
 
 Behaves the same as `isDefaultBrowser`, but retrieves the current value directly from shell service instead of using the cached value. This may not be as performant.
 
+### `isOneClickSetDefaultEnabled`
+
+Windows only. Can Firefox currently make itself the default browser by writing
+the Windows UserChoice registry keys, instead of having to send the user into the
+Windows Settings app to do it manually. Accounts for the
+`browser.shell.setDefaultBrowserUserChoice` and
+`browser.shell.setDefaultBrowserUserChoice.regRename` prefs as well as whether
+Windows will currently accept a UserChoice change from a third-party browser.
+
+`true` means a set-default request would be honored or that Firefox is already the default (the latter is a shortcut to `true` to avoid the risk of a UserChoice write when we don't need to attempt to set to default anyway).
+
+
+If the UserChoice Protection Driver (UCPD) is running and Firefox isn't already
+the default, this temporarily renames the `http` association key and renames it
+back. UCPD versions where one-click still works permit this rename, while those where it doesn't do not.
+
+
+Always `false` on macOS and Linux. Neither goes through UserChoice, and neither
+is reliably one-click, since both can (but don't always) defer to an OS consent prompt. Supporting them needs its own handling (see bug 2060879).
+
+#### Definition
+
+```ts
+declare const isOneClickSetDefaultEnabled: boolean;
+```
+
 ### `isDefaultHandler`
 
 Is Firefox the user's default handler for various file extensions and protocols?
@@ -1009,6 +1035,27 @@ isAIWindow
 isAIWindow == isAIWindow
 or equivalently
 (isAIWindow || !isAIWindow)
+```
+
+### `isSmartTabGroupingAllowed`
+
+Whether Smart Tab Grouping is available to this user, delegating to
+`SmartTabGroupingManager.isAllowed`. Smart Tab Grouping is currently gated on an
+English application locale, but that rule lives in the feature itself, so prefer
+this attribute over a hand-written locale check: messages that depend on the
+feature then stay in sync when the gate changes.
+
+#### Definition
+
+```ts
+declare const isSmartTabGroupingAllowed: boolean;
+```
+
+#### Examples
+
+* Only show a message when the feature can actually run:
+```javascript
+isSmartTabGroupingAllowed
 ```
 
 ### `userId`

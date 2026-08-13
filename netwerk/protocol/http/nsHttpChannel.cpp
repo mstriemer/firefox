@@ -9065,6 +9065,19 @@ static already_AddRefed<nsIURI> GetFallbackURI(nsIURI* aURI) {
   return backupURI.forget();
 }
 
+// The essential domain fallback only targets Firefox's own internal requests
+// Opening a link from browser UI or a priviledged page still carries the
+// system principal so we need to exclude these regular pageloads.
+static bool IsInternalSystemLoad(nsILoadInfo* aLoadInfo) {
+  if (!aLoadInfo->TriggeringPrincipal()->IsSystemPrincipal()) {
+    return false;
+  }
+
+  ExtContentPolicyType type = aLoadInfo->GetExternalContentPolicyType();
+  return type != ExtContentPolicy::TYPE_DOCUMENT &&
+         type != ExtContentPolicy::TYPE_SUBDOCUMENT;
+}
+
 // static
 nsHttpChannel::EssentialDomainCategory
 nsHttpChannel::GetEssentialDomainCategory(nsCString& domain) {
@@ -9345,8 +9358,7 @@ nsHttpChannel::OnStartRequest(nsIRequest* request) {
     MaybeUpdateDocumentIPAddressSpaceFromCache();
   }
 
-  if (!mCanceled && mTransaction &&
-      mLoadInfo->TriggeringPrincipal()->IsSystemPrincipal()) {
+  if (!mCanceled && mTransaction && IsInternalSystemLoad(mLoadInfo)) {
     // We have to report telemetry before we actually attempt to redirect to
     // the fallback domain because doing so will change mStatus
     ReportSystemChannelTelemetry(mStatus);
@@ -9405,8 +9417,7 @@ nsHttpChannel::OnStartRequest(nsIRequest* request) {
   // If this is a system principal request to an essential domain and we
   // currently have connectivity, then check if there's a fallback domain we
   // can use to retry. If so we redirect to the fallback domain.
-  if (NS_FAILED(mStatus) && !mCanceled &&
-      mLoadInfo->TriggeringPrincipal()->IsSystemPrincipal()) {
+  if (NS_FAILED(mStatus) && !mCanceled && IsInternalSystemLoad(mLoadInfo)) {
     if (StaticPrefs::network_essential_domains_fallback() &&
         hasConnectivity()) {
       auto passDomainCategory = [&](nsIChannel* aRedirectedChannel) {
@@ -10465,60 +10476,6 @@ nsresult nsHttpChannel::ContinueOnStopRequest(nsresult aStatus, bool aIsFromNet,
        chanDisposition));
   glean::http::channel_disposition.AccumulateSingleSample(chanDisposition);
   RecordHttpChanDispositionGlean(chanDisposition);
-
-  // Collect specific telemetry for measuring image, video, audio
-  // success/failure rates in regular browsing mode and when auto upgrading of
-  // subresources is enabled. Note that we only evaluate actual image types, not
-  // favicons.
-  nsContentPolicyType internalLoadType;
-  mLoadInfo->GetInternalContentPolicyType(&internalLoadType);
-  bool statusIsSuccess = NS_SUCCEEDED(aStatus);
-  if (internalLoadType == nsIContentPolicy::TYPE_INTERNAL_IMAGE ||
-      internalLoadType == nsIContentPolicy::TYPE_INTERNAL_IMAGE_PRELOAD) {
-    if (mLoadInfo->GetBrowserDidUpgradeInsecureRequests()) {
-      glean::mixed_content::images
-          .EnumGet(statusIsSuccess
-                       ? glean::mixed_content::ImagesLabel::eImgupsuccess
-                       : glean::mixed_content::ImagesLabel::eImgupfailure)
-          .Add();
-    } else {
-      glean::mixed_content::images
-          .EnumGet(statusIsSuccess
-                       ? glean::mixed_content::ImagesLabel::eImgnoupsuccess
-                       : glean::mixed_content::ImagesLabel::eImgnoupfailure)
-          .Add();
-    }
-  }
-  if (internalLoadType == nsIContentPolicy::TYPE_INTERNAL_VIDEO) {
-    if (mLoadInfo->GetBrowserDidUpgradeInsecureRequests()) {
-      glean::mixed_content::video
-          .EnumGet(statusIsSuccess
-                       ? glean::mixed_content::VideoLabel::eVideoupsuccess
-                       : glean::mixed_content::VideoLabel::eVideoupfailure)
-          .Add();
-    } else {
-      glean::mixed_content::video
-          .EnumGet(statusIsSuccess
-                       ? glean::mixed_content::VideoLabel::eVideonoupsuccess
-                       : glean::mixed_content::VideoLabel::eVideonoupfailure)
-          .Add();
-    }
-  }
-  if (internalLoadType == nsIContentPolicy::TYPE_INTERNAL_AUDIO) {
-    if (mLoadInfo->GetBrowserDidUpgradeInsecureRequests()) {
-      glean::mixed_content::audio
-          .EnumGet(statusIsSuccess
-                       ? glean::mixed_content::AudioLabel::eAudioupsuccess
-                       : glean::mixed_content::AudioLabel::eAudioupfailure)
-          .Add();
-    } else {
-      glean::mixed_content::audio
-          .EnumGet(statusIsSuccess
-                       ? glean::mixed_content::AudioLabel::eAudionoupsuccess
-                       : glean::mixed_content::AudioLabel::eAudionoupfailure)
-          .Add();
-    }
-  }
 
   // if needed, check cache entry has all data we expect
   if (mCacheEntry && mCachePump && LoadConcurrentCacheAccess() &&

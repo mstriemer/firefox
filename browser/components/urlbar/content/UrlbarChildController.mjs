@@ -19,6 +19,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
 });
 
 /**
+ * @import {URIFixupPrimitives} from "chrome://browser/content/urlbar/UrlbarShared.mjs"
  * @import {UrlbarChild} from "../../../actors/UrlbarChild.sys.mjs"
  * @import {UrlbarInput} from "chrome://browser/content/urlbar/UrlbarInput.mjs"
  * @import {UrlbarParentController} from "moz-src:///browser/components/urlbar/UrlbarParentController.sys.mjs"
@@ -72,6 +73,16 @@ export class UrlbarChildController {
   #listeners = new Set();
 
   #userSelectionBehavior = /** @type {"arrow"|"tab"|"none"} */ ("none");
+
+  // The id of the query the listeners are still hearing about. Notifications
+  // carrying an older id belong to a query nobody is waiting for anymore.
+  #queryId = 0;
+
+  // Whether the query identified by `#queryId` was cancelled. Only meaningful
+  // while it's held back waiting for the engine store; a cancel can't be taken
+  // as a statement about in-flight results, since the view cancels for reasons
+  // of its own (freezing the list, closing on a stale query's completion).
+  #queryCancelled = false;
 
   // The content-side engagement-telemetry collector, created lazily on the
   // message path (where the parent stand-in has no `engagementEvent`).
@@ -200,7 +211,10 @@ export class UrlbarChildController {
   getHeuristicResult(queryContext) {
     return this.#parentController.getHeuristicResult(queryContext);
   }
-  resolveFallbackNavigation(details) {
+  async resolveFallbackNavigation(details) {
+    // The result this hands back is picked like a query's, and paste-and-go
+    // suppresses the query that would otherwise have waited for the store.
+    await this.#engineStoreReady();
     return this.#parentController.resolveFallbackNavigation(details);
   }
   addListener(listener) {
@@ -212,11 +226,33 @@ export class UrlbarChildController {
   removeListener(listener) {
     this.#listeners.delete(listener);
   }
+  /**
+   * Hands a notification to the listeners, dropping the results and the end of
+   * a query they have moved on from.
+   *
+   * @param {string} notification
+   *   The notification, one of `UrlbarShared.NOTIFICATIONS`.
+   * @param {...any} params
+   *   The notification's arguments. The query lifecycle ones take the query
+   *   context.
+   */
   notify(notification, ...params) {
+    // Drop the results and the end of a query nobody is waiting for anymore.
+    // Its end, read against results the listeners never saw, would tell the
+    // view that the query produced nothing: the view would clear its rows and
+    // close, cancelling the query that took over. QUERY_STARTED still goes
+    // through -- it carries the per-query state the listeners reset, and the
+    // query they do track resets it again when it starts.
+    if (
+      (notification === UrlbarShared.NOTIFICATIONS.QUERY_FIRST_RESULT ||
+        notification === UrlbarShared.NOTIFICATIONS.QUERY_RESULTS ||
+        notification === UrlbarShared.NOTIFICATIONS.QUERY_FINISHED) &&
+      params[0].id < this.#queryId
+    ) {
+      return;
+    }
     // When the first results arrive, pre-warm a connection to the heuristic
-    // result. This runs content-side on both transports (the input has already
-    // reacted to the first result before we're notified) and reaches the
-    // parent's window the same way a mousedown speculative connect does.
+    // result.
     if (
       notification === UrlbarShared.NOTIFICATIONS.QUERY_RESULTS &&
       params[0].firstResultChanged
@@ -249,6 +285,18 @@ export class UrlbarChildController {
   recordAutofillBackspace(url) {
     return this.#parentController.recordAutofillBackspace(url);
   }
+  clearAutofillBackspaceEntryForUrl(url) {
+    return this.#parentController.clearAutofillBackspaceEntryForUrl(url);
+  }
+  dismissAutofill(url, action) {
+    return this.#parentController.dismissAutofill(url, action);
+  }
+  recordAutofillDeletion() {
+    return this.#parentController.recordAutofillDeletion();
+  }
+  handleAutofillReintegration(url) {
+    return this.#parentController.handleAutofillReintegration(url);
+  }
   recordSearchMode(searchMode) {
     return this.#parentController.recordSearchMode(searchMode);
   }
@@ -269,10 +317,45 @@ export class UrlbarChildController {
    * Starts a query and returns the parent controller's promise so callers (the
    * input's `lastQueryContextPromise`, which tests await) can track completion.
    *
+   * A query that would run before the engine store is populated is held back
+   * until it is. Results are produced by the providers in the parent, which use
+   * the search service directly, so a query dispatched before the store is
+   * ready can deliver results to a UI that has no engines to look up. Holding
+   * the query back is what keeps every result-handling path downstream of a
+   * populated store.
+   *
+   * @param {UrlbarQueryContext} queryContext
+   * @returns {Promise<UrlbarQueryContext>}
+   *   Resolves with the finished context, or with the untouched one if the
+   *   query was cancelled or superseded while waiting for the engine store.
+   */
+  startQuery(queryContext) {
+    this.#queryId = queryContext.id;
+    this.#queryCancelled = false;
+
+    if (this.engineStore.initialized || this.engineStore.failed) {
+      return this.#dispatchQuery(queryContext);
+    }
+
+    // Arm the bufferer up front so an Enter typed during the wait is deferred
+    // too. Nothing can tear down the previous query in the meantime, which is
+    // the only thing #dispatchQuery's arm-after-dispatch ordering guards
+    // against.
+    this.#input.eventBufferer.queryStarting(queryContext);
+
+    return this.#engineStoreReady().then(() =>
+      this.#queryId == queryContext.id && !this.#queryCancelled
+        ? this.#dispatchQuery(queryContext)
+        : queryContext
+    );
+  }
+  /**
+   * Hands a query to the parent controller.
+   *
    * @param {UrlbarQueryContext} queryContext
    * @returns {Promise<UrlbarQueryContext>} Resolves with the finished context.
    */
-  startQuery(queryContext) {
+  #dispatchQuery(queryContext) {
     let queryContextPromise = this.#parentController.startQuery(queryContext);
     // Arm the event bufferer as the query starts so a just-typed Enter is
     // deferred until results arrive; it can't wait for the QUERY_STARTED
@@ -282,8 +365,44 @@ export class UrlbarChildController {
     this.#input.eventBufferer.queryStarting(queryContext);
     return queryContextPromise;
   }
+  /**
+   * Waits for the engine store to be populated.
+   *
+   * @returns {Promise<void>}
+   *   Resolves once the store holds engines, or immediately if it never will
+   *   because the search service failed. It doesn't reject: waiting on a store
+   *   that can't be populated would keep the input from producing results at
+   *   all.
+   */
+  async #engineStoreReady() {
+    if (this.engineStore.initialized || this.engineStore.failed) {
+      return;
+    }
+    try {
+      await this.engineStore.init();
+    } catch {
+      // The search service failed.
+    }
+  }
   cancelQuery() {
+    // A query still waiting for the engine store must not be dispatched at all.
+    this.#queryCancelled = true;
     return this.#parentController.cancelQuery();
+  }
+  /**
+   * Takes the running query away from the listeners, reporting it to them as
+   * cancelled: nothing more of it reaches them, results or end. The input calls
+   * this when it takes the query over after the first result -- entering search
+   * mode and restarting it -- since the results are about to be replaced. The
+   * query keeps running until the restart cancels it, which over the message
+   * path takes a round trip.
+   *
+   * @param {UrlbarQueryContext} queryContext
+   *   The context of the query being discarded.
+   */
+  discardResults(queryContext) {
+    this.#queryId++;
+    this.notify(UrlbarShared.NOTIFICATIONS.QUERY_CANCELLED, queryContext);
   }
   receiveResults(queryContext) {
     return this.#parentController.receiveResults(queryContext);
@@ -698,6 +817,10 @@ export class UrlbarChildController {
     return this.#parentController.switchToTab(loadData);
   }
 
+  addToInputHistory(url, input, options) {
+    return this.#parentController.addToInputHistory(url, input, options);
+  }
+
   /**
    * Returns whether the passed-in event represents a canonization request.
    *
@@ -722,14 +845,14 @@ export class UrlbarChildController {
   /**
    * Gets URI fixup primitives for a string. Runs through the actor since the
    * content-web input can't reach `Services.uriFixup` (see
-   * `UrlbarChild.getFixupInfo`).
+   * `UrlbarChild.getFixupPrimitives`).
    *
    * @param {string} searchString
    *   The string to fix up.
-   * @returns {?{keywordAsSent: boolean, preferredURIDisplaySpec: ?string}}
+   * @returns {?URIFixupPrimitives}
    */
-  getFixupInfo(searchString) {
-    return this.#actor.getFixupInfo(searchString, this.#input.isPrivate);
+  getFixupPrimitives(searchString) {
+    return this.#actor.getFixupPrimitives(searchString, this.#input.isPrivate);
   }
 
   /**
@@ -742,6 +865,32 @@ export class UrlbarChildController {
    */
   getDisplaySpec(url) {
     return this.#actor.getDisplaySpec(url);
+  }
+
+  /**
+   * Gets the SUMO URL for a support topic. Runs through the actor since the
+   * content-web input can't reach `Services.urlFormatter` (see
+   * `UrlbarChild.getSupportUrl`).
+   *
+   * @param {string} topic
+   *   The support page slug to append to the SUMO base URL.
+   * @returns {string}
+   */
+  getSupportUrl(topic) {
+    return this.#actor.getSupportUrl(topic);
+  }
+
+  /**
+   * Whether a string reads right-to-left. Runs through the actor since the
+   * content-web input can't reach the chrome-only `windowUtils` (see
+   * `UrlbarChild.isTextDirectionRTL`).
+   *
+   * @param {string} value
+   *   The text to check.
+   * @returns {boolean}
+   */
+  isTextDirectionRTL(value) {
+    return this.#actor.isTextDirectionRTL(value, window);
   }
 
   /**
@@ -795,6 +944,21 @@ export class UrlbarChildController {
       where = "current";
     }
     return where;
+  }
+
+  /**
+   * Whether a pick opened with the given `where` will load in the background.
+   * Runs through the actor since the content-web input can't import
+   * `BrowserUtils` (see `UrlbarChild.willLoadInBackground`).
+   *
+   * @param {string} where
+   *   Where the pick will open, as returned by `whereToOpen`.
+   * @param {object} params
+   *   The params that will be passed to `openLinkIn`.
+   * @returns {boolean}
+   */
+  willLoadInBackground(where, params) {
+    return this.#actor.willLoadInBackground(where, params);
   }
 
   focusOnUnifiedSearchButton() {

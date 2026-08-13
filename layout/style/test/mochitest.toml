@@ -17,7 +17,8 @@ prefs = [
   "layout.css.text-box.enabled=true",
   "layout.css.text-decoration-inset-percentage.enabled=true",
   "layout.css.link-parameters.enabled=true",
-  "layout.css.ellipse-corners.enabled=true"
+  "layout.css.ellipse-corners.enabled=true",
+  "layout.css.calc-typed-arithmetic.enabled=true"
 ]
 support-files = [
   "animation_utils.js",

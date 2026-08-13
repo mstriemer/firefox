@@ -37,29 +37,6 @@ export class MonitorsDisplay extends MozLitElement {
     return monitorStatus;
   }
 
-  buildHistoryItem(monitorHistory) {
-    const transformedHistory = (monitorHistory || []).map(item => {
-      const date = new Date(item.checkedAt);
-      const timeStr = date.toLocaleTimeString(undefined, {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      });
-
-      return {
-        when: timeStr,
-        note: item.resultExplanation || "",
-        flag: item.conditionMet ? "Triggered" : null,
-        low: !item.conditionMet,
-        // oldValue and newValue would be populated if we tracked value changes
-        oldValue: null,
-        newValue: null,
-      };
-    });
-
-    return transformedHistory;
-  }
-
   /**
    * Transforms a monitor object to match the agent-monitor-item format.
    *
@@ -68,8 +45,6 @@ export class MonitorsDisplay extends MozLitElement {
    */
   transformMonitorToAgent(monitor) {
     const monitorStatus = this.buildMonitorStatus(monitor);
-    // Transform history to match agent-monitor-item format
-    const transformedHistory = this.buildHistoryItem(monitor.history);
 
     return {
       id: monitor.id,
@@ -82,7 +57,7 @@ export class MonitorsDisplay extends MozLitElement {
       valueMeta: monitor.lastRunTime
         ? `checked ${new Date(monitor.lastRunTime).toLocaleTimeString()}`
         : "",
-      history: transformedHistory,
+      history: (monitor.history || []).slice().reverse(),
       // Pass the schedule data directly - agent-monitor-item will format it using FTL strings
       schedule: monitor.schedule
         ? {
@@ -106,20 +81,24 @@ export class MonitorsDisplay extends MozLitElement {
       />
 
       <div class="monitors-section">
-        <p data-l10n-id="ai-task-page-description"></p>
-
-        <h3
-          data-l10n-id="ai-tasks-alerts-count"
-          data-l10n-args=${JSON.stringify({ count: this.monitors.length })}
-        ></h3>
         ${this.monitors.length
           ? html`
+              <p data-l10n-id="ai-task-page-description"></p>
+
+              <p
+                class="monitors-count"
+                data-l10n-id="ai-tasks-alerts-count"
+                data-l10n-args=${JSON.stringify({
+                  count: this.monitors.length,
+                })}
+              ></p>
               <div class="monitors-list">
                 ${repeat(
                   this.monitors,
                   monitor => monitor.id,
                   monitor => html`
                     <agent-monitor-item
+                      .showLastResult=${true}
                       .agent=${this.transformMonitorToAgent(monitor)}
                       mode="display"
                     ></agent-monitor-item>
@@ -127,10 +106,12 @@ export class MonitorsDisplay extends MozLitElement {
                 )}
               </div>
             `
-          : html` <p
-              class="no-monitors"
-              data-l10n-id="ai-task-page-no-alerts"
-            ></p>`}
+          : html` <section class="no-monitors-wrapper">
+              <div class="no-monitors-container">
+                <h2 data-l10n-id="ai-task-page-no-alerts-title"></h2>
+                <p data-l10n-id="ai-task-page-no-alerts"></p>
+              </div>
+            </section>`}
       </div>
     `;
   }

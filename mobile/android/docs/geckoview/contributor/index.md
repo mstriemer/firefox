@@ -21,6 +21,5 @@
   GeckoView's architecture.
 - [Junit Test Framework](junit.md): An overview of GeckoView's custom
   Junit code.
-- [apilint](apilint.md): GeckoView's linter for the API.
 - [Translations: Toolkit to Fenix](translations-toolkit-to-fenix.md): Creating
   a new Android feature using existing JavaScript toolkit code

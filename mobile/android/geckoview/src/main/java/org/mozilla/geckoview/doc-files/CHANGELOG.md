@@ -13,9 +13,14 @@ exclude: true
 
 ⚠️  breaking change and deprecation notices
 
-
 ## v155
 - Added [WebRequestError.ERROR_LOCAL_NETWORK_ACCESS_DENIED] to indicate that a load failed because the user denied the local network access permission on Android 17+.
+- Added the [`IPProxyException.ERROR_CATASTROPHIC`][155.1] and [`IPProxyException.ERROR_VPN_UNAVAILABLE`][155.2]
+  error codes for the [`IPProtectioController.activate`][155.3].
+
+[155.1]: {{javadoc_uri}}/IPProtectionController.IPProxyException.html#ERROR_CATASTROPHIC
+[155.2]: {{javadoc_uri}}/IPProtectionController.IPProxyException.html#ERROR_VPN_UNAVAILABLE
+[155.3]: {{javadoc_uri}}/IPProtectionController.html#activate(boolean,boolean,java.lang.String)
 
 ## v154
 - Added [`Autofill.Node.getDatalist`][154.1] to expose predefined values by [`datalist`][154.2] elements for input fields.
@@ -2052,4 +2057,4 @@ to allow adding gecko profiler markers.
 [65.24]: {{javadoc_uri}}/CrashReporter.html#sendCrashReport(android.content.Context,android.os.Bundle,java.lang.String)
 [65.25]: {{javadoc_uri}}/GeckoResult.html
 
-[api-version]: a836faf542c8e3d175a6492a1c0c6f39f639d7c2
+[api-version]: 8746a786b9e9fd08dd61321d2973efc43d1ffefa

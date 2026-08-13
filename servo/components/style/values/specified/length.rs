@@ -22,7 +22,7 @@ use crate::values::generics::length::{
 };
 use crate::values::generics::NonNegative;
 use crate::values::specified::calc::{
-    AllowAnchorPositioningFunctions, CalcLengthPercentage, CalcNode,
+    AllowAnchorPositioningFunctions, CalcLengthPercentage, CalcNode, PercentageContext,
 };
 use crate::values::specified::font::QueryFontMetricsFlags;
 use crate::values::specified::percentage::NoCalcPercentage;
@@ -760,7 +760,7 @@ impl NoCalcLength {
 
         context
             .builder
-            .add_flags(ComputedValueFlags::USES_FONT_RELATIVE_UNITS);
+            .add_flags(ComputedValueFlags::USES_FONT_OR_WM_RELATIVE_UNITS);
 
         let reference_font_size = base_size.resolve(context);
         let length = self.value;
@@ -931,6 +931,9 @@ impl NoCalcLength {
             ViewportUnit::Vmin => cmp::min(size.width, size.height),
             ViewportUnit::Vmax => cmp::max(size.width, size.height),
             ViewportUnit::Vi | ViewportUnit::Vb => {
+                context
+                    .builder
+                    .add_flags(ComputedValueFlags::USES_FONT_OR_WM_RELATIVE_UNITS);
                 context
                     .rule_cache_conditions
                     .borrow_mut()
@@ -1183,7 +1186,13 @@ impl Length {
             },
             Token::Function(ref name) => {
                 let function = CalcNode::math_function(context, name, location)?;
-                let calc = CalcNode::parse_length(context, input, num_context, function)?;
+                let calc = CalcNode::parse_length(
+                    context,
+                    input,
+                    num_context,
+                    function,
+                    PercentageContext::not_allowed(),
+                )?;
                 Ok(Self::new_calc(Box::new(calc)))
             },
             ref token => return Err(location.new_unexpected_token_error(token.clone())),

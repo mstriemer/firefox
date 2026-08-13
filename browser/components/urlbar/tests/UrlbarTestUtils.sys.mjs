@@ -1501,9 +1501,6 @@ class UrlbarInputTestUtils {
           get sapName() {
             return sapName;
           },
-          onFirstResult() {
-            return false;
-          },
           getSearchSource() {
             return "dummy-search-source";
           },
@@ -1546,7 +1543,15 @@ class UrlbarInputTestUtils {
       lazy.ProvidersManager.getInstanceForSap = () => parentOptions.manager;
     }
     try {
-      return new lazy.UrlbarChildController({ input: parentOptions.input });
+      let controller = new lazy.UrlbarChildController({
+        input: parentOptions.input,
+      });
+      // A query waits for the engine store, which this fixture never populates:
+      // the stubbed actor has nothing to service the request with. Mark it ready
+      // so the mock dispatches queries the way a real controller does once its
+      // store is up. Tests that need engines populate it themselves.
+      controller.engineStore.initialized = true;
+      return controller;
     } finally {
       lazy.ProvidersManager.getInstanceForSap = originalGetInstanceForSap;
     }
@@ -1731,6 +1736,15 @@ class UrlbarInputTestUtils {
 
     let promisePanelOpen = lazy.BrowserTestUtils.waitForEvent(popup, "shown");
     let rebuildPromise = lazy.BrowserTestUtils.waitForEvent(popup, "rebuild");
+    // In XUL windows the panel-list is wrapped in a XUL panel, which it opens
+    // asynchronously, so its "shown" event can fire before the panel is open
+    // and its contents are interactive. Bug 2063011 will fix this in
+    // panel-list itself, and remove this wait.
+    let xulPanel = popup.parentElement;
+    let promisePopupShown =
+      xulPanel.localName == "panel"
+        ? lazy.BrowserTestUtils.waitForPopupEvent(xulPanel, "shown")
+        : null;
     if (openFn) {
       await openFn();
     } else {
@@ -1740,7 +1754,7 @@ class UrlbarInputTestUtils {
       );
       button.click();
     }
-    await Promise.all([promisePanelOpen, rebuildPromise]);
+    await Promise.all([promisePanelOpen, rebuildPromise, promisePopupShown]);
 
     return popup;
   }
@@ -2001,6 +2015,34 @@ class UrlbarInputTestUtils {
       "chrome://browser/content/urlbar/UrlbarShared.mjs",
       { global: "current" }
     ).UrlbarShared;
+  }
+
+  /**
+   * Returns whether the given separator element is visible. Currently only
+   * tested with `.urlbarView-title-separator`. Please update it if you need to!
+   *
+   * @param {Element} separatorElement
+   * @returns {boolean}
+   */
+  isSeparatorVisible(separatorElement) {
+    if (!Services.prefs.getBoolPref("browser.nova.enabled", false)) {
+      return lazy.BrowserTestUtils.isVisible(separatorElement);
+    }
+
+    let before = separatorElement.documentGlobal.getComputedStyle(
+      separatorElement,
+      "::before"
+    );
+    if (!before) {
+      throw new Error("Separator does not have ::before as expected!");
+    }
+    switch (before.content) {
+      case '"•" / "—"':
+        return true;
+      case '"" / "—"':
+        return false;
+    }
+    throw new Error("Separator ::before has unexpected content!");
   }
 
   /**

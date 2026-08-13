@@ -72,12 +72,82 @@ object ToolbarSelectors {
         groups = listOf(),
     )
 
+    val NEW_PRIVATE_TAB_BUTTON = Selector(
+        strategy = SelectorStrategy.UIAUTOMATOR_WITH_DESCRIPTION_CONTAINS,
+        value = "New private tab",
+        description = "New private tab button",
+        groups = listOf(),
+    )
+
+    val EXPANDED_TOOLBAR_ADD_BOOKMARK_BUTTON = Selector(
+        strategy = SelectorStrategy.UIAUTOMATOR_WITH_DESCRIPTION_CONTAINS,
+        value = getStringResource(R.string.browser_menu_bookmark_this_page_2),
+        description = "Expanded toolbar bookmark page button",
+        groups = listOf("expandedToolbarItem"),
+    )
+
+    val EXPANDED_TOOLBAR_EDIT_BOOKMARK_BUTTON = Selector(
+        strategy = SelectorStrategy.UIAUTOMATOR_WITH_DESCRIPTION_CONTAINS,
+        value = getStringResource(R.string.browser_menu_edit_bookmark),
+        description = "Expanded toolbar edit bookmark button",
+        groups = listOf("expandedToolbarItem"),
+    )
+
+    val EXPANDED_TOOLBAR_SHARE_BUTTON = Selector(
+        strategy = SelectorStrategy.UIAUTOMATOR_WITH_DESCRIPTION_CONTAINS,
+        value = getStringResource(R.string.browser_menu_share),
+        description = "Expanded toolbar share button",
+        groups = listOf("expandedToolbarItem"),
+    )
+
+    val EXPANDED_TOOLBAR_BACK_BUTTON = Selector(
+        strategy = SelectorStrategy.UIAUTOMATOR_WITH_DESCRIPTION_CONTAINS,
+        value = getStringResource(R.string.browser_menu_back),
+        description = "Expanded toolbar back button",
+        groups = listOf("expandedToolbarInLandscapeItem"),
+    )
+
+    val EXPANDED_TOOLBAR_FORWARD_BUTTON = Selector(
+        strategy = SelectorStrategy.UIAUTOMATOR_WITH_DESCRIPTION_CONTAINS,
+        value = getStringResource(R.string.browser_menu_forward),
+        description = "Expanded toolbar forward button",
+        groups = listOf("expandedToolbarInLandscapeItem"),
+    )
+
+    val EXPANDED_TOOLBAR_REFRESH_BUTTON = Selector(
+        strategy = SelectorStrategy.UIAUTOMATOR_WITH_DESCRIPTION_CONTAINS,
+        value = getStringResource(R.string.browser_menu_refresh),
+        description = "Expanded toolbar refresh button",
+        groups = listOf("expandedToolbarInLandscapeItem"),
+    )
+
+    val SITE_INFO_BUTTON = Selector(
+        strategy = SelectorStrategy.UIAUTOMATOR_WITH_DESCRIPTION_CONTAINS,
+        value = "Site information",
+        description = "Site information button",
+        groups = listOf(),
+    )
+
     @Suppress("ktlint:standard:function-naming", "FunctionName")
     fun SEARCH_ENGINE_SELECTOR_ICON(searchEngineName: String = "") = Selector(
         strategy = SelectorStrategy.COMPOSE_BY_CONTENT_DESCRIPTION,
         value = getStringResource(R.string.search_engine_selector_content_description, searchEngineName),
         description = "Search engine selector icon",
         groups = listOf("homeScreenToolbar"),
+    )
+
+    val READER_VIEW_BUTTON = Selector(
+        strategy = SelectorStrategy.COMPOSE_BY_CONTENT_DESCRIPTION,
+        value = getStringResource(R.string.browser_menu_read),
+        description = "Reader view toolbar button",
+        groups = listOf(),
+    )
+
+    val READER_VIEW_CLOSE_BUTTON = Selector(
+        strategy = SelectorStrategy.COMPOSE_BY_CONTENT_DESCRIPTION,
+        value = getStringResource(R.string.browser_menu_read_close),
+        description = "Close reader view toolbar button",
+        groups = listOf(),
     )
 
     // UIAutomator rather than Compose: this is asserted on BrowserPage with GeckoView active, where
@@ -87,6 +157,41 @@ object ToolbarSelectors {
         strategy = SelectorStrategy.UIAUTOMATOR_WITH_DESCRIPTION_CONTAINS,
         value = "Non-private Tabs Open: $openTabs",
         description = "Tab counter showing $openTabs open tab(s)",
+        groups = listOf(),
+    )
+
+    // UIAutomator rather than Compose: asserted on BrowserPage with GeckoView active (see
+    // TAB_COUNTER_WITH_COUNT). The capitalized "Private Tabs Open:" is distinct from the normal
+    // counter's "Non-private Tabs Open:" fragment, so a description-contains match won't cross over.
+    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    fun PRIVATE_TAB_COUNTER_WITH_COUNT(openTabs: String = "") = Selector(
+        strategy = SelectorStrategy.UIAUTOMATOR_WITH_DESCRIPTION_CONTAINS,
+        value = "Private Tabs Open: $openTabs",
+        description = "Private tab counter showing $openTabs open tab(s)",
+        groups = listOf(),
+    )
+
+    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    fun TAB_STRIP_TAB_COUNTER_WITH_COUNT(openTabs: String = "") = Selector(
+        strategy = SelectorStrategy.COMPOSE_BY_CONTENT_DESCRIPTION,
+        value = "Non-private Tabs Open: $openTabs. Tap to switch tabs.",
+        description = "Tab strip tab counter showing $openTabs open tab(s)",
+        groups = listOf(),
+    )
+
+    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    fun TAB_STRIP_TAB(tabTitle: String = "") = Selector(
+        strategy = SelectorStrategy.UIAUTOMATOR_WITH_TEXT,
+        value = tabTitle,
+        description = "Tab strip tab '$tabTitle'",
+        groups = listOf(),
+    )
+
+    @Suppress("ktlint:standard:function-naming", "FunctionName")
+    fun TAB_STRIP_CLOSE_TAB_BUTTON(tabTitle: String = "") = Selector(
+        strategy = SelectorStrategy.UIAUTOMATOR_WITH_DESCRIPTION_CONTAINS,
+        value = "Close tab $tabTitle",
+        description = "Tab strip close button for '$tabTitle'",
         groups = listOf(),
     )
 
@@ -126,8 +231,22 @@ object ToolbarSelectors {
         TOOLBAR_URL_BOX,
         TOOLBAR_URL_BOX_UIAUTOMATOR,
         NEW_TAB_BUTTON,
+        NEW_PRIVATE_TAB_BUTTON,
+        EXPANDED_TOOLBAR_ADD_BOOKMARK_BUTTON,
+        EXPANDED_TOOLBAR_EDIT_BOOKMARK_BUTTON,
+        EXPANDED_TOOLBAR_SHARE_BUTTON,
+        EXPANDED_TOOLBAR_BACK_BUTTON,
+        EXPANDED_TOOLBAR_FORWARD_BUTTON,
+        EXPANDED_TOOLBAR_REFRESH_BUTTON,
+        SITE_INFO_BUTTON,
+        READER_VIEW_BUTTON,
+        READER_VIEW_CLOSE_BUTTON,
         SEARCH_ENGINE_SELECTOR_ICON(),
         TAB_COUNTER_WITH_COUNT(),
+        PRIVATE_TAB_COUNTER_WITH_COUNT(),
+        TAB_STRIP_TAB_COUNTER_WITH_COUNT(),
+        TAB_STRIP_TAB(),
+        TAB_STRIP_CLOSE_TAB_BUTTON(),
         INSECURE_CONNECTION_INFORMATION_BUTTON,
         SECURE_SITE_INFORMATION_BUTTON,
         TRACKING_PROTECTION_OFF_INFORMATION_BUTTON,

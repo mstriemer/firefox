@@ -136,12 +136,17 @@ class TransactionBuilder final {
 
   void RemovePipeline(PipelineId aPipelineId);
 
-  void SetDisplayList(Epoch aEpoch, wr::WrPipelineId pipeline_id,
+  // aIdNamespace is the namespace whose resources the display list is allowed
+  // to reference. It must be supplied by the compositor-side owner of the
+  // pipeline.
+  void SetDisplayList(Epoch aEpoch, wr::IdNamespace aIdNamespace,
+                      wr::WrPipelineId pipeline_id,
                       wr::BuiltDisplayListDescriptor dl_descriptor,
                       wr::Vec<uint8_t>& dl_items_data,
                       wr::Vec<uint8_t>& dl_spatial_tree);
 
-  void ClearDisplayList(Epoch aEpoch, wr::WrPipelineId aPipeline);
+  void ClearDisplayList(Epoch aEpoch, wr::IdNamespace aIdNamespace,
+                        wr::WrPipelineId aPipeline);
 
   void GenerateFrame(const VsyncId& aVsyncId, bool aPresent, bool aTracked,
                      wr::RenderReasons aReasons);
@@ -698,11 +703,7 @@ class DisplayListBuilder final {
                  bool aPremultipliedAlpha = true,
                  const wr::ColorF& aColor = wr::ColorF{1.0f, 1.0f, 1.0f, 1.0f},
                  bool aPreferCompositorSurface = false,
-                 bool aSupportsExternalCompositing = false,
-                 // Restricts sampling to this sub-rect of the image, in image
-                 // pixels; aBounds must map to it rather than to the whole
-                 // image. Used for CSS sprite sheets.
-                 const Maybe<wr::DeviceIntRect>& aSubRect = Nothing());
+                 bool aSupportsExternalCompositing = false);
 
   void PushRepeatingImage(
       const wr::LayoutRect& aBounds, const wr::LayoutRect& aClip,

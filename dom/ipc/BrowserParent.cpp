@@ -194,7 +194,7 @@ class RequestingAccessKeyEventData {
   RequestingAccessKeyEventData() = delete;
 
   static void OnBrowserParentCreated() {
-    MOZ_ASSERT(sBrowserParentCount <= INT32_MAX);
+    MOZ_ASSERT(sBrowserParentCount < INT32_MAX);
     sBrowserParentCount++;
   }
   static void OnBrowserParentDestroyed() {
@@ -1421,7 +1421,7 @@ IPCResult BrowserParent::RecvNewWindowGlobal(
 
   // Ensure we never load a document with a content principal in
   // the wrong type of webIsolated process
-  // NOTE: Keep this in sync with the similar check in
+  // NOTE: Keep the AllowSystem condition in sync with the similar check in
   // DocumentLoadListener::TriggerRedirectToRealChannel.
   EnumSet<ValidatePrincipalOptions> validationOptions = {};
   if (xpc::IsInAutomation()) {
@@ -1436,7 +1436,7 @@ IPCResult BrowserParent::RecvNewWindowGlobal(
     if (isChromeReftest ||
         (NS_IsAboutBlank(docURI) && parentWgp && parentWgp->Manager() == this &&
          parentWgp->DocumentPrincipal()->IsSystemPrincipal())) {
-      validationOptions += ValidatePrincipalOptions::AllowSystem;
+      validationOptions += ValidatePrincipalOptions::AllowSystemIfLoaded;
     }
   }
   if (!Manager()->ValidatePrincipal(aInit.principal(), validationOptions)) {
@@ -3987,6 +3987,7 @@ mozilla::ipc::IPCResult BrowserParent::RecvInvokeDragSession(
     return IPC_OK();
   }
 
+  // XXX: Can we remove AllowNullPtr here?
   if (!Manager()->ValidatePrincipal(aPrincipal,
                                     {ValidatePrincipalOptions::AllowNullPtr})) {
     return ContentParent::PrincipalValidationIpcFail(aPrincipal, this,

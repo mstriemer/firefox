@@ -268,6 +268,11 @@ class MainMenuTest {
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/3080160
+    @Converted(
+        replacedBy = ["org.mozilla.fenix.ui.efficiency.tests.MainMenuTest#verifyTheExtensionsMenuListAfterRemovingAnExtensionTest"],
+        bug = 2061643,
+        since = "2026-08",
+    )
     @SmokeTest
     @Test
     fun verifyTheExtensionsMenuListAfterRemovingAnExtensionTest() {
@@ -306,6 +311,11 @@ class MainMenuTest {
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/3080163
+    @Converted(
+        replacedBy = ["org.mozilla.fenix.ui.efficiency.tests.MainMenuTest#verifyTheExtensionsMenuListAfterRemovingAnExtensionTest"],
+        bug = 2061643,
+        since = "2026-08",
+    )
     @SmokeTest
     @Test
     fun verifyTheManageExtensionsItemTest() {
@@ -616,6 +626,11 @@ class MainMenuTest {
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/3080156
+    @Converted(
+        replacedBy = ["org.mozilla.fenix.ui.efficiency.tests.MainMenuTest#verifyTheExtensionInstallationTest"],
+        bug = 2062245,
+        since = "2026-08",
+    )
     @SmokeTest
     @Test
     fun verifyTheExtensionInstallationTest() {
@@ -647,6 +662,11 @@ class MainMenuTest {
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/3080181
+    @Converted(
+        replacedBy = ["org.mozilla.fenix.ui.efficiency.tests.MainMenuTest#verifyTheHomePageSettingsMenuItemTest"],
+        bug = 2062245,
+        since = "2026-08",
+    )
     @SmokeTest
     @Test
     fun verifyTheHomePageSettingsMenuItemTest() {
@@ -744,6 +764,7 @@ class MainMenuTest {
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/3080101
     @Converted(
         replacedBy = ["org.mozilla.fenix.ui.efficiency.tests.CustomTabsTest#verifyTheFindInPageMenuItemInACustomTabTest"],
+        bug = 2057409,
         since = "2026-07",
     )
     @SmokeTest
@@ -865,6 +886,11 @@ class MainMenuTest {
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/3080162
+    @Converted(
+        replacedBy = ["org.mozilla.fenix.ui.efficiency.tests.MainMenuTest#verifyTheExtensionMenuListWhileExtensionsAreDisabledTest"],
+        bug = 2062245,
+        since = "2026-08",
+    )
     @SmokeTest
     @Test
     fun verifyTheExtensionMenuListWhileExtensionsAreDisabledTest() {
@@ -1389,6 +1415,7 @@ class MainMenuTest {
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/3080137
     @Converted(
         replacedBy = ["org.mozilla.fenix.ui.efficiency.tests.MainMenuTest#verifyTheBookmarksMainMenuItemTest"],
+        bug = 2057417,
         since = "2026-07",
     )
     @SmokeTest
@@ -1439,6 +1466,7 @@ class MainMenuTest {
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/3080096
     @Converted(
         replacedBy = ["org.mozilla.fenix.ui.efficiency.tests.CustomTabsTest#verifyTheMainMenuBackButtonFromCustomTabTest"],
+        bug = 2057414,
         since = "2026-07",
     )
     @SmokeTest
@@ -1503,6 +1531,7 @@ class MainMenuTest {
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/3080097
     @Converted(
         replacedBy = ["org.mozilla.fenix.ui.efficiency.tests.CustomTabsTest#verifyTheMainMenuForwardButtonFromCustomTabTest"],
+        bug = 2057414,
         since = "2026-07",
     )
     @SmokeTest
@@ -1603,6 +1632,11 @@ class MainMenuTest {
     }
 
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/3080110
+    @Converted(
+        replacedBy = ["org.mozilla.fenix.ui.efficiency.tests.MainMenuTest#verifyTheMoreMainMenuSubListTest"],
+        bug = 2062245,
+        since = "2026-08",
+    )
     @SmokeTest
     @Test
     fun verifyTheMoreMainMenuSubListTest() {

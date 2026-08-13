@@ -926,7 +926,8 @@ async function clickDoorhangerButton(buttonType, index = 0) {
     info("expecting notification popup show up");
     await dropdownPromise;
 
-    button = notification.querySelectorAll("menuitem")[index];
+    // Only look in the dropmarker popup; some doorhangers have other menus too.
+    button = notification.menupopup.querySelectorAll("menuitem")[index];
     if (notification.menupopup.isNativeMenu) {
       notification.menupopup.activateItem(button);
     } else {
@@ -1543,6 +1544,9 @@ async function triggerCapture(browser, submitButtonSelector, fillSelectors) {
  *        Region to assign before running the test
  * @param {Array} patterns.expectedResult
  *        The expected result of this heuristic test. See below for detailed explanation
+ * @param {Function} patterns.onTestSetup
+ *        Function that is executed after preferences and profile data are set, but before
+ *        the test document is opened.
  * @param {Function} patterns.onTestStart
  *        Function that is executed before the test starts. This runs after the form
  *        field has been focused.
@@ -1677,6 +1681,10 @@ async function add_heuristic_tests(
 
     if (testPattern.profile) {
       await setStorage(testPattern.profile);
+    }
+
+    if (testPattern.onTestSetup) {
+      await testPattern.onTestSetup();
     }
 
     await BrowserTestUtils.withNewTab(TEST_URL, async browser => {

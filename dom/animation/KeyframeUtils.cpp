@@ -19,6 +19,7 @@
 #include "mozilla/ServoCSSParser.h"
 #include "mozilla/ServoStyleSet.h"
 #include "mozilla/StaticPrefs_dom.h"
+#include "mozilla/StaticPrefs_layout.h"
 #include "mozilla/StyleAnimationValue.h"
 #include "mozilla/TimingParams.h"
 #include "mozilla/dom/BaseKeyframeTypesBinding.h"  // For FastBaseKeyframe etc.
@@ -61,9 +62,9 @@ enum class ListAllowance { eDisallow, eAllow };
  * mValues.
  */
 struct PropertyValuesPair {
-  PropertyValuesPair() : mProperty(eCSSProperty_UNKNOWN) {}
+  PropertyValuesPair() = default;
 
-  CSSPropertyId mProperty;
+  CSSPropertyId mProperty{eCSSProperty_UNKNOWN};
   nsTArray<nsCString> mValues;
 };
 
@@ -413,10 +414,10 @@ nsTArray<AnimationProperty> KeyframeUtils::GetAnimationPropertiesFromKeyframes(
 
 /* static */
 bool KeyframeUtils::IsAnimatableProperty(const CSSPropertyId& aProperty) {
-  // Regardless of the backend type, treat the 'display' property as not
-  // animatable. (Servo will report it as being animatable, since it is
-  // in fact animatable by SMIL.)
-  if (aProperty.mId == eCSSProperty_display) {
+  // Servo considers 'display' animatable (since it's animatable by SMIL), so
+  // we keep it non-animatable unless the display animations pref is enabled.
+  if (aProperty.mId == eCSSProperty_display &&
+      !StaticPrefs::layout_css_display_animations_enabled()) {
     return false;
   }
   return Servo_Property_IsAnimatable(&aProperty);

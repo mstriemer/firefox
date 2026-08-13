@@ -4,11 +4,10 @@
 
 // This is included first to ensure it doesn't implicitly depend on anything
 // else.
-#include "mozilla/SegmentedVector.h"
-
 #include "mozilla/Alignment.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/CheckedArithmetic.h"
+#include "mozilla/SegmentedVector.h"
 
 using mozilla::SegmentedVector;
 

@@ -191,6 +191,7 @@
   margin: 0;
   align-items: center;
 
+  /* stylelint-disable-next-line stylelint-plugin-mozilla/no-has-selector */
   &:has(slot:has-slotted) {
     gap: var(--space-small);
   }

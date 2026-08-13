@@ -1621,8 +1621,9 @@ export class _ASRouter {
 
   /**
    * Whether a special message action is allowed to fire automatically from an
-   * "action_only" template message (no UI). MULTI_ACTION is allowed only when
-   * every nested action is itself allowlisted and the list is non-empty.
+   * "action_only" template message (no UI). MULTI_ACTION is allowed only as the
+   * top level action, and only when every nested action is itself allowlisted
+   * and the list is non-empty.
    *
    * @param {object} action - The special message action to validate.
    * @returns {boolean}
@@ -1633,9 +1634,16 @@ export class _ASRouter {
       // This pinning action is ONLY to be used in cases where an OS level
       // prompt will ask a user's consent to pin.
       "PIN_FIREFOX_TO_TASKBAR",
+      // This set default action is ONLY to be used in cases where an OS level
+      // prompt or settings panel will obtain a user's consent to set default.
+      "SET_DEFAULT_BROWSER",
     ];
-    // The in-tree baseline allowlist can be extended off-train via Remote
-    // Settings. If the collection is unavailable the getter returns nothing.
+    // ALLOWED_ACTION_MESSAGE_ACTIONS above is the in-tree baseline. It can be
+    // extended off-train via Remote Settings, except for the actions in
+    // MessagingSystemBlocklists.sys.mjs, which are filtered out before they
+    // reach this getter. If the collection is unavailable the getter returns
+    // nothing. MessagingSystemAllowlists.sys.mjs documents how the two in-tree
+    // lists and the collection resolve against each other.
     const allowed = new Set([
       ...ALLOWED_ACTION_MESSAGE_ACTIONS,
       ...lazy.MessagingSystemAllowlists.getActionOnlyActions(),
@@ -1645,10 +1653,14 @@ export class _ASRouter {
     }
     if (action.type === "MULTI_ACTION") {
       const actions = action.data?.actions;
+      // MULTI_ACTION is only permitted as a top-level action and only if its
+      // nested actions are allowed.
       return (
         Array.isArray(actions) &&
         !!actions.length &&
-        actions.every(nested => allowed.has(nested?.type))
+        actions.every(
+          nested => nested?.type !== "MULTI_ACTION" && allowed.has(nested?.type)
+        )
       );
     }
     return allowed.has(action.type);

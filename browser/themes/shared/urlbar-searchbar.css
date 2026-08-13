@@ -120,9 +120,10 @@ toolbar[inactive="true"] .urlbar,
 #urlbar:not([actiontype="switchtab"], [actiontype="extension"]) > .urlbar-input-container > #urlbar-label-box,
 #urlbar:not([actiontype="switchtab"]) > .urlbar-input-container > #urlbar-label-box > #urlbar-label-switchtab,
 #urlbar:not([actiontype="extension"]) > .urlbar-input-container > #urlbar-label-box > #urlbar-label-extension,
-.urlbar-input-container[pageproxystate="invalid"] > #page-action-buttons > .urlbar-page-action,
-#identity-box.chromeUI ~ #page-action-buttons > .urlbar-page-action:not(#star-button-box, #split-view-button),
+.urlbar-input-container[pageproxystate="invalid"] > #page-action-buttons > .urlbar-page-action:not(#share-button),
+#identity-box.chromeUI ~ #page-action-buttons > .urlbar-page-action:not(#star-button-box, #split-view-button, #share-button),
 #urlbar[usertyping] > .urlbar-input-container > #page-action-buttons > #urlbar-zoom-button,
+#urlbar[usertyping] > .urlbar-input-container > #page-action-buttons > .urlbar-page-action,
 .urlbar:not([usertyping]) > .urlbar-input-container > .urlbar-go-button,
 .urlbar:not(#searchbar-new, [focused]) > .urlbar-input-container > .urlbar-go-button,
 #urlbar-revert-button-container {
@@ -350,11 +351,7 @@ toolbar[inactive="true"] .urlbar,
   outline: none;
 }
 
-#urlbar-input {
-  mask-repeat: no-repeat;
-  unicode-bidi: plaintext;
-  text-align: match-parent;
-
+.urlbar-input {
   /* Make the editable line box span the field's full inner height so clicking
      anywhere in the field places the caret. The value equals the input's
      available height so it fills the field without growing it. */
@@ -366,6 +363,12 @@ toolbar[inactive="true"] .urlbar,
   @media not -moz-pref("browser.nova.enabled") {
     line-height: calc(var(--urlbar-height) - 2 * var(--urlbar-input-container-border-width));
   }
+}
+
+#urlbar-input {
+  mask-repeat: no-repeat;
+  unicode-bidi: plaintext;
+  text-align: match-parent;
 
   /* Align URLs to the right in RTL mode. */
   &:-moz-locale-dir(rtl) {
@@ -423,14 +426,6 @@ toolbar[inactive="true"] .urlbar,
   color: var(--toolbar-field-text-color-focus);
 }
 
-@media -moz-pref("browser.nova.enabled") {
-  .urlbar:not(moz-smartbar) {
-    &[breakout][breakout-extend] {
-      height: auto;
-    }
-  }
-}
-
 #TabsToolbar #searchbar:not(:focus-within) {
   /* The tabs toolbar is usually a different color than the other toolbars, and
      we can't predict it, to avoid a transparent field we enforce a border. */
@@ -481,7 +476,6 @@ toolbar[inactive="true"] .urlbar,
   }
 
   .urlbar[breakout][breakout-extend] {
-    height: auto;
     margin-left: calc(-1 * var(--urlbar-margin-inline));
     width: calc(var(--urlbar-width) + 2 * var(--urlbar-margin-inline));
 

@@ -7331,10 +7331,10 @@ class BackEdge {
   JS::ubi::Node predecessor_;
 
   // The name of this edge.
-  EdgeName name_;
+  EdgeName name_{nullptr};
 
  public:
-  BackEdge() : name_(nullptr) {}
+  BackEdge() = default;
   // Construct an initialized back edge, taking ownership of |name|.
   BackEdge(JS::ubi::Node predecessor, EdgeName name)
       : predecessor_(predecessor), name_(std::move(name)) {}

@@ -449,6 +449,7 @@ class CommonFrameLayout {
   FrameType prevType() const { return descriptor_.type(); }
   void changePrevType(FrameType type) { descriptor_.changeType(type); }
   bool hasCachedSavedFrame() const { return descriptor_.hasCachedSavedFrame(); }
+  bool isResumingGenerator() const { return descriptor_.isResumingGenerator(); }
   void setHasCachedSavedFrame() { descriptor_.setHasCachedSavedFrame(); }
   void clearHasCachedSavedFrame() { descriptor_.clearHasCachedSavedFrame(); }
   uint8_t* returnAddress() const { return returnAddress_; }
@@ -495,14 +496,16 @@ class JitFrameLayout : public CommonFrameLayout {
   JS::Value* actualArgs() { return thisAndActualArgs() + 1; }
   uintptr_t numActualArgs() const { return descriptor().numActualArgs(); }
 
-  static constexpr size_t offsetOfModuleResumeSlots() {
+  static constexpr size_t offsetOfModuleResumeArgs() {
     return sizeof(JitFrameLayout);
   }
-  JS::Value* moduleResumeSlots() {
-    MOZ_ASSERT(descriptor().isResumingGenerator());
+  JS::Value* moduleResumeArgs() {
+    MOZ_ASSERT(isResumingGenerator());
     MOZ_ASSERT(!CalleeTokenIsFunction(calleeToken()));
     return reinterpret_cast<JS::Value*>(this + 1);
   }
+
+  JS::Value* resumeArgs();
 
   // Computes a reference to a stack or argument slot, where a slot is a
   // distance from the base frame pointer, as would be used for LStackSlot

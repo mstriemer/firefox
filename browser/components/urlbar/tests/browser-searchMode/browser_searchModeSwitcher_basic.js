@@ -270,6 +270,15 @@ async function setDefaultEngine(name) {
 }
 
 add_task(async function test_icon_new_window() {
+  // The switcher's initial icon needs the engine store populated before it
+  // first renders, which the message path can't do: the store's snapshot
+  // arrives from the parent, so the fallback icon shows until then
+  // (bug 2059513). An input picks its transport at construction, so setting the
+  // pref here applies to the window opened below.
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.urlbar.ipc.chromeMessagePassing", false]],
+  });
+
   let newWin = await BrowserTestUtils.openNewBrowserWindow();
   await UrlbarTestUtils.assertSearchModeSwitcherIcon(
     newWin,
@@ -278,11 +287,17 @@ add_task(async function test_icon_new_window() {
   );
 
   await BrowserTestUtils.closeWindow(newWin);
+  await SpecialPowers.popPrefEnv();
 });
 
 add_task(async function test_search_icon_change() {
   await SpecialPowers.pushPrefEnv({
-    set: [["keyword.enabled", false]],
+    set: [
+      ["keyword.enabled", false],
+      // This test also asserts the switcher's icon as a fresh window opens; see
+      // test_icon_new_window.
+      ["browser.urlbar.ipc.chromeMessagePassing", false],
+    ],
   });
 
   let newWin = await BrowserTestUtils.openNewBrowserWindow();
@@ -850,7 +865,12 @@ add_task(async function test_search_mode_switcher_engine_no_icon() {
 
 add_task(async function test_search_mode_switcher_private_engine_icon() {
   await SpecialPowers.pushPrefEnv({
-    set: [["browser.search.separatePrivateDefault.ui.enabled", true]],
+    set: [
+      ["browser.search.separatePrivateDefault.ui.enabled", true],
+      // This test also asserts the switcher's icon in a window it opens itself;
+      // see test_icon_new_window.
+      ["browser.urlbar.ipc.chromeMessagePassing", false],
+    ],
   });
 
   const testEngineName = "DefaultPrivateEngine";

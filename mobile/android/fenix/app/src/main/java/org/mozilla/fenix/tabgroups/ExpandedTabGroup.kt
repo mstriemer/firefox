@@ -35,7 +35,6 @@ import androidx.compose.ui.unit.dp
 import mozilla.components.compose.base.annotation.FlexibleWindowLightDarkPreview
 import mozilla.components.compose.base.button.IconButton
 import org.mozilla.fenix.R
-import org.mozilla.fenix.tabstray.LocalTabManagementFeatureHelper
 import org.mozilla.fenix.tabstray.TabsTrayTestTag
 import org.mozilla.fenix.tabstray.controller.NoOpTabInteractionHandler
 import org.mozilla.fenix.tabstray.controller.TabInteractionHandler
@@ -77,10 +76,7 @@ fun ExpandedTabGroup(
             title = group.title,
             groupTheme = group.theme,
             groupTabsSize = group.tabs.size,
-            onDeleteTabGroupClick = actions.onDeleteTabGroupClick,
-            onEditTabGroupClick = actions.onEditTabGroupClick,
-            onCloseTabGroupClick = actions.onCloseTabGroupClick,
-            onAddNewTabClick = actions.onAddNewTabClick,
+            actions = actions,
         )
 
         TabLayout(
@@ -97,9 +93,10 @@ fun ExpandedTabGroup(
             onTabClose = actions.onTabClose,
             onItemClick = actions.onItemClick,
             onItemLongClick = { item -> }, // Ignore long click
-            onDeleteTabGroupClick = { }, // Ignore tab group deletes
             onEditTabGroupClick = { }, // Ignore tab group edits
             onCloseTabGroupClick = { }, // Ignore tab group closes
+            onShareTabGroupClick = { }, // Ignore tab group shares
+            onDeleteTabGroupClick = { }, // Ignore tab group deletes
             onTabGroupOnboardingDismiss = { }, // Ignore onboarding dismissals - onboarding is not shown in this layout
             contentPadding = PaddingValues(0.dp), // TabLayout should not have its own content padding inside this view
             listHorizontalPadding = 0.dp, // The list layout should not add its own horizontal padding inside this view
@@ -113,10 +110,7 @@ private fun ViewTabGroupHeader(
     title: String,
     groupTabsSize: Int,
     groupTheme: TabGroupTheme,
-    onDeleteTabGroupClick: () -> Unit,
-    onEditTabGroupClick: () -> Unit,
-    onCloseTabGroupClick: () -> Unit,
-    onAddNewTabClick: (() -> Unit)?,
+    actions: ExpandedTabGroupActions,
 ) {
     Row(
         modifier = Modifier
@@ -168,16 +162,7 @@ private fun ViewTabGroupHeader(
             ),
         )
 
-        if (LocalTabManagementFeatureHelper.current.shareTabGroupEnabled) {
-            ShareTabGroupButton(
-                title = title,
-                groupTabsSize = groupTabsSize,
-                onClick = {},
-            )
-
-            Spacer(modifier = Modifier.width(FirefoxTheme.layout.space.static100))
-        }
-
+        val onAddNewTabClick = actions.onAddNewTabClick
         if (onAddNewTabClick != null) {
             AddTabToGroupButton(
                 onClick = onAddNewTabClick,
@@ -189,9 +174,10 @@ private fun ViewTabGroupHeader(
         TabGroupMenuButton(
             includeCloseOption = true,
             includeUngroupOption = true,
-            onDeleteTabGroupClick = onDeleteTabGroupClick,
-            onEditTabGroupClick = onEditTabGroupClick,
-            onCloseTabGroupClick = onCloseTabGroupClick,
+            onDeleteTabGroupClick = actions.onDeleteTabGroupClick,
+            onEditTabGroupClick = actions.onEditTabGroupClick,
+            onCloseTabGroupClick = actions.onCloseTabGroupClick,
+            onShareTabGroupClick = actions.onShareTabGroupClick,
             onUngroupTabGroupClick = {},
         )
     }
@@ -215,31 +201,6 @@ private fun AddTabToGroupButton(
     }
 }
 
-@Composable
-private fun ShareTabGroupButton(
-    title: String,
-    groupTabsSize: Int,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    IconButton(
-        onClick = onClick,
-        contentDescription = pluralStringResource(
-            id = R.plurals.share_tab_group_button_content_description,
-            count = groupTabsSize,
-            title,
-            groupTabsSize,
-        ),
-        modifier = modifier.testTag(TabsTrayTestTag.BOTTOM_SHEET_SHARE_BUTTON),
-    ) {
-        Icon(
-            painter = painterResource(id = iconsR.drawable.mozac_ic_share_android_24),
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurface,
-        )
-    }
-}
-
 @FlexibleWindowLightDarkPreview
 @Composable
 private fun ExpandedTabGroupPreview(
@@ -257,6 +218,7 @@ private fun ExpandedTabGroupPreview(
                     onEditTabGroupClick = {},
                     onCloseTabGroupClick = {},
                     onAddNewTabClick = {},
+                    onShareTabGroupClick = {},
                 ),
                 displayTabsInGrid = previewState.displayTabsInGrid,
                 tabInteractionHandler = NoOpTabInteractionHandler,
@@ -370,6 +332,7 @@ private class ExpandedTabGroupPreviewProvider :
  * @property onCloseTabGroupClick Invoked when the user clicks to close a tab group.
  * @property onAddNewTabClick Invoked when the user clicks to add a new tab to the group. When null,
  * the add-tab button is hidden.
+ * @property onShareTabGroupClick Invoked when the user clicks to share the group.
  */
 data class ExpandedTabGroupActions(
     val onItemClick: (TabsTrayItem) -> Unit,
@@ -378,4 +341,5 @@ data class ExpandedTabGroupActions(
     val onEditTabGroupClick: () -> Unit,
     val onCloseTabGroupClick: () -> Unit,
     val onAddNewTabClick: (() -> Unit)?,
+    val onShareTabGroupClick: () -> Unit,
 )

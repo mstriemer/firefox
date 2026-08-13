@@ -15,7 +15,5 @@ data class LaunchConfig(
     val isPocketEnabled: Boolean = true,
     val isRecentlyVisitedFeatureEnabled: Boolean = true,
     val shouldUseExpandedToolbar: Boolean = false,
-    // Disabled by default because the "Add to Home screen" PWA prompt pops over the page on a
-    // repeat visit to an installable site and covers the engine view, breaking navigation.
-    val isPWAsPromptEnabled: Boolean = false,
+    val isTabStripEnabled: Boolean = false,
 )
