@@ -681,3 +681,53 @@ add_task(async function test_picker_reflects_external_addon_install() {
   await closeView(win);
   await SpecialPowers.popPrefEnv();
 });
+
+// The theme preview box is not a whole number of device pixels tall, so
+// painting snaps it and an SVG used as an image is laid out at the snapped
+// size. A preview that relies on the default preserveAspectRatio is therefore
+// letterboxed by a varying amount and appears to jiggle while scrolling, see
+// bug 2059917. Guard against a new preview reintroducing that.
+add_task(async function test_theme_preview_svgs_ignore_aspect_ratio() {
+  const themesListManager = await getThemesList({
+    installSource: "about:addons",
+  });
+
+  const previewUrls = [
+    DEFAULT_THEME_PREVIEW_URL,
+    DEFAULT_THEME_PREVIEW_NOVA_URL,
+    "resource://builtin-themes/dark/preview.svg",
+    "resource://builtin-themes/light/preview.svg",
+    "resource://builtin-themes/alpenglow/preview.svg",
+    ...ALL_THEME_IDS.map(id => themesListManager.getThemePreviewURL(id)).filter(
+      Boolean
+    ),
+  ];
+
+  Assert.greater(
+    previewUrls.length,
+    5,
+    "Expect to have collected the extra theme preview URLs"
+  );
+
+  for (const url of previewUrls) {
+    const response = await fetch(url);
+    Assert.ok(response.ok, `Expect ${url} to be packaged`);
+    const root = new DOMParser().parseFromString(
+      await response.text(),
+      "image/svg+xml"
+    ).documentElement;
+
+    Assert.equal(
+      root.getAttribute("preserveAspectRatio"),
+      "none",
+      `Expect ${url} to set preserveAspectRatio="none"`
+    );
+    // preserveAspectRatio only has an effect when a viewBox maps the drawing
+    // onto the viewport, and without one the preview is cropped to the snapped
+    // size instead of being scaled to it.
+    Assert.ok(
+      root.hasAttribute("viewBox"),
+      `Expect ${url} to declare a viewBox`
+    );
+  }
+});

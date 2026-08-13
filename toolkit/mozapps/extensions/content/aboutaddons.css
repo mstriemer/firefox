@@ -273,6 +273,15 @@ theme-preview {
   height: calc(var(--page-main-content-width) * 92 / 680);
   object-fit: cover;
 
+  /* This height is not a whole number of pixels, so painting snaps it to the
+   * device pixel grid and the snapped size depends on where the card lands
+   * while scrolling. An SVG used as an image is laid out at that snapped size
+   * (SVGOuterSVGFrame sizes the root to the viewport), so any preview SVG
+   * relying on the default preserveAspectRatio would be letterboxed by a
+   * varying amount and appear to jiggle. The preview SVGs therefore set
+   * preserveAspectRatio="none" and are stretched to the box instead.
+   * For details, see https://bugzilla.mozilla.org/show_bug.cgi?id=2059917 */
+
   /* Border bottom box to show more clearly where the preview image ends
    * as shown in the UX specs (especially needed for Nova themes for which
    * the toolbar color is exactly the same as the theme card background
