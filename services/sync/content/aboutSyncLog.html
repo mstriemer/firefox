@@ -17,30 +17,6 @@
     <link rel="localization" href="services/aboutSyncLog.ftl" />
     <script
       type="module"
-      src="chrome://global/content/elements/moz-page-header.mjs"
-    ></script>
-    <script
-      type="module"
-      src="chrome://global/content/elements/moz-radio-group.mjs"
-    ></script>
-    <script
-      type="module"
-      src="chrome://global/content/elements/moz-select.mjs"
-    ></script>
-    <script
-      type="module"
-      src="chrome://global/content/elements/moz-input-search.mjs"
-    ></script>
-    <script
-      type="module"
-      src="chrome://global/content/elements/moz-button.mjs"
-    ></script>
-    <script
-      type="module"
-      src="chrome://global/content/elements/moz-button-group.mjs"
-    ></script>
-    <script
-      type="module"
       src="chrome://global/content/aboutSyncLog.mjs"
     ></script>
   </head>
@@ -51,31 +27,27 @@
         data-l10n-id="about-sync-log-page-header"
       ></moz-page-header>
 
-      <div class="toolbar">
-        <moz-radio-group
-          class="filter-type"
+      <div class="filters">
+        <moz-segmented-control
           id="filter-type"
           name="type"
-          orientation="horizontal"
-          value="all"
           data-l10n-id="about-sync-log-filter-type"
         >
-          <moz-radio
+          <moz-segmented-control-item
             value="all"
             data-l10n-id="about-sync-log-filter-type-all"
-          ></moz-radio>
-          <moz-radio
+          ></moz-segmented-control-item>
+          <moz-segmented-control-item
             value="success"
             data-l10n-id="about-sync-log-filter-type-success"
-          ></moz-radio>
-          <moz-radio
+          ></moz-segmented-control-item>
+          <moz-segmented-control-item
             value="error"
             data-l10n-id="about-sync-log-filter-type-error"
-          ></moz-radio>
-        </moz-radio-group>
+          ></moz-segmented-control-item>
+        </moz-segmented-control>
 
         <moz-select
-          class="filter-date"
           id="filter-date"
           value="all"
           data-l10n-id="about-sync-log-filter-date"
@@ -104,7 +76,7 @@
           data-l10n-id="about-sync-log-search-input"
         ></moz-input-search>
 
-        <moz-button-group class="toolbar-actions">
+        <moz-button-group class="filter-actions">
           <moz-button
             id="refresh-button"
             data-l10n-id="about-sync-log-refresh-button"
@@ -121,35 +93,37 @@
         </moz-button-group>
       </div>
 
-      <p id="log-count" class="log-count"></p>
+      <p id="log-count" class="text-deemphasized" aria-live="polite"></p>
 
-      <ul id="log-list" class="log-list"></ul>
-
-      <p
-        id="empty-state"
-        class="empty-state"
-        hidden
-        data-l10n-id="about-sync-log-empty"
-      ></p>
+      <moz-box-group id="log-list" type="list"></moz-box-group>
     </main>
 
     <template id="log-row-template">
-      <li class="log-row">
-        <div class="log-row-header">
-          <button class="log-row-toggle" type="button" aria-expanded="false">
-            <span class="log-badge"></span>
-            <span class="log-date"></span>
-            <span class="log-size"></span>
-          </button>
-          <moz-button
-            class="log-open-raw"
-            type="ghost"
-            size="small"
-            data-l10n-id="about-sync-log-open-raw"
-          ></moz-button>
-        </div>
-        <pre class="log-contents" hidden></pre>
-      </li>
+      <moz-box-item class="log-row">
+        <span class="log-meta" slot="description"></span>
+        <moz-button
+          class="log-toggle"
+          slot="actions"
+          type="ghost"
+          iconsrc="chrome://global/skin/icons/arrow-down.svg"
+          aria-expanded="false"
+          data-l10n-id="about-sync-log-expand"
+        ></moz-button>
+        <moz-button
+          class="log-open-raw"
+          slot="actions"
+          type="ghost"
+          iconsrc="chrome://global/skin/icons/open-in-new.svg"
+          data-l10n-id="about-sync-log-open-raw"
+        ></moz-button>
+      </moz-box-item>
+      <moz-box-item class="log-contents-row" hidden>
+        <pre class="log-contents" tabindex="0"></pre>
+      </moz-box-item>
+    </template>
+
+    <template id="empty-state-template">
+      <moz-box-item id="empty-state"></moz-box-item>
     </template>
   </body>
 </html>

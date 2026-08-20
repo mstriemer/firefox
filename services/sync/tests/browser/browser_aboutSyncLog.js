@@ -79,20 +79,20 @@ add_task(async function test_logs_are_listed() {
     const typeFilter = doc.getElementById("filter-type");
     is(typeFilter.value, "all", "The type filter defaults to all logs");
     ok(
-      doc.querySelector("moz-radio[value=all]").checked,
-      "The all logs radio is checked by default"
+      doc.querySelector("moz-segmented-control-item[value=all]").checked,
+      "The all logs segment is checked by default"
     );
   });
 });
 
 add_task(async function test_filters() {
   await withPage(async doc => {
-    doc.querySelector("moz-radio[value=success]").click();
+    doc.querySelector("moz-segmented-control-item[value=success]").click();
     await TestUtils.waitForCondition(
       () => rows(doc).length === 1,
       "Only the success log remains"
     );
-    doc.querySelector("moz-radio[value=all]").click();
+    doc.querySelector("moz-segmented-control-item[value=all]").click();
     await TestUtils.waitForCondition(
       () => rows(doc).length === 3,
       "All logs are shown again"
@@ -130,7 +130,7 @@ add_task(async function test_search() {
     await TestUtils.waitForCondition(
       () =>
         rows(doc).length === 1 &&
-        rows(doc)[0].querySelector(".log-badge").classList.contains("success"),
+        rows(doc)[0].classList.contains("log-row-success"),
       "Search matches the success log by contents"
     );
 
@@ -138,13 +138,12 @@ add_task(async function test_search() {
     await TestUtils.waitForCondition(
       () =>
         !rows(doc).length &&
-        !doc.getElementById("empty-state").hidden &&
-        doc.getElementById("empty-state").textContent ===
+        doc.getElementById("empty-state")?.label ===
           "No logs match the current filters.",
       "An unmatched search shows the filtered empty state"
     );
     is(
-      doc.getElementById("empty-state").textContent,
+      doc.getElementById("empty-state").label,
       "No logs match the current filters.",
       "The filtered empty state differs from an empty log directory"
     );
@@ -162,7 +161,7 @@ add_task(async function test_clear_logs() {
     await promptPromise;
 
     await TestUtils.waitForCondition(
-      () => !rows(doc).length && !doc.getElementById("empty-state").hidden,
+      () => !rows(doc).length && doc.getElementById("empty-state"),
       "All logs are cleared and the empty state is shown"
     );
 

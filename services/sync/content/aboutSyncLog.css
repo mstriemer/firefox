@@ -3,131 +3,48 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 .main-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-large);
   max-width: 72em;
   margin-inline: auto;
-  padding: var(--space-large);
 }
 
-moz-page-header {
-  margin-block-end: var(--space-xlarge);
-}
-
-.toolbar {
+.filters {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-medium);
-  padding-block-end: var(--space-medium);
-  border-block-end: 1px solid var(--border-color);
 
   .filter-search {
     flex: 1;
     min-inline-size: var(--size-layout-small);
   }
 
-  .toolbar-actions {
+  .filter-actions {
     margin-inline-start: auto;
   }
 }
 
-.log-count {
-  color: var(--text-color-deemphasized);
-  margin-block: var(--space-medium);
+.log-row-success {
+  --box-icon-fill: var(--icon-color-success);
 }
 
-.log-list {
-  list-style: none;
+.log-row-error {
+  --box-icon-fill: var(--icon-color-critical);
+}
+
+.log-contents {
   margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xsmall);
+  max-block-size: 30em;
+  overflow: auto;
+  /* Wrapping keeps long lines from widening the box, which would otherwise
+     push the row's actions out of view. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: monospace;
 }
 
-.log-row {
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius-medium);
-  overflow: hidden;
-
-  .log-row-header {
-    display: flex;
-    align-items: center;
-  }
-
-  .log-row-toggle {
-    display: flex;
-    align-items: center;
-    gap: var(--space-medium);
-    flex: 1;
-    padding: var(--space-small) var(--space-medium);
-    background: transparent;
-    border: none;
-    border-radius: 0;
-    margin: 0;
-    text-align: start;
-    cursor: pointer;
-
-    &:hover {
-      background-color: var(--background-color-list-item-hover);
-    }
-  }
-
-  .log-open-raw {
-    flex: none;
-    margin-inline: var(--space-small);
-  }
-
-  .log-contents {
-    margin: 0;
-    padding: var(--space-medium);
-    max-block-size: 30em;
-    overflow: auto;
-    border-block-start: 1px solid var(--border-color);
-    background-color: var(--background-color-canvas);
-    white-space: pre;
-    font-family: monospace;
-  }
-}
-
-.log-badge {
-  flex: none;
-  padding: var(--space-xxsmall) var(--space-small);
-  border-radius: var(--border-radius-small);
-  font-weight: var(--font-weight-semibold);
-
-  &.success {
-    background-color: var(--background-color-success);
-  }
-
-  &.error {
-    background-color: var(--background-color-critical);
-    color: var(--text-color-error);
-  }
-}
-
-.log-date {
-  flex: 1;
-}
-
-.log-size {
-  flex: none;
-  color: var(--text-color-deemphasized);
-  font-variant-numeric: tabular-nums;
-}
-
-.log-line {
-  &.error {
-    color: var(--text-color-error);
-    font-weight: var(--font-weight-semibold);
-  }
-
-  &.warn {
-    color: var(--text-color-deemphasized);
-  }
-}
-
-.empty-state {
-  margin-block: var(--space-xlarge);
-  text-align: center;
+.log-line-warn {
   color: var(--text-color-deemphasized);
 }

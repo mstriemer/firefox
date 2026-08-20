@@ -52,28 +52,35 @@ about-sync-log-count =
        *[other] { $count } logs
     }
 
-about-sync-log-badge-success = Success
-about-sync-log-badge-error = Error
-
+# Secondary line of a log row, shown under the date the log was written.
 # Variables:
 #   $value (number) - The amount of data (e.g. "12.3").
 #   $unit (string) - The unit of data (e.g. "KB").
-about-sync-log-row-size = { $value } { $unit }
+about-sync-log-row-success = Success — { $value } { $unit }
+# Variables:
+#   $value (number) - The amount of data (e.g. "12.3").
+#   $unit (string) - The unit of data (e.g. "KB").
+about-sync-log-row-error = Error — { $value } { $unit }
 
-about-sync-log-empty = No sync logs have been recorded.
-about-sync-log-empty-filtered = No logs match the current filters.
+about-sync-log-empty =
+    .label = No sync logs have been recorded.
+about-sync-log-empty-filtered =
+    .label = No logs match the current filters.
 
 ## Inline viewer
 
-about-sync-log-view-expand =
+about-sync-log-expand =
     .title = Show log contents
-about-sync-log-view-collapse =
+    .aria-label = Show log contents
+about-sync-log-collapse =
     .title = Hide log contents
+    .aria-label = Hide log contents
 about-sync-log-view-error = Could not read this log file.
 
-# Opens the raw log file in a new browser tab.
+# Button that opens the raw log file in a new browser tab.
 about-sync-log-open-raw =
-    .label = Open raw
+    .title = Open raw log
+    .aria-label = Open raw log
 
 ## Clear logs confirmation
 

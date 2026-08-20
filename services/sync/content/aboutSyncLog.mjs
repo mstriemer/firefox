@@ -13,6 +13,12 @@ const LOG_DIR = PathUtils.join(PathUtils.profileDir, "weave", "logs");
 const FILENAME_RE = /^(success|error)-sync-(\d+)\.txt$/;
 const ERROR_LINE_RE = /\b(ERROR|FATAL|Exception|Traceback)\b/;
 const WARN_LINE_RE = /\bWARN(ING)?\b/;
+const ICONS = {
+  success: "chrome://global/skin/icons/check-filled.svg",
+  error: "chrome://global/skin/icons/error.svg",
+  expand: "chrome://global/skin/icons/arrow-down.svg",
+  collapse: "chrome://global/skin/icons/arrow-up.svg",
+};
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, {
   dateStyle: "medium",
@@ -150,11 +156,10 @@ function renderContents(pre, text) {
   }
   for (const line of lines) {
     const span = document.createElement("span");
-    span.className = "log-line";
     if (ERROR_LINE_RE.test(line)) {
-      span.classList.add("error");
+      span.className = "text-error";
     } else if (WARN_LINE_RE.test(line)) {
-      span.classList.add("warn");
+      span.className = "log-line-warn";
     }
     span.textContent = line + "\n";
     fragment.appendChild(span);
@@ -162,18 +167,24 @@ function renderContents(pre, text) {
   pre.appendChild(fragment);
 }
 
-async function toggleRow(row, log) {
-  const toggle = row.querySelector(".log-row-toggle");
-  const pre = row.querySelector(".log-contents");
-  const expanded = toggle.getAttribute("aria-expanded") === "true";
+// The box group navigates its list with the arrow keys, which would move focus
+// out of the log contents instead of scrolling them.
+function keepArrowKeys(event) {
+  if (event.key.startsWith("Arrow")) {
+    event.stopPropagation();
+  }
+}
 
-  if (expanded) {
-    pre.hidden = true;
-    toggle.setAttribute("aria-expanded", "false");
-    document.l10n.setAttributes(toggle, "about-sync-log-view-expand");
+async function toggleRow(toggle, contentsRow, log) {
+  if (toggle.ariaExpanded === "true") {
+    contentsRow.hidden = true;
+    toggle.ariaExpanded = "false";
+    toggle.iconSrc = ICONS.expand;
+    document.l10n.setAttributes(toggle, "about-sync-log-expand");
     return;
   }
 
+  const pre = contentsRow.querySelector(".log-contents");
   if (!pre.dataset.loaded) {
     try {
       renderContents(pre, await readContents(log));
@@ -182,9 +193,10 @@ async function toggleRow(row, log) {
     }
     pre.dataset.loaded = "true";
   }
-  pre.hidden = false;
-  toggle.setAttribute("aria-expanded", "true");
-  document.l10n.setAttributes(toggle, "about-sync-log-view-collapse");
+  contentsRow.hidden = false;
+  toggle.ariaExpanded = "true";
+  toggle.iconSrc = ICONS.collapse;
+  document.l10n.setAttributes(toggle, "about-sync-log-collapse");
 }
 
 function openRaw(log) {
@@ -202,42 +214,41 @@ function render() {
   const fragment = document.createDocumentFragment();
 
   for (const log of visibleLogs) {
-    const row = els.rowTemplate.content.firstElementChild.cloneNode(true);
-    const toggle = row.querySelector(".log-row-toggle");
-    const badge = row.querySelector(".log-badge");
-    const date = row.querySelector(".log-date");
-    const size = row.querySelector(".log-size");
+    const rows = els.rowTemplate.content.cloneNode(true);
+    const row = rows.querySelector(".log-row");
+    const contentsRow = rows.querySelector(".log-contents-row");
+    const toggle = rows.querySelector(".log-toggle");
 
-    badge.classList.add(log.type);
+    row.classList.add(`log-row-${log.type}`);
+    row.iconSrc = ICONS[log.type];
+    row.label = dateFormatter.format(log.date);
+    const [value, unit] = DownloadUtils.convertByteUnits(log.size);
     document.l10n.setAttributes(
-      badge,
-      log.type === "error"
-        ? "about-sync-log-badge-error"
-        : "about-sync-log-badge-success"
+      rows.querySelector(".log-meta"),
+      `about-sync-log-row-${log.type}`,
+      { value, unit }
     );
-    date.textContent = dateFormatter.format(log.date);
-    const [sizeValue, sizeUnit] = DownloadUtils.convertByteUnits(log.size);
-    document.l10n.setAttributes(size, "about-sync-log-row-size", {
-      value: sizeValue,
-      unit: sizeUnit,
-    });
-    document.l10n.setAttributes(toggle, "about-sync-log-view-expand");
 
-    toggle.addEventListener("click", () => toggleRow(row, log));
-    row
+    toggle.addEventListener("click", () => toggleRow(toggle, contentsRow, log));
+    contentsRow
+      .querySelector(".log-contents")
+      .addEventListener("keydown", keepArrowKeys);
+    rows
       .querySelector(".log-open-raw")
       .addEventListener("click", () => openRaw(log));
-    fragment.appendChild(row);
+    fragment.appendChild(rows);
   }
-  els.list.appendChild(fragment);
 
-  els.empty.hidden = !!visibleLogs.length;
-  if (!els.empty.hidden) {
+  if (!visibleLogs.length) {
+    const empty = els.emptyTemplate.content.firstElementChild.cloneNode(true);
     document.l10n.setAttributes(
-      els.empty,
+      empty,
       allLogs.length ? "about-sync-log-empty-filtered" : "about-sync-log-empty"
     );
+    fragment.appendChild(empty);
   }
+
+  els.list.appendChild(fragment);
   document.l10n.setAttributes(els.count, "about-sync-log-count", {
     count: visibleLogs.length,
   });
@@ -352,9 +363,9 @@ function init() {
   els.filterDate = $("filter-date");
   els.search = $("filter-search");
   els.list = $("log-list");
-  els.empty = $("empty-state");
   els.count = $("log-count");
   els.rowTemplate = $("log-row-template");
+  els.emptyTemplate = $("empty-state-template");
 
   els.filterType.value = "all";
   els.filterType.addEventListener("change", applyFilters);
