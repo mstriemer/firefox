@@ -1,0 +1,24 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
+
+/* Matches the gap moz-fieldset puts between the controls in a group, so the
+   add button sits above the list the same way a sibling control would. */
+setting-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-large);
+}
+
+/* Buttons hug their label, they don't stretch like the list does. */
+.setting-list-add {
+  align-self: start;
+}
+
+.setting-list-header {
+  --box-label-font-weight: var(--font-weight-heading);
+}
+
+.setting-list-empty {
+  color: var(--text-color-deemphasized);
+}

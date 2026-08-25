@@ -19,4 +19,6 @@ support-files = [
 
 ["test_setting_group.html"]
 
+["test_setting_list.html"]
+
 ["test_sync_device_name.html"]

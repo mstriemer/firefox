@@ -1,0 +1,519 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>setting-list test</title>
+    <script src="chrome://mochikit/content/tests/SimpleTest/SimpleTest.js"></script>
+    <link
+      rel="stylesheet"
+      href="chrome://mochikit/content/tests/SimpleTest/test.css"
+    />
+    <link rel="stylesheet" href="chrome://global/skin/global.css" />
+    <script src="chrome://mochikit/content/tests/SimpleTest/EventUtils.js"></script>
+    <script src="../../../../../toolkit/content/tests/widgets/lit-test-helpers.js"></script>
+    <script src="./head.js"></script>
+    <script
+      type="module"
+      src="chrome://browser/content/preferences/widgets/setting-group.mjs"
+    ></script>
+    <script
+      type="module"
+      src="chrome://browser/content/preferences/widgets/setting-control.mjs"
+    ></script>
+    <script
+      type="module"
+      src="chrome://browser/content/preferences/widgets/setting-list.mjs"
+    ></script>
+    <script
+      type="application/javascript"
+      src="chrome://global/content/preferencesBindings.js"
+    ></script>
+    <script>
+      /* import-globals-from /toolkit/content/preferencesBindings.js */
+      let html, testHelpers;
+
+      const HEADER_L10N_ID = "setting-list-test-header";
+      const EMPTY_L10N_ID = "setting-list-test-empty";
+      const ADD_L10N_ID = "setting-list-test-add";
+      // The shared remove label the component supplies for `removable` lists.
+      const REMOVE_L10N_ID = "setting-list-remove-button";
+
+      /**
+       * Registers a ListSetting and waits for its first refresh, since the
+       * cached rows are only populated once the async callbacks resolve.
+       *
+       * @param {typeof Preferences.ListSetting} ListSettingClass
+       * @returns {Promise<object>} The registered Setting.
+       */
+      async function addListSetting(ListSettingClass) {
+        Preferences.addSetting(ListSettingClass);
+        let setting = Preferences.getSetting(ListSettingClass.id);
+        await waitForSettingChange(setting);
+        return setting;
+      }
+
+      async function renderList(id) {
+        let config = { items: [{ id, control: "setting-list" }] };
+        let result = await testHelpers.renderTemplate(html`
+          <setting-group
+            .config=${config}
+            .getSetting=${(...args) => Preferences.getSetting(...args)}
+          ></setting-group>
+        `);
+        await result.firstElementChild.updateComplete;
+        return result.querySelector("setting-list");
+      }
+
+      add_setup(async function setup() {
+        // The rows only carry l10n ids, but registering them keeps Fluent from
+        // logging a missing-message error for every one.
+        const mockL10nSource = L10nFileSource.createMock(
+          "test",
+          "app",
+          ["en-US"],
+          "/localization/{locale}/",
+          [
+            {
+              path: "/localization/en-US/mock.ftl",
+              source: [
+                HEADER_L10N_ID,
+                EMPTY_L10N_ID,
+                ADD_L10N_ID,
+                REMOVE_L10N_ID,
+                "setting-list-edit",
+                "setting-list-duplicate",
+                "setting-list-templated-row",
+                "setting-list-row-description",
+              ]
+                .map(id => `${id} =\n .label = ${id}`)
+                .join("\n"),
+            },
+          ]
+        );
+        L10nRegistry.getInstance().registerSources([mockL10nSource]);
+        MozXULElement.insertFTLIfNeeded("mock.ftl");
+        SimpleTest.registerCleanupFunction(() => {
+          L10nRegistry.getInstance().removeSources([mockL10nSource.name]);
+        });
+        testHelpers = new InputTestHelpers();
+        ({ html } = await testHelpers.setupLit());
+        testHelpers.setupTests({
+          templateFn: () => html`<setting-group></setting-group>`,
+        });
+      });
+
+      add_task(async function testRowsHeaderAndActions() {
+        const ITEMS = [
+          {
+            key: "one",
+            label: "First row",
+            description: "A description",
+            iconSrc: "chrome://global/skin/icons/info.svg",
+          },
+          { key: "two", label: "Second row" },
+        ];
+        await addListSetting(
+          class extends Preferences.ListSetting {
+            static id = "list-rows";
+            static headerL10nId = HEADER_L10N_ID;
+            static removable = true;
+            static actions = [{ name: "edit", l10nId: "setting-list-edit" }];
+            async getItems() {
+              return ITEMS;
+            }
+          }
+        );
+        let list = await renderList("list-rows");
+
+        is(list.groupEl.localName, "moz-box-group", "Rows go in a box group");
+        is(list.groupEl.type, "list", "The group is a list");
+        is(
+          list.headerEl.dataset.l10nId,
+          HEADER_L10N_ID,
+          "The header row is localized"
+        );
+        is(list.headerEl.slot, "header", "The header uses the header slot");
+        ok(!list.emptyStateEl, "No empty state while there are rows");
+
+        is(list.itemEls.length, 2, "One row per item");
+        let [first, second] = list.itemEls;
+        is(first.dataset.key, "one", "The row keeps its key");
+        is(first.getAttribute("label"), "First row", "Raw label is set");
+        is(
+          first.getAttribute("description"),
+          "A description",
+          "Raw description is set"
+        );
+        is(
+          first.iconSrc,
+          "chrome://global/skin/icons/info.svg",
+          "The icon is set"
+        );
+        ok(
+          !second.hasAttribute("description"),
+          "No description on the second row"
+        );
+
+        let actions = [...first.querySelectorAll(".setting-list-action")];
+        is(actions.length, 2, "The declared action plus remove");
+        is(
+          actions[0].dataset.action,
+          "edit",
+          "The declared action comes first"
+        );
+        is(actions[1].dataset.action, "remove", "Remove is always last");
+        is(actions[1].dataset.key, "one", "The action carries the row's key");
+        is(
+          actions[1].dataset.l10nId,
+          REMOVE_L10N_ID,
+          "Remove uses the shared label"
+        );
+        is(
+          actions[0].iconSrc,
+          "chrome://global/skin/icons/edit.svg",
+          "edit falls back to the edit icon"
+        );
+        is(
+          actions[1].iconSrc,
+          "chrome://global/skin/icons/delete.svg",
+          "remove uses the delete icon"
+        );
+        is(actions[0].slot, "actions", "Actions go in the actions slot");
+        ok(!list.addEl, "No add button without an addActionL10nId");
+
+        // moz-box-group only manages rows that are its own children, so
+        // setting-list has to render them directly into it.
+        is(first.parentElement, list.groupEl, "Rows are children of the group");
+        await list.groupEl.updateComplete;
+        is(first.slot, "0", "The group assigned the first row a list slot");
+        is(second.slot, "1", "The group assigned the second row a list slot");
+      });
+
+      add_task(async function testEmptyState() {
+        await addListSetting(
+          class extends Preferences.ListSetting {
+            static id = "list-empty";
+            static headerL10nId = HEADER_L10N_ID;
+            static emptyStateL10nId = EMPTY_L10N_ID;
+            async getItems() {
+              return [];
+            }
+          }
+        );
+        let list = await renderList("list-empty");
+
+        is(list.itemEls.length, 0, "No rows");
+        ok(list.headerEl, "The header still renders when empty");
+        is(
+          list.emptyStateEl.dataset.l10nId,
+          EMPTY_L10N_ID,
+          "The empty state is localized"
+        );
+      });
+
+      add_task(async function testActionsRouteThroughTheSetting() {
+        let added = [];
+        let removed = [];
+        let edited = [];
+        let custom = [];
+        await addListSetting(
+          class extends Preferences.ListSetting {
+            static id = "list-actions";
+            static removable = true;
+            static addActionL10nId = ADD_L10N_ID;
+            static actions = [
+              { name: "edit", l10nId: "setting-list-edit" },
+              {
+                name: "duplicate",
+                l10nId: "setting-list-duplicate",
+                iconSrc: "chrome://global/skin/icons/edit-copy.svg",
+              },
+            ];
+            async getItems() {
+              return [{ key: "abc", label: "A row" }];
+            }
+            async addItem() {
+              added.push("add");
+            }
+            async removeItem(key) {
+              removed.push(key);
+            }
+            async editItem(key) {
+              edited.push(key);
+            }
+            onListAction(action, key) {
+              custom.push([action, key]);
+            }
+          }
+        );
+        let list = await renderList("list-actions");
+        let [edit, duplicate, remove] = list.actionEls;
+
+        synthesizeMouseAtCenter(remove, {});
+        isDeeply(removed, ["abc"], "removeItem got the row's key");
+
+        synthesizeMouseAtCenter(edit, {});
+        isDeeply(edited, ["abc"], "editItem got the row's key");
+
+        synthesizeMouseAtCenter(duplicate, {});
+        isDeeply(
+          custom,
+          [["duplicate", "abc"]],
+          "An unknown action falls through to onListAction"
+        );
+        is(
+          duplicate.iconSrc,
+          "chrome://global/skin/icons/edit-copy.svg",
+          "A custom action keeps its own icon"
+        );
+
+        is(
+          list.addEl.dataset.l10nId,
+          ADD_L10N_ID,
+          "The add button is localized"
+        );
+        is(
+          list.addEl.iconSrc,
+          "chrome://global/skin/icons/plus.svg",
+          "The add button uses the plus icon"
+        );
+        is(
+          list.addEl.nextElementSibling,
+          list.groupEl,
+          "The add button sits above the list"
+        );
+        synthesizeMouseAtCenter(list.addEl, {});
+        isDeeply(added, ["add"], "addItem was called");
+      });
+
+      add_task(async function testRowsUpdateOnChange() {
+        let items = [{ key: "one", label: "First row" }];
+        let setting = await addListSetting(
+          class extends Preferences.ListSetting {
+            static id = "list-change";
+            static emptyStateL10nId = EMPTY_L10N_ID;
+            async getItems() {
+              return items;
+            }
+          }
+        );
+        let list = await renderList("list-change");
+        is(list.itemEls.length, 1, "One row initially");
+
+        // This is what an out-of-band add, from a dialog or another window,
+        // looks like to the list.
+        items = [...items, { key: "two", label: "Second row" }];
+        let settingChanged = waitForSettingChange(setting);
+        setting.config.asyncSetting.emitChange();
+        await settingChanged;
+        await list.updateComplete;
+
+        is(list.itemEls.length, 2, "The new row is rendered without a reload");
+        is(
+          list.itemEls[1].getAttribute("label"),
+          "Second row",
+          "The new row has its label"
+        );
+
+        items = [];
+        settingChanged = waitForSettingChange(setting);
+        setting.config.asyncSetting.emitChange();
+        await settingChanged;
+        await list.updateComplete;
+
+        is(list.itemEls.length, 0, "The rows are gone");
+        ok(list.emptyStateEl, "The empty state took their place");
+      });
+
+      add_task(async function testPerRowOverrides() {
+        await addListSetting(
+          class extends Preferences.ListSetting {
+            static id = "list-per-row";
+            static removable = true;
+            static actions = [{ name: "edit", l10nId: "setting-list-edit" }];
+            async getItems() {
+              return [
+                { key: "one", label: "Default actions" },
+                {
+                  key: "two",
+                  label: "No declared actions",
+                  actions: [],
+                },
+                {
+                  key: "three",
+                  label: "Disabled row",
+                  disabled: true,
+                },
+              ];
+            }
+          }
+        );
+        let list = await renderList("list-per-row");
+        let [first, second, third] = list.itemEls;
+
+        is(
+          first.querySelectorAll(".setting-list-action").length,
+          2,
+          "The first row gets the declared actions plus remove"
+        );
+        let secondActions = [
+          ...second.querySelectorAll(".setting-list-action"),
+        ];
+        is(secondActions.length, 1, "A row can opt out of declared actions");
+        is(
+          secondActions[0].dataset.action,
+          "remove",
+          "Opting out keeps remove, which is a property of the list"
+        );
+        ok(
+          third.querySelector(".setting-list-action").disabled,
+          "A disabled row disables its actions"
+        );
+        ok(
+          !first.querySelector(".setting-list-action").disabled,
+          "Other rows stay enabled"
+        );
+      });
+
+      add_task(async function testTemplatedRow() {
+        await addListSetting(
+          class extends Preferences.ListSetting {
+            static id = "list-templated";
+            async getItems() {
+              return [
+                {
+                  key: "one",
+                  l10nId: "setting-list-templated-row",
+                  l10nArgs: { number: "**** 1234" },
+                },
+                {
+                  key: "two",
+                  label: "Raw label",
+                  description: {
+                    l10nId: "setting-list-row-description",
+                    l10nArgs: { state: "blocked" },
+                  },
+                },
+              ];
+            }
+          }
+        );
+        let list = await renderList("list-templated");
+        let [templated, partial] = list.itemEls;
+
+        is(
+          templated.dataset.l10nId,
+          "setting-list-templated-row",
+          "A templated row localizes the whole row"
+        );
+        is(
+          templated.dataset.l10nArgs,
+          JSON.stringify({ number: "**** 1234" }),
+          "The row's l10n args are passed through"
+        );
+        ok(!templated.hasAttribute("label"), "No raw label on a templated row");
+
+        ok(!partial.dataset.l10nId, "A raw label isn't routed through Fluent");
+        is(partial.getAttribute("label"), "Raw label", "The raw label is set");
+        let description = partial.querySelector("[slot='description']");
+        is(
+          description.dataset.l10nId,
+          "setting-list-row-description",
+          "A localized description is slotted in"
+        );
+        is(
+          description.dataset.l10nArgs,
+          JSON.stringify({ state: "blocked" }),
+          "The description's l10n args are passed through"
+        );
+      });
+
+      add_task(async function testListWideDisabled() {
+        let disabled = true;
+        let setting = await addListSetting(
+          class extends Preferences.ListSetting {
+            static id = "list-disabled";
+            static removable = true;
+            static addActionL10nId = ADD_L10N_ID;
+            async getItems() {
+              return [{ key: "one", label: "A row" }];
+            }
+            async disabled() {
+              return disabled;
+            }
+          }
+        );
+        let list = await renderList("list-disabled");
+        ok(list.disabled, "The list is disabled");
+        ok(
+          list.actionEls[0].disabled,
+          "A disabled list disables every row's actions"
+        );
+        ok(list.addEl.disabled, "A disabled list disables the add button");
+
+        disabled = false;
+        let settingChanged = waitForSettingChange(setting);
+        setting.config.asyncSetting.emitChange();
+        await settingChanged;
+        await list.updateComplete;
+
+        ok(!list.disabled, "The list is enabled again");
+        ok(!list.actionEls[0].disabled, "The actions are enabled again");
+        ok(!list.addEl.disabled, "The add button is enabled again");
+      });
+
+      add_task(async function testAddDisabledIndependently() {
+        let addDisabled = true;
+        let setting = await addListSetting(
+          class extends Preferences.ListSetting {
+            static id = "list-add-disabled";
+            static removable = true;
+            static addActionL10nId = ADD_L10N_ID;
+            async getItems() {
+              return [{ key: "one", label: "A row" }];
+            }
+            async addDisabled() {
+              return addDisabled;
+            }
+          }
+        );
+        let list = await renderList("list-add-disabled");
+
+        ok(list.addEl.disabled, "The add button is disabled");
+        ok(
+          !list.actionEls[0].disabled,
+          "Rows stay editable while adding is refused"
+        );
+
+        addDisabled = false;
+        let settingChanged = waitForSettingChange(setting);
+        setting.config.asyncSetting.emitChange();
+        await settingChanged;
+        await list.updateComplete;
+
+        ok(!list.addEl.disabled, "The add button is enabled again");
+      });
+
+      add_task(async function testSettingIsNotAList() {
+        const SETTING = "list-not-a-list";
+        Preferences.addSetting({ id: SETTING, get: () => true });
+        try {
+          await renderList(SETTING);
+          ok(false, "Should throw when the setting isn't a ListSetting");
+        } catch (e) {
+          let SettingList = customElements.get("setting-list");
+          is(
+            e.constructor,
+            SettingList.ListSettingNotDefinedError,
+            "We got a ListSettingNotDefinedError"
+          );
+        }
+      });
+    </script>
+  </head>
+  <body>
+    <p id="display"></p>
+    <div id="content" style="display: none"></div>
+    <pre id="test"></pre>
+  </body>
+</html>

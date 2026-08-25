@@ -10,6 +10,7 @@ import { Preferences } from "chrome://global/content/preferences/Preferences.mjs
 
 /**
  * @import { type Preference } from "chrome://global/content/preferences/Preference.mjs"
+ * @import { SettingListConfig, SettingListItem } from "chrome://global/content/preferences/AsyncSetting.mjs"
  * @import { SettingControlConfig } from "chrome://browser/content/preferences/widgets/setting-control.mjs"
  * @import { ExtensionSettingsStore } from "resource://gre/modules/ExtensionSettingsStore.sys.mjs"
  * @import { AddonManager } from "resource://gre/modules/AddonManager.sys.mjs"
@@ -123,6 +124,24 @@ import { Preferences } from "chrome://global/content/preferences/Preferences.mjs
  */
 
 /**
+ * @callback SettingGetItemsCallback
+ * @returns {SettingListItem[]} The rows to render for a list setting.
+ */
+
+/**
+ * @callback SettingGetListConfigCallback
+ * @returns {SettingListConfig | undefined} The data a list control needs
+ *   besides its rows, or undefined if this setting isn't a list.
+ */
+
+/**
+ * @callback SettingOnListActionCallback
+ * @param {string} action - The name of the activated action, eg. "remove"
+ * @param {string} key - The key of the row the action came from
+ * @returns {void}
+ */
+
+/**
  * @typedef {object} SettingControllingExtensionInfo
  * @property {string} storeId The ExtensionSettingsStore id that controls this setting.
  * @property {string} l10nId A fluent id to show in a controlled by extension message.
@@ -161,6 +180,10 @@ import { Preferences } from "chrome://global/content/preferences/Preferences.mjs
  * @property {SettingOnUserReorderCallback} [onUserReorder] - A function that will be called when items in a
  *    reorderable list have been reordered. This should be used to update the underlying data when the user
  *    reorders items, such as updating preference values.
+ * @property {SettingGetItemsCallback} [getItems] - See {@link SettingGetItemsCallback}. Provided by
+ *    {@link ListSetting}, list rows are generated data rather than authored config.
+ * @property {SettingGetListConfigCallback} [getListConfig] - See {@link SettingGetListConfigCallback}.
+ * @property {SettingOnListActionCallback} [onListAction] - See {@link SettingOnListActionCallback}.
  */
 
 const { EventEmitter } = ChromeUtils.importESModule(
@@ -239,7 +262,7 @@ export class Setting extends EventEmitter {
     /** @type {SettingConfig | AsyncSettingHandler} */
     let configObj;
 
-    if (Object.getPrototypeOf(config) == AsyncSetting) {
+    if (AsyncSetting.isPrototypeOf(config)) {
       configObj = new AsyncSettingHandler(
         id,
         /** @type {typeof AsyncSetting} */ (config)
@@ -381,6 +404,33 @@ export class Setting extends EventEmitter {
     if (this.config.onUserReorder) {
       this.config.onUserReorder(event, this.deps, this);
     }
+  }
+
+  /**
+   * The rows of a list setting. Empty for anything that isn't a list.
+   *
+   * @type {SettingListItem[]}
+   */
+  get items() {
+    return this.config.getItems?.() ?? [];
+  }
+
+  /**
+   * The data a list control needs besides its rows, or undefined if this
+   * setting isn't a list.
+   *
+   * @type {SettingListConfig | undefined}
+   */
+  get listConfig() {
+    return this.config.getListConfig?.();
+  }
+
+  /**
+   * @param {string} action
+   * @param {string} key
+   */
+  listAction(action, key) {
+    this.config.onListAction?.(action, key);
   }
 
   /**

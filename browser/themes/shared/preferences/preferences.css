@@ -1576,18 +1576,6 @@ setting-pane[onsearchpane] {
   gap: var(--space-small);
 }
 
-#addresses-list-header,
-#payments-list-header,
-#passports-list-header {
-  --box-label-font-weight: var(--font-weight-heading);
-}
-
-#no-addresses-stored,
-#no-payments-stored,
-#no-passports-stored {
-  color: var(--text-color-deemphasized);
-}
-
 .box-header-bold {
   --box-label-font-weight: var(--font-weight-heading);
 }

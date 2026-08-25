@@ -145,6 +145,167 @@ export class AsyncSetting extends EventEmitter {
 }
 
 /**
+ * @typedef {object} FluentString
+ * @property {string} l10nId A Fluent message id.
+ * @property {Record<string, any>} [l10nArgs] Arguments for the Fluent message.
+ */
+
+/**
+ * An action button rendered at the end of a list row. The "edit" and "remove"
+ * names are handled by {@link ListSetting.editItem} and
+ * {@link ListSetting.removeItem}, any other name is forwarded to
+ * {@link ListSetting.onListAction}.
+ *
+ * @typedef {object} ListAction
+ * @property {string} name The action to perform, passed back with the row's key.
+ * @property {string} l10nId The button's label, generally an `.aria-label`.
+ * @property {string} [iconSrc] Defaults to the standard icon for "edit" and "remove".
+ */
+
+/**
+ * One row of a list. This is generated data rather than hand authored layout,
+ * so unlike {@link SettingControlConfig} it lives outside the config tree and
+ * rows are not Settings themselves.
+ *
+ * @typedef {object} SettingListItem
+ * @property {string} key Stable row identity, passed back to the ListSetting callbacks.
+ * @property {string} [label] Raw, unlocalized label, such as a domain or a nickname.
+ * @property {string | FluentString} [description] Secondary text for the row.
+ * @property {string} [iconSrc]
+ * @property {string} [l10nId] Localize the whole row from one message, for templated rows.
+ * @property {Record<string, any>} [l10nArgs]
+ * @property {ListAction[]} [actions] Defaults to the ListSetting's static actions.
+ * @property {boolean} [disabled] Disable this row's actions. The setting-wide
+ *   case stays on {@link AsyncSetting.disabled}.
+ */
+
+/**
+ * The data a list control needs beyond its rows.
+ *
+ * @typedef {object} SettingListConfig
+ * @property {ListAction[]} actions
+ * @property {boolean} removable
+ * @property {string} [headerL10nId]
+ * @property {string} [emptyStateL10nId]
+ * @property {string} [addActionL10nId]
+ * @property {boolean} [addDisabled]
+ */
+
+/**
+ * A setting backed by a list of records that the user can manage, rendered by
+ * the setting-list control.
+ *
+ * Rows come from getItems() rather than the value plumbing because a list is
+ * asymmetric: a read is the whole array while a write is scoped to a single
+ * row. Subclasses should call emitChange, generally from a setup() observer,
+ * whenever the backing store changes so the rows are recomputed.
+ */
+export class ListSetting extends AsyncSetting {
+  /**
+   * The actions offered on every row, unless a row overrides them. The remove
+   * action isn't listed here, see {@link ListSetting.removable}.
+   *
+   * @type {ListAction[]}
+   */
+  static actions = [];
+
+  /**
+   * Whether rows can be removed. The remove action is always rendered last and
+   * uses a shared label, so it doesn't need to be declared as an action.
+   */
+  static removable = false;
+
+  /**
+   * Fluent id for an optional header row.
+   *
+   * @type {string | undefined}
+   */
+  static headerL10nId;
+
+  /**
+   * Fluent id for the message shown in place of the rows when there are none.
+   *
+   * @type {string | undefined}
+   */
+  static emptyStateL10nId;
+
+  /**
+   * Fluent id for the add button's label. The button is only rendered when this
+   * is set, and activating it calls {@link ListSetting.addItem}.
+   *
+   * @type {string | undefined}
+   */
+  static addActionL10nId;
+
+  /**
+   * The rows to render.
+   *
+   * @abstract
+   * @returns {Promise<SettingListItem[]>}
+   */
+  async getItems() {
+    return [];
+  }
+
+  /**
+   * Whether the add button should be disabled. The setting-wide
+   * {@link AsyncSetting.disabled} covers the rows, this covers only adding, so
+   * a list can stay editable while it refuses new records.
+   *
+   * @returns {Promise<boolean>}
+   */
+  async addDisabled() {
+    return false;
+  }
+
+  /**
+   * Add a new record, generally by opening a dialog.
+   *
+   * @returns {Promise<void>}
+   */
+  async addItem() {}
+
+  /**
+   * Edit the record behind a row, generally by opening a dialog.
+   *
+   * @param {string} key
+   * @returns {Promise<void>}
+   */
+  // eslint-disable-next-line no-unused-vars
+  async editItem(key) {}
+
+  /**
+   * Remove the record behind a row. Writes apply immediately, there is no
+   * staging or commit step.
+   *
+   * @param {string} key
+   * @returns {Promise<void>}
+   */
+  // eslint-disable-next-line no-unused-vars
+  async removeItem(key) {}
+
+  /**
+   * Handle an action other than "edit" or "remove".
+   *
+   * @param {string} action
+   * @param {string} key
+   */
+  // eslint-disable-next-line no-unused-vars
+  onListAction(action, key) {}
+}
+
+/**
+ * @param {typeof AsyncSetting} AsyncSettingClass
+ * @returns {boolean}
+ */
+function isListSettingClass(AsyncSettingClass) {
+  return (
+    AsyncSettingClass == ListSetting ||
+    ListSetting.isPrototypeOf(AsyncSettingClass)
+  );
+}
+
+/**
  * Wraps an AsyncSetting and adds caching of values to provide a synchronous
  * API to the Setting class.
  *
@@ -156,6 +317,17 @@ export class AsyncSettingHandler {
 
   /** @type {Function} */
   #emitChange;
+
+  /** @type {boolean} */
+  #isList;
+
+  /**
+   * The parts of a list's config that come from the class rather than from an
+   * async callback. Only set for {@link ListSetting} subclasses.
+   *
+   * @type {SettingListConfig | undefined}
+   */
+  #listConfig;
 
   /** @type {string} */
   pref;
@@ -186,6 +358,23 @@ export class AsyncSettingHandler {
     this.cachedDisabled = this.asyncSetting.defaultDisabled;
     this.cachedVisible = this.asyncSetting.defaultVisible;
     this.cachedGetControlConfig = this.asyncSetting.defaultGetControlConfig;
+    /** @type {SettingListItem[]} */
+    this.cachedItems = [];
+    this.cachedAddDisabled = false;
+
+    this.#isList = isListSettingClass(AsyncSettingClass);
+    if (this.#isList) {
+      let ListSettingClass = /** @type {typeof ListSetting} */ (
+        AsyncSettingClass
+      );
+      this.#listConfig = {
+        actions: ListSettingClass.actions ?? [],
+        removable: ListSettingClass.removable ?? false,
+        headerL10nId: ListSettingClass.headerL10nId,
+        emptyStateL10nId: ListSettingClass.emptyStateL10nId,
+        addActionL10nId: ListSettingClass.addActionL10nId,
+      };
+    }
 
     // Listen for change events from the async setting
     this.asyncSetting.on("change", () => this.refresh());
@@ -209,16 +398,21 @@ export class AsyncSettingHandler {
    */
   async refresh() {
     this.asyncSetting.beforeRefresh();
+    let listSetting = /** @type {ListSetting} */ (this.asyncSetting);
     [
       this.cachedValue,
       this.cachedDisabled,
       this.cachedVisible,
       this.cachedGetControlConfig,
+      this.cachedItems,
+      this.cachedAddDisabled,
     ] = await Promise.all([
       this.asyncSetting.get(),
       this.asyncSetting.disabled(),
       this.asyncSetting.visible(),
       this.asyncSetting.getControlConfig(),
+      this.#isList ? listSetting.getItems() : [],
+      this.#isList ? listSetting.addDisabled() : false,
     ]);
     this.#emitChange();
   }
@@ -261,6 +455,44 @@ export class AsyncSettingHandler {
       ...config,
       ...this.cachedGetControlConfig,
     };
+  }
+
+  /**
+   * @returns {SettingListItem[]}
+   */
+  getItems() {
+    return this.cachedItems;
+  }
+
+  /**
+   * @returns {SettingListConfig | undefined}
+   */
+  getListConfig() {
+    if (!this.#isList) {
+      return undefined;
+    }
+    return { ...this.#listConfig, addDisabled: this.cachedAddDisabled };
+  }
+
+  /**
+   * @param {string} action
+   * @param {string} key
+   */
+  onListAction(action, key) {
+    let listSetting = /** @type {ListSetting} */ (this.asyncSetting);
+    switch (action) {
+      case "add":
+        listSetting.addItem();
+        break;
+      case "edit":
+        listSetting.editItem(key);
+        break;
+      case "remove":
+        listSetting.removeItem(key);
+        break;
+      default:
+        listSetting.onListAction(action, key);
+    }
   }
 
   /**

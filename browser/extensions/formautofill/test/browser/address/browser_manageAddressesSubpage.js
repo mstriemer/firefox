@@ -2,11 +2,12 @@
 
 const PAGE_MANAGE_ADDRESSES = "about:preferences#manageAddresses";
 
+const LIST = "#setting-control-addresses-list";
 const SELECTORS = {
-  records: "#address-item",
-  add: "#add-address-button",
-  edit: "#edit-address-button",
-  delete: "#delete-address-button",
+  records: `${LIST} .setting-list-item`,
+  add: `${LIST} .setting-list-add`,
+  edit: `${LIST} .setting-list-action[data-action="edit"]`,
+  delete: `${LIST} .setting-list-action[data-action="remove"]`,
 };
 
 const TEST_ADDRESSES = [

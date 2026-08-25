@@ -29,6 +29,7 @@ const lazy = XPCOMUtils.declareLazy({
   LoginHelper: "resource://gre/modules/LoginHelper.sys.mjs",
   FormAutofillPreferences:
     "resource://autofill/FormAutofillPreferences.sys.mjs",
+  formAutofillStorage: "resource://autofill/FormAutofillStorage.sys.mjs",
   AutofillDataTypes: "resource://gre/modules/shared/AutofillDataTypes.sys.mjs",
 });
 
@@ -398,301 +399,236 @@ Preferences.addSetting({
   },
 });
 
-Preferences.addSetting({
-  id: "payment-item",
-  async onUserClick(e) {
-    const action = e.target.getAttribute("action");
-    const guid = e.target.getAttribute("guid");
-    if (action === "remove") {
-      let [title, confirmLabel, cancelLabel] = await document.l10n.formatValues(
-        [
-          { id: "payments-delete-payment-prompt-title" },
-          { id: "payments-delete-payment-prompt-confirm-button" },
-          { id: "payments-delete-payment-prompt-cancel-button" },
-        ]
+/**
+ * The autofill lists all mirror formAutofillStorage, so they share the observer
+ * that keeps their rendered rows in sync with it. They also all gate adding new
+ * records on the matching "save and fill" checkbox, while leaving existing rows
+ * editable so records can still be removed once autofill is turned off.
+ */
+class AutofillListSetting extends Preferences.ListSetting {
+  static removable = true;
+
+  /**
+   * Id of the Setting that gates adding new records. AsyncSettings don't
+   * support `deps`, so the list watches it directly.
+   *
+   * @type {string}
+   */
+  static enabledSettingId;
+
+  get enabledSetting() {
+    return Preferences.getSetting(
+      /** @type {typeof AutofillListSetting} */ (this.constructor)
+        .enabledSettingId
+    );
+  }
+
+  async addDisabled() {
+    return !this.enabledSetting?.value;
+  }
+
+  setup() {
+    Services.obs.addObserver(this.emitChange, "formautofill-storage-changed");
+    this.enabledSetting?.on("change", this.emitChange);
+    return () => {
+      Services.obs.removeObserver(
+        this.emitChange,
+        "formautofill-storage-changed"
       );
-      lazy.FormAutofillPreferences.prototype.openRemovePaymentDialog(
-        guid,
-        window.browsingContext.topChromeWindow.browsingContext,
-        title,
-        confirmLabel,
-        cancelLabel
+      this.enabledSetting?.off("change", this.emitChange);
+    };
+  }
+}
+
+/**
+ * Localizes the strings for a confirm-removal prompt and pairs them with the
+ * browsing context it opens in, ready to spread after the record's guid.
+ *
+ * @param {[string, string, string]} l10nIds The title, confirm and cancel ids.
+ * @returns {Promise<[BrowsingContext, string, string, string]>}
+ */
+async function removePromptArgs(l10nIds) {
+  let [title, confirmLabel, cancelLabel] = await document.l10n.formatValues(
+    l10nIds.map(id => ({ id }))
+  );
+  return [
+    window.browsingContext.topChromeWindow.browsingContext,
+    title,
+    confirmLabel,
+    cancelLabel,
+  ];
+}
+
+Preferences.addSetting(
+  class extends AutofillListSetting {
+    static id = "payments-list";
+    static enabledSettingId = "saveAndFillPayments";
+    static headerL10nId = "payments-list-header";
+    static emptyStateL10nId = "payments-no-payments-stored-message";
+    static addActionL10nId = "autofill-payment-methods-add-button";
+    static actions = [
+      { name: "edit", l10nId: "payments-edit-payment-button-label" },
+    ];
+
+    async getItems() {
+      await lazy.FormAutofillPreferences.prototype.initializePaymentsStorage();
+      let records = await lazy.formAutofillStorage.creditCards.getAll();
+      return records
+        .sort((a, b) =>
+          (a.timeLastUsed || a.timeLastModified) <
+          (b.timeLastUsed || b.timeLastModified)
+            ? 1
+            : -1
+        )
+        .map(record => ({
+          key: record.guid,
+          // The masked number has to be formatted inside a localized string,
+          // so this row is templated rather than carrying a raw label.
+          l10nId: "payment-moz-box-item",
+          l10nArgs: {
+            cardNumber: record["cc-number"].replace(/^(\*+)(\d+)$/, "$1 $2"),
+            expDate: (record["cc-exp"] ?? "").replace(
+              /^(\d{4})-(\d{2})$/,
+              "$2/$1"
+            ),
+          },
+          iconSrc: "chrome://browser/skin/payment-methods-16.svg",
+        }));
+    }
+
+    async addItem() {
+      window.gSubDialog.open(
+        "chrome://formautofill/content/editCreditCard.xhtml"
       );
-    } else if (action === "edit") {
+    }
+
+    async editItem(guid) {
       lazy.FormAutofillPreferences.prototype.openEditCreditCardDialog(
         guid,
         window
       );
     }
-  },
-});
 
-Preferences.addSetting({
-  id: "add-payment-button",
-  deps: ["saveAndFillPayments"],
-  setup: (emitChange, _, setting) => {
-    function updateDepsAndChange() {
-      setting._deps = null;
-      emitChange();
-    }
-    Services.obs.addObserver(
-      updateDepsAndChange,
-      "formautofill-preferences-initialized"
-    );
-    return () =>
-      Services.obs.removeObserver(
-        updateDepsAndChange,
-        "formautofill-preferences-initialized"
+    async removeItem(guid) {
+      lazy.FormAutofillPreferences.prototype.openRemovePaymentDialog(
+        guid,
+        ...(await removePromptArgs([
+          "payments-delete-payment-prompt-title",
+          "payments-delete-payment-prompt-confirm-button",
+          "payments-delete-payment-prompt-cancel-button",
+        ]))
       );
-  },
-  onUserClick: () => {
-    window.gSubDialog.open(
-      "chrome://formautofill/content/editCreditCard.xhtml"
-    );
-  },
-  disabled: ({ saveAndFillPayments }) => !saveAndFillPayments?.value,
-});
-
-Preferences.addSetting({
-  id: "payments-list-header",
-});
-
-Preferences.addSetting({
-  id: "no-payments-stored",
-});
-
-Preferences.addSetting(
-  class extends Preferences.AsyncSetting {
-    static id = "payments-list";
-
-    /** @type {Promise<any[]>} */
-    paymentMethods;
-
-    beforeRefresh() {
-      this.paymentMethods = this.getPaymentMethods();
-    }
-
-    async getPaymentMethods() {
-      await lazy.FormAutofillPreferences.prototype.initializePaymentsStorage();
-      return lazy.FormAutofillPreferences.prototype.makePaymentsListItems();
-    }
-
-    async getControlConfig() {
-      return {
-        items: await this.paymentMethods,
-      };
-    }
-
-    async visible() {
-      return Boolean((await this.paymentMethods).length);
-    }
-
-    setup() {
-      Services.obs.addObserver(this.emitChange, "formautofill-storage-changed");
-      return () =>
-        Services.obs.removeObserver(
-          this.emitChange,
-          "formautofill-storage-changed"
-        );
     }
   }
 );
-Preferences.addSetting({
-  /** @type {{ _removeAddressDialogStrings: string[] } & SettingConfig} */
-  id: "address-item",
-  _removeAddressDialogStrings: [],
-  onUserClick(e) {
-    const action = e.target.getAttribute("action");
-    const guid = e.target.getAttribute("guid");
-    if (action === "remove") {
-      let [title, confirmLabel, cancelLabel] = this._removeAddressDialogStrings;
-      lazy.FormAutofillPreferences.prototype.openRemoveAddressDialog(
-        guid,
-        window.browsingContext.topChromeWindow.browsingContext,
-        title,
-        confirmLabel,
-        cancelLabel
+
+Preferences.addSetting(
+  class extends AutofillListSetting {
+    static id = "addresses-list";
+    static enabledSettingId = "saveAndFillAddresses";
+    static headerL10nId = "addresses-list-header";
+    static emptyStateL10nId = "addresses-no-addresses-stored-message";
+    static addActionL10nId = "autofill-addresses-add-button";
+    static actions = [
+      { name: "edit", l10nId: "addreses-edit-address-button-label" },
+    ];
+
+    async getItems() {
+      await lazy.FormAutofillPreferences.prototype.initializeAddressesStorage();
+      let addresses = await lazy.formAutofillStorage.addresses.getAll();
+      return addresses
+        .slice()
+        .reverse()
+        .map(record => {
+          let addressFormatted = [
+            record["street-address"],
+            record["address-level2"],
+            record["address-level1"],
+            record.country,
+            record["postal-code"],
+          ]
+            .filter(Boolean)
+            .join(", ");
+          let label = record.name || record.organization || record.email;
+          return {
+            key: record.guid,
+            label: label || addressFormatted,
+            description: label ? addressFormatted : undefined,
+            iconSrc: "chrome://browser/skin/notification-icons/geo.svg",
+          };
+        });
+    }
+
+    async addItem() {
+      lazy.FormAutofillPreferences.prototype.openEditAddressDialog(
+        undefined,
+        window
       );
-    } else if (action === "edit") {
+    }
+
+    async editItem(guid) {
       lazy.FormAutofillPreferences.prototype.openEditAddressDialog(
         guid,
         window
       );
     }
-  },
-  setup(emitChange) {
-    document.l10n
-      .formatValues([
-        { id: "addresses-delete-address-prompt-title" },
-        { id: "addresses-delete-address-prompt-confirm-button" },
-        { id: "addresses-delete-address-prompt-cancel-button" },
-      ])
-      .then(val => (this._removeAddressDialogStrings = val))
-      .then(emitChange);
-  },
-  disabled() {
-    return !!this._removeAddressDialogStrings.length;
-  },
-});
 
-Preferences.addSetting({
-  id: "add-address-button",
-  deps: ["saveAndFillAddresses"],
-  setup: (emitChange, _, setting) => {
-    function updateDepsAndChange() {
-      setting._deps = null;
-      emitChange();
-    }
-    Services.obs.addObserver(
-      updateDepsAndChange,
-      "formautofill-preferences-initialized"
-    );
-    return () =>
-      Services.obs.removeObserver(
-        updateDepsAndChange,
-        "formautofill-preferences-initialized"
+    async removeItem(guid) {
+      lazy.FormAutofillPreferences.prototype.openRemoveAddressDialog(
+        guid,
+        ...(await removePromptArgs([
+          "addresses-delete-address-prompt-title",
+          "addresses-delete-address-prompt-confirm-button",
+          "addresses-delete-address-prompt-cancel-button",
+        ]))
       );
-  },
-  onUserClick: () => {
-    lazy.FormAutofillPreferences.prototype.openEditAddressDialog(
-      undefined,
-      window
-    );
-  },
-  disabled: ({ saveAndFillAddresses }) => !saveAndFillAddresses?.value,
-});
-
-Preferences.addSetting({
-  id: "addresses-list-header",
-});
-
-Preferences.addSetting({
-  id: "no-addresses-stored",
-});
-
-Preferences.addSetting(
-  class extends Preferences.AsyncSetting {
-    static id = "addresses-list";
-
-    /** @type {Promise<any[]>} */
-    addresses;
-
-    beforeRefresh() {
-      this.addresses = this.getAddresses();
-    }
-
-    async getAddresses() {
-      await lazy.FormAutofillPreferences.prototype.initializeAddressesStorage();
-      return lazy.FormAutofillPreferences.prototype.makeAddressesListItems();
-    }
-
-    async getControlConfig() {
-      return {
-        items: await this.addresses,
-      };
-    }
-
-    async visible() {
-      return Boolean((await this.addresses).length);
-    }
-
-    setup() {
-      Services.obs.addObserver(this.emitChange, "formautofill-storage-changed");
-      return () =>
-        Services.obs.removeObserver(
-          this.emitChange,
-          "formautofill-storage-changed"
-        );
     }
   }
 );
 
-Preferences.addSetting({
-  /** @type {{ _removePassportDialogStrings: string[] } & SettingConfig} */
-  id: "passport-item",
-  _removePassportDialogStrings: [],
-  onUserClick(e) {
-    const action = e.target.getAttribute("action");
-    const guid = e.target.getAttribute("guid");
-    if (action === "remove") {
-      let [title, confirmLabel, cancelLabel] =
-        this._removePassportDialogStrings;
-      lazy.FormAutofillPreferences.prototype.openRemovePassportDialog(
-        guid,
-        window.browsingContext.topChromeWindow.browsingContext,
-        title,
-        confirmLabel,
-        cancelLabel
-      );
-    } else if (action === "edit") {
-      lazy.FormAutofillPreferences.prototype.openEditPassportDialog(
-        guid,
-        window
-      );
-    }
-  },
-  setup(emitChange) {
-    document.l10n
-      .formatValues([
-        { id: "passports-delete-passport-prompt-title" },
-        { id: "passports-delete-passport-prompt-confirm-button" },
-        { id: "passports-delete-passport-prompt-cancel-button" },
-      ])
-      .then(val => (this._removePassportDialogStrings = val))
-      .then(emitChange);
-  },
-  disabled() {
-    return !!this._removePassportDialogStrings.length;
-  },
-});
-
-Preferences.addSetting({
-  id: "add-passport-button",
-  deps: ["saveAndFillPersonalInfo"],
-  visible: () =>
-    FormAutofill.isAutofillTypeAvailable(lazy.AutofillDataTypes.PASSPORT),
-  onUserClick: () => {
-    lazy.FormAutofillPreferences.prototype.openEditPassportDialog(
-      undefined,
-      window
-    );
-  },
-  disabled: ({ saveAndFillPersonalInfo }) => !saveAndFillPersonalInfo?.value,
-});
-
-Preferences.addSetting({
-  id: "passports-list-header",
-});
-
-Preferences.addSetting({
-  id: "no-passports-stored",
-});
-
 Preferences.addSetting(
-  class extends Preferences.AsyncSetting {
+  class extends AutofillListSetting {
     static id = "passports-list";
+    static enabledSettingId = "saveAndFillPersonalInfo";
+    static headerL10nId = "passports-list-header";
+    static emptyStateL10nId = "passports-no-passports-stored-message";
+    static addActionL10nId = "autofill-passports-add-button";
+    static actions = [
+      { name: "edit", l10nId: "passports-edit-passport-button-label" },
+    ];
 
-    /** @type {Promise<any[]>} */
-    passports;
-
-    beforeRefresh() {
-      this.passports = this.getPassports();
-    }
-
-    async getPassports() {
+    async getItems() {
       if (
         !FormAutofill.isAutofillTypeAvailable(lazy.AutofillDataTypes.PASSPORT)
       ) {
         return [];
       }
       await lazy.FormAutofillPreferences.prototype.initializePassportsStorage();
-      return lazy.FormAutofillPreferences.prototype.makePassportsListItems();
-    }
-
-    async getControlConfig() {
-      return {
-        items: await this.passports,
-      };
+      let passports = await lazy.formAutofillStorage.passports.getAll();
+      return passports
+        .slice()
+        .reverse()
+        .map(record => {
+          let maskedNumber = record["passport-number"]
+            ? "****" + record["passport-number"].slice(-4)
+            : "";
+          let pad = value => String(value).padStart(2, "0");
+          let expiry = [
+            record["passport-expiry-date-month"] &&
+              pad(record["passport-expiry-date-month"]),
+            record["passport-expiry-date-day"] &&
+              pad(record["passport-expiry-date-day"]),
+            record["passport-expiry-date-year"],
+          ]
+            .filter(Boolean)
+            .join("/");
+          return {
+            key: record.guid,
+            label: record["passport-name"] || maskedNumber,
+            description: [maskedNumber, expiry].filter(Boolean).join(", "),
+            iconSrc: "chrome://browser/skin/personal-info-16.svg",
+          };
+        });
     }
 
     // Show the passport list (its header and, when empty, its empty state)
@@ -704,13 +640,29 @@ Preferences.addSetting(
       );
     }
 
-    setup() {
-      Services.obs.addObserver(this.emitChange, "formautofill-storage-changed");
-      return () =>
-        Services.obs.removeObserver(
-          this.emitChange,
-          "formautofill-storage-changed"
-        );
+    async addItem() {
+      lazy.FormAutofillPreferences.prototype.openEditPassportDialog(
+        undefined,
+        window
+      );
+    }
+
+    async editItem(guid) {
+      lazy.FormAutofillPreferences.prototype.openEditPassportDialog(
+        guid,
+        window
+      );
+    }
+
+    async removeItem(guid) {
+      lazy.FormAutofillPreferences.prototype.openRemovePassportDialog(
+        guid,
+        ...(await removePromptArgs([
+          "passports-delete-passport-prompt-title",
+          "passports-delete-passport-prompt-confirm-button",
+          "passports-delete-passport-prompt-cancel-button",
+        ]))
+      );
     }
   }
 );
@@ -1000,48 +952,24 @@ SettingGroupManager.registerGroups({
   managePayments: {
     items: [
       {
-        id: "add-payment-button",
-        control: "moz-button",
-        l10nId: "autofill-payment-methods-add-button",
-      },
-      {
         id: "payments-list",
-        control: "moz-box-group",
-        controlAttrs: {
-          type: "list",
-        },
+        control: "setting-list",
       },
     ],
   },
   manageAddresses: {
     items: [
       {
-        id: "add-address-button",
-        control: "moz-button",
-        l10nId: "autofill-addresses-add-button",
-      },
-      {
         id: "addresses-list",
-        control: "moz-box-group",
-        controlAttrs: {
-          type: "list",
-        },
+        control: "setting-list",
       },
     ],
   },
   managePersonalInfo: {
     items: [
       {
-        id: "add-passport-button",
-        control: "moz-button",
-        l10nId: "autofill-passports-add-button",
-      },
-      {
         id: "passports-list",
-        control: "moz-box-group",
-        controlAttrs: {
-          type: "list",
-        },
+        control: "setting-list",
       },
     ],
   },

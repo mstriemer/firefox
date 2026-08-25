@@ -130,3 +130,5 @@ skip-if = [
 skip-if = [
   "true",
 ]
+
+["browser_managePaymentMethodsSubpage.js"]

@@ -191,7 +191,9 @@ async function openEditPaymentsList(redesignEnabled, browser) {
       );
       ok(true, "Payments page is visible");
       info("Click list item edit button");
-      const editBtn = paymentsPage.querySelector("moz-button[action='edit']");
+      const editBtn = paymentsPage.querySelector(
+        ".setting-list-action[data-action='edit']"
+      );
       editBtn.click();
     });
   }

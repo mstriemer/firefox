@@ -6,6 +6,10 @@
 
 const PAGE_MANAGE_PERSONAL_INFO = "about:preferences#managePersonalInfo";
 
+const PASSPORT_LIST = "#setting-control-passports-list";
+const PASSPORT_ITEM = `${PASSPORT_LIST} .setting-list-item`;
+const PASSPORT_EMPTY_STATE = `${PASSPORT_LIST} .setting-list-empty`;
+
 const TEST_PASSPORT = {
   "passport-name": "Jane Q Doe",
   "passport-country": "US",
@@ -267,28 +271,32 @@ add_task(async function test_managePersonalInfoEmptyState() {
   await BrowserTestUtils.withNewTab(
     { gBrowser, url: PAGE_MANAGE_PERSONAL_INFO },
     async browser => {
-      await SpecialPowers.spawn(browser, [], async () => {
-        const page = await ContentTaskUtils.waitForCondition(
-          () =>
-            content.document.querySelector(
-              '[data-category="paneManagePersonalInfo"]'
-            ),
-          "Manage personal info pane exists"
-        );
-        await ContentTaskUtils.waitForCondition(
-          () => page && !page.hidden,
-          "Manage personal info pane is visible"
-        );
-        // With no stored passports the list renders its empty state.
-        await ContentTaskUtils.waitForCondition(
-          () => content.document.querySelector("#no-passports-stored"),
-          "Empty-state 'No passports added' item rendered"
-        );
-        ok(
-          !content.document.querySelector("#passport-item"),
-          "No passport list items are shown in the empty state"
-        );
-      });
+      await SpecialPowers.spawn(
+        browser,
+        [PASSPORT_ITEM, PASSPORT_EMPTY_STATE],
+        async (itemSelector, emptyStateSelector) => {
+          const page = await ContentTaskUtils.waitForCondition(
+            () =>
+              content.document.querySelector(
+                '[data-category="paneManagePersonalInfo"]'
+              ),
+            "Manage personal info pane exists"
+          );
+          await ContentTaskUtils.waitForCondition(
+            () => page && !page.hidden,
+            "Manage personal info pane is visible"
+          );
+          // With no stored passports the list renders its empty state.
+          await ContentTaskUtils.waitForCondition(
+            () => content.document.querySelector(emptyStateSelector),
+            "Empty-state 'No passports added' item rendered"
+          );
+          ok(
+            !content.document.querySelector(itemSelector),
+            "No passport list items are shown in the empty state"
+          );
+        }
+      );
     }
   );
 });
@@ -299,7 +307,8 @@ add_task(async function test_addPassportThroughUI() {
     async browser => {
       const prefsWin = browser.contentWindow;
       const addButton = await TestUtils.waitForCondition(
-        () => prefsWin.document.getElementById("add-passport-button"),
+        () =>
+          prefsWin.document.querySelector(`${PASSPORT_LIST} .setting-list-add`),
         "Add-passport button present"
       );
 
@@ -324,7 +333,7 @@ add_task(async function test_addPassportThroughUI() {
       );
 
       await TestUtils.waitForCondition(
-        () => prefsWin.document.querySelector("#passport-item"),
+        () => prefsWin.document.querySelector(PASSPORT_ITEM),
         "new passport appears in the list"
       );
 
@@ -341,7 +350,7 @@ add_task(async function test_listReflectsStoredPassport() {
     async browser => {
       const prefsWin = browser.contentWindow;
       const item = await TestUtils.waitForCondition(
-        () => prefsWin.document.querySelector("#passport-item"),
+        () => prefsWin.document.querySelector(PASSPORT_ITEM),
         "stored passport rendered in the list"
       );
       is(
@@ -355,7 +364,7 @@ add_task(async function test_listReflectsStoredPassport() {
         "list item description shows masked number and expiry"
       );
       is(
-        prefsWin.document.querySelectorAll("#passport-item").length,
+        prefsWin.document.querySelectorAll(PASSPORT_ITEM).length,
         1,
         "exactly one list item for one stored passport"
       );
@@ -375,7 +384,7 @@ add_task(async function test_editPassportThroughUI() {
       const editButton = await TestUtils.waitForCondition(
         () =>
           prefsWin.document.querySelector(
-            `moz-button[action="edit"][guid="${guid}"]`
+            `${PASSPORT_LIST} .setting-list-action[data-action="edit"][data-key="${guid}"]`
           ),
         "edit button for the stored passport"
       );
@@ -413,7 +422,7 @@ add_task(async function test_removePassportThroughUI() {
       const removeButton = await TestUtils.waitForCondition(
         () =>
           prefsWin.document.querySelector(
-            `moz-button[action="remove"][guid="${guid}"]`
+            `${PASSPORT_LIST} .setting-list-action[data-action="remove"][data-key="${guid}"]`
           ),
         "remove button for the stored passport"
       );
@@ -431,7 +440,7 @@ add_task(async function test_removePassportThroughUI() {
       );
 
       await TestUtils.waitForCondition(
-        () => prefsWin.document.querySelector("#no-passports-stored"),
+        () => prefsWin.document.querySelector(PASSPORT_EMPTY_STATE),
         "empty state shown after removal"
       );
     }
@@ -447,13 +456,13 @@ add_task(async function test_listReflectsMultipleStoredPassports() {
     async browser => {
       const prefsWin = browser.contentWindow;
       await TestUtils.waitForCondition(
-        () => prefsWin.document.querySelectorAll("#passport-item").length == 2,
+        () => prefsWin.document.querySelectorAll(PASSPORT_ITEM).length == 2,
         "both stored passports rendered in the list"
       );
 
       // Match by label so the assertions don't depend on list ordering.
       const byLabel = new Map(
-        [...prefsWin.document.querySelectorAll("#passport-item")].map(item => [
+        [...prefsWin.document.querySelectorAll(PASSPORT_ITEM)].map(item => [
           item.getAttribute("label"),
           item.getAttribute("description"),
         ])
@@ -483,7 +492,7 @@ add_task(async function test_listReflectsExternalStorageChange() {
 
       // The subpage opens in its empty state.
       await TestUtils.waitForCondition(
-        () => prefsWin.document.querySelector("#no-passports-stored"),
+        () => prefsWin.document.querySelector(PASSPORT_EMPTY_STATE),
         "empty state shown before any passport is stored"
       );
 
@@ -493,11 +502,11 @@ add_task(async function test_listReflectsExternalStorageChange() {
         formAutofillStorage.passports.add(TEST_PASSPORT)
       );
       await TestUtils.waitForCondition(
-        () => prefsWin.document.querySelector("#passport-item"),
+        () => prefsWin.document.querySelector(PASSPORT_ITEM),
         "externally added passport appears without reloading the subpage"
       );
       is(
-        prefsWin.document.querySelectorAll("#passport-item").length,
+        prefsWin.document.querySelectorAll(PASSPORT_ITEM).length,
         1,
         "one list item after external add"
       );
@@ -507,11 +516,11 @@ add_task(async function test_listReflectsExternalStorageChange() {
         formAutofillStorage.passports.removeAll()
       );
       await TestUtils.waitForCondition(
-        () => prefsWin.document.querySelector("#no-passports-stored"),
+        () => prefsWin.document.querySelector(PASSPORT_EMPTY_STATE),
         "empty state restored after external removal"
       );
       ok(
-        !prefsWin.document.querySelector("#passport-item"),
+        !prefsWin.document.querySelector(PASSPORT_ITEM),
         "no list items remain after external removal"
       );
     }

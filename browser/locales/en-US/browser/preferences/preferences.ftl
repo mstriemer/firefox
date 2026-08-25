@@ -173,6 +173,13 @@ extension-controlled-enable-2 = To re-enable this extension visit <a data-l10n-n
 # are being controlled by an extension.
 extension-controlling-homepage = { $name } controls some of your homepage settings.
 
+## Shared strings for lists of saved items, such as payment methods or
+## addresses, rendered by the setting-list component.
+
+# Accessible label for the icon button that deletes one saved item from a list.
+setting-list-remove-button =
+    .aria-label = Delete
+
 ## Preferences UI Search Results
 
 search-results-header = Search results
@@ -1653,8 +1660,6 @@ payments-list-header =
 payments-delete-payment-prompt-title = Delete this payment method?
 payments-delete-payment-prompt-confirm-button = Delete
 payments-delete-payment-prompt-cancel-button = Cancel
-payments-delete-payment-button-label =
-    .aria-label = Delete
 payments-edit-payment-button-label =
     .aria-label = Edit
 
@@ -1681,8 +1686,6 @@ autofill-addresses-manage-addresses-button =
     .accesskey = M
 addresses-list-header =
     .label = Addresses
-addreses-delete-address-button-label =
-    .aria-label = Delete
 addreses-edit-address-button-label =
     .aria-label = Edit
 addresses-delete-address-prompt-title = Delete this address?
@@ -1704,8 +1707,6 @@ autofill-personal-info-manage-button =
     .label = Manage personal info
 passports-list-header =
     .label = Passports
-passports-delete-passport-button-label =
-    .aria-label = Delete
 passports-edit-passport-button-label =
     .aria-label = Edit
 passports-delete-passport-prompt-title = Delete this passport?

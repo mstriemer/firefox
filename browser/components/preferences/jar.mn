@@ -59,6 +59,8 @@ browser.jar:
    content/browser/preferences/widgets/setting-control.css              (widgets/setting-control/setting-control.css)
    content/browser/preferences/widgets/setting-control.mjs              (widgets/setting-control/setting-control.mjs)
    content/browser/preferences/widgets/setting-group.mjs                (widgets/setting-group/setting-group.mjs)
+   content/browser/preferences/widgets/setting-list.mjs                 (widgets/setting-list/setting-list.mjs)
+   content/browser/preferences/widgets/setting-list.css                 (widgets/setting-list/setting-list.css)
    content/browser/preferences/widgets/setting-group.css                (widgets/setting-group/setting-group.css)
    content/browser/preferences/widgets/setting-element.mjs              (widgets/setting-element/setting-element.mjs)
    content/browser/preferences/widgets/setting-pane.mjs                 (widgets/setting-pane/setting-pane.mjs)
