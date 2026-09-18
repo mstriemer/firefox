@@ -2,10 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import {
-  AsyncSetting,
-  ListSetting,
-} from "chrome://global/content/preferences/AsyncSetting.mjs";
+import { AsyncSetting } from "chrome://global/content/preferences/AsyncSetting.mjs";
+import { ListSetting } from "chrome://global/content/preferences/ListSetting.mjs";
 import { Preference } from "chrome://global/content/preferences/Preference.mjs";
 import { Setting } from "chrome://global/content/preferences/Setting.mjs";
 

@@ -14,7 +14,7 @@ import { SettingElement } from "chrome://browser/content/preferences/widgets/set
 
 /**
  * @import { Setting } from "chrome://global/content/preferences/Setting.mjs"
- * @import { ListSetting, SettingListItem } from "chrome://global/content/preferences/AsyncSetting.mjs"
+ * @import { ListSetting, SettingListItem } from "chrome://global/content/preferences/ListSetting.mjs"
  * @import { SettingControlConfig } from "chrome://browser/content/preferences/widgets/setting-control.mjs"
  * @import { TemplateResult } from "chrome://global/content/vendor/lit.all.mjs"
  */

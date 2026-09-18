@@ -65,6 +65,7 @@ toolkit.jar:
    content/global/aboutMozilla.css
    content/global/preferencesBindings.js
    content/global/preferences/AsyncSetting.mjs  (preferences/AsyncSetting.mjs)
+   content/global/preferences/ListSetting.mjs   (preferences/ListSetting.mjs)
    content/global/preferences/Preference.mjs    (preferences/Preference.mjs)
    content/global/preferences/Preferences.mjs   (preferences/Preferences.mjs)
    content/global/preferences/Setting.mjs       (preferences/Setting.mjs)
