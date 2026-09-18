@@ -10,6 +10,7 @@ import { Preferences } from "chrome://global/content/preferences/Preferences.mjs
 
 /**
  * @import { type Preference } from "chrome://global/content/preferences/Preference.mjs"
+ * @import { SettingListItem } from "chrome://global/content/preferences/ListSetting.mjs"
  * @import { SettingControlConfig } from "chrome://browser/content/preferences/widgets/setting-control.mjs"
  * @import { ExtensionSettingsStore } from "resource://gre/modules/ExtensionSettingsStore.sys.mjs"
  * @import { AddonManager } from "resource://gre/modules/AddonManager.sys.mjs"
@@ -25,7 +26,7 @@ import { Preferences } from "chrome://global/content/preferences/Preferences.mjs
  */
 
 /**
- * @typedef {string | boolean | number | nsIFile | null} SettingValue
+ * @typedef {string | boolean | number | nsIFile | null | SettingListItem[]} SettingValue
  */
 
 /**

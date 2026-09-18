@@ -42,13 +42,7 @@ import { AsyncSetting } from "chrome://global/content/preferences/AsyncSetting.m
  * actions instead of through set(). Subclasses should call emitChange,
  * generally from a setup() observer, whenever the backing store changes so the
  * rows are recomputed.
- *
- * Every action the config declares is routed to an `on<Action>` method, so a
- * list that offers `[{ name: "edit" }, { name: "remove" }]` implements
- * `onEdit(key)` and `onRemove(key)`, and one with an add button implements
- * `onAdd()`. These are handlers for the user activating the action, the work
- * itself generally happens in a dialog, which is why they aren't named after
- * the mutation they lead to.
+
  */
 export class ListSetting extends AsyncSetting {
   /** @type {SettingListItem[]} */
@@ -75,27 +69,15 @@ export class ListSetting extends AsyncSetting {
 
   /**
    * Handle the user activating one of the actions the config declared, or the
-   * add button. The default implementation routes the action to its
-   * `on<Action>` method, so an action named "setAllowed" calls
-   * `onSetAllowed(key, value)`. Override this when the action names aren't
-   * known ahead of time.
+   * add button. The work generally happens in a dialog, so this handles the
+   * user asking for the action rather than performing it.
    *
-   * There are no `onAdd`/`onEdit`/`onRemove` defaults on purpose: declaring an
-   * action the list doesn't handle is a mistake worth hearing about.
-   *
-   * @param {string} action The name of the action.
+   * @abstract
+   * @param {string} action The name of the action, eg. "remove".
    * @param {string} [key] The row's key, undefined for the add button.
    * @param {any} [value] The action's value, for an action that offers a
    *   choice rather than a command.
    */
-  onListAction(action, key, value) {
-    let method = `on${action[0].toUpperCase()}${action.slice(1)}`;
-    if (typeof this[method] != "function") {
-      console.error(
-        `The "${action}" action on ${this.constructor.id} needs a ${method}() method`
-      );
-      return;
-    }
-    this[method](key, value);
-  }
+  // eslint-disable-next-line no-unused-vars
+  onListAction(action, key, value) {}
 }

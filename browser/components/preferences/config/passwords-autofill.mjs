@@ -404,6 +404,9 @@ Preferences.addSetting({
  * that keeps their rendered rows in sync with it. They also all gate adding new
  * records on the matching "save and fill" checkbox, while leaving existing rows
  * editable so records can still be removed once autofill is turned off.
+ *
+ * Every one of them offers the same three actions, so the dispatch lives here
+ * and each list only says which dialog each one opens.
  */
 class AutofillListSetting extends Preferences.ListSetting {
   /**
@@ -436,6 +439,50 @@ class AutofillListSetting extends Preferences.ListSetting {
       this.enabledSetting?.off("change", this.emitChange);
     };
   }
+
+  /**
+   * @param {string} action
+   * @param {string} [guid]
+   */
+  onListAction(action, guid) {
+    switch (action) {
+      case "add":
+        this.openAddDialog();
+        break;
+      case "edit":
+        this.openEditDialog(guid);
+        break;
+      case "remove":
+        this.openRemoveDialog(guid);
+        break;
+    }
+  }
+
+  /**
+   * Open the dialog that creates a record.
+   *
+   * @abstract
+   */
+  openAddDialog() {}
+
+  /**
+   * Open the dialog that edits the record behind a row, or creates one when
+   * there is no guid.
+   *
+   * @abstract
+   * @param {string} [guid]
+   */
+  // eslint-disable-next-line no-unused-vars
+  openEditDialog(guid) {}
+
+  /**
+   * Prompt to remove the record behind a row.
+   *
+   * @abstract
+   * @param {string} [guid]
+   */
+  // eslint-disable-next-line no-unused-vars
+  async openRemoveDialog(guid) {}
 }
 
 /**
@@ -484,20 +531,20 @@ Preferences.addSetting(
         }));
     }
 
-    async onAdd() {
+    openAddDialog() {
       window.gSubDialog.open(
         "chrome://formautofill/content/editCreditCard.xhtml"
       );
     }
 
-    async onEdit(guid) {
+    openEditDialog(guid) {
       lazy.FormAutofillPreferences.prototype.openEditCreditCardDialog(
         guid,
         window
       );
     }
 
-    async onRemove(guid) {
+    async openRemoveDialog(guid) {
       lazy.FormAutofillPreferences.prototype.openRemovePaymentDialog(
         guid,
         ...(await removePromptArgs([
@@ -540,21 +587,18 @@ Preferences.addSetting(
         });
     }
 
-    async onAdd() {
-      lazy.FormAutofillPreferences.prototype.openEditAddressDialog(
-        undefined,
-        window
-      );
+    openAddDialog() {
+      this.openEditDialog();
     }
 
-    async onEdit(guid) {
+    openEditDialog(guid) {
       lazy.FormAutofillPreferences.prototype.openEditAddressDialog(
         guid,
         window
       );
     }
 
-    async onRemove(guid) {
+    async openRemoveDialog(guid) {
       lazy.FormAutofillPreferences.prototype.openRemoveAddressDialog(
         guid,
         ...(await removePromptArgs([
@@ -614,21 +658,18 @@ Preferences.addSetting(
       );
     }
 
-    async onAdd() {
-      lazy.FormAutofillPreferences.prototype.openEditPassportDialog(
-        undefined,
-        window
-      );
+    openAddDialog() {
+      this.openEditDialog();
     }
 
-    async onEdit(guid) {
+    openEditDialog(guid) {
       lazy.FormAutofillPreferences.prototype.openEditPassportDialog(
         guid,
         window
       );
     }
 
-    async onRemove(guid) {
+    async openRemoveDialog(guid) {
       lazy.FormAutofillPreferences.prototype.openRemovePassportDialog(
         guid,
         ...(await removePromptArgs([

@@ -253,27 +253,15 @@
       });
 
       add_task(async function testActionsRouteThroughTheSetting() {
-        let added = [];
-        let removed = [];
-        let edited = [];
-        let custom = [];
+        let handled = [];
         await addListSetting(
           class extends Preferences.ListSetting {
             static id = "list-actions";
             async getItems() {
               return [{ key: "abc", label: "A row" }];
             }
-            async onAdd() {
-              added.push("add");
-            }
-            async onRemove(key) {
-              removed.push(key);
-            }
-            async onEdit(key) {
-              edited.push(key);
-            }
-            async onDuplicate(key) {
-              custom.push(["duplicate", key]);
+            onListAction(action, key) {
+              handled.push([action, key]);
             }
           }
         );
@@ -292,21 +280,21 @@
         let [edit, duplicate, remove] = list.actionEls;
 
         synthesizeMouseAtCenter(remove, {});
-        isDeeply(removed, ["abc"], "onRemove got the row's key");
-
         synthesizeMouseAtCenter(edit, {});
-        isDeeply(edited, ["abc"], "onEdit got the row's key");
-
         synthesizeMouseAtCenter(duplicate, {});
         isDeeply(
-          custom,
-          [["duplicate", "abc"]],
-          "A list's own action reaches its on<Action> method"
+          handled,
+          [
+            ["remove", "abc"],
+            ["edit", "abc"],
+            ["duplicate", "abc"],
+          ],
+          "Every action reaches onListAction with the row's key"
         );
         is(
           duplicate.iconSrc,
           "chrome://global/skin/icons/edit-copy.svg",
-          "A custom action keeps its own icon"
+          "A list's own action keeps its own icon"
         );
 
         is(
@@ -325,31 +313,10 @@
           "The add button sits above the list"
         );
         synthesizeMouseAtCenter(list.addEl, {});
-        isDeeply(added, ["add"], "onAdd was called");
-      });
-
-      add_task(async function testOnListActionOverride() {
-        let handled = [];
-        await addListSetting(
-          class extends Preferences.ListSetting {
-            static id = "list-action-override";
-            async getItems() {
-              return [{ key: "abc", label: "A row" }];
-            }
-            onListAction(action, key) {
-              handled.push([action, key]);
-            }
-          }
-        );
-        let list = await renderList("list-action-override", {
-          actions: [{ name: "edit", l10nId: "setting-list-edit" }],
-        });
-
-        synthesizeMouseAtCenter(list.actionEls[0], {});
         isDeeply(
-          handled,
-          [["edit", "abc"]],
-          "A list can take over the dispatch for action names it generates"
+          handled.at(-1),
+          ["add", undefined],
+          "The add button has no row, so it sends no key"
         );
       });
 
@@ -380,8 +347,8 @@
                 },
               ];
             }
-            onSetHandler(key, value) {
-              picked.push([key, value]);
+            onListAction(action, key, value) {
+              picked.push([action, key, value]);
             }
           }
         );
@@ -402,8 +369,8 @@
         select.dispatchEvent(new Event("change", { bubbles: true }));
         isDeeply(
           picked,
-          [["application/pdf", "open"]],
-          "onSetHandler got the row's key and the chosen value"
+          [["setHandler", "application/pdf", "open"]],
+          "onListAction got the row's key and the chosen value"
         );
       });
 

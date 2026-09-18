@@ -15,7 +15,7 @@ import { SettingElement } from "chrome://browser/content/preferences/widgets/set
 /**
  * @import { Setting } from "chrome://global/content/preferences/Setting.mjs"
  * @import { ListSetting, SettingListItem } from "chrome://global/content/preferences/ListSetting.mjs"
- * @import { SettingControlConfig } from "chrome://browser/content/preferences/widgets/setting-control.mjs"
+ * @import { SettingControlConfigBase } from "chrome://browser/content/preferences/widgets/setting-control.mjs"
  * @import { TemplateResult } from "chrome://global/content/vendor/lit.all.mjs"
  */
 
@@ -82,7 +82,7 @@ import { SettingElement } from "chrome://browser/content/preferences/widgets/set
  * @property {boolean} [addDisabled] Disable only the add button, generally
  *   returned from {@link ListSetting.getControlConfig} rather than authored.
  *
- * @typedef {SettingControlConfig & SettingListConfigExtensions} SettingListConfig
+ * @typedef {SettingControlConfigBase & SettingListConfigExtensions} SettingListConfig
  */
 
 /**
@@ -101,7 +101,7 @@ const ACTION_DEFAULTS = {
 };
 
 export class ListSettingNotDefinedError extends Error {
-  /** @param {string} settingId */
+  /** @param {string} [settingId] */
   constructor(settingId) {
     super(
       `Setting "${settingId}" is not a list. Did you extend Preferences.ListSetting?`
@@ -202,29 +202,25 @@ export class SettingList extends SettingElement {
   }
 
   /**
-   * @param {MouseEvent} event
+   * @param {ListAction} action
+   * @param {SettingListItem} [item] The row it came from, omitted for the add
+   *   button, which belongs to the list rather than to a row.
+   * @param {any} [value]
    */
-  onActionClick(event) {
-    let button = /** @type {HTMLElement} */ (event.currentTarget);
-    this.setting.listAction(button.dataset.action, button.dataset.key);
-  }
-
-  onAddClick() {
-    this.setting.listAction("add");
+  onAction(action, item, value) {
+    this.setting?.listAction(action.name, item?.key, value);
   }
 
   /**
+   * @param {ListAction} action
+   * @param {SettingListItem} item
    * @param {Event} event
    */
-  onActionChange(event) {
-    let control = /** @type {HTMLElement & { value: any }} */ (
+  onActionChange(action, item, event) {
+    let control = /** @type {EventTarget & { value: any }} */ (
       event.currentTarget
     );
-    this.setting.listAction(
-      control.dataset.action,
-      control.dataset.key,
-      control.value
-    );
+    this.onAction(action, item, control.value);
   }
 
   /**
@@ -235,12 +231,14 @@ export class SettingList extends SettingElement {
     if (!config.addActionL10nId) {
       return nothing;
     }
+    /** @type {ListAction} */
+    let action = { name: "add", l10nId: config.addActionL10nId };
     return html`<moz-button
       class="setting-list-add"
       data-l10n-id=${config.addActionL10nId}
       .iconSrc=${ACTION_DEFAULTS.add.iconSrc}
       ?disabled=${this.disabled || config.addDisabled}
-      @click=${this.onAddClick}
+      @click=${() => this.onAction(action)}
     ></moz-button>`;
   }
 
@@ -296,7 +294,7 @@ export class SettingList extends SettingElement {
    * @returns {TemplateResult}
    */
   valueActionTemplate(item, action) {
-    let tag = unsafeStatic(action.control);
+    let tag = unsafeStatic(action.control ?? "moz-button");
     let options = action.options ?? [];
     return staticHtml`<${tag}
       slot="actions"
@@ -307,7 +305,8 @@ export class SettingList extends SettingElement {
       .value=${action.value ?? ""}
       .iconSrc=${action.iconSrc ?? ""}
       ?disabled=${this.disabled || item.disabled}
-      @change=${this.onActionChange}
+      @change=${(/** @type {Event} */ event) =>
+        this.onActionChange(action, item, event)}
     >${options.map(option => this.optionTemplate(option))}</${tag}>`;
   }
 
@@ -330,7 +329,7 @@ export class SettingList extends SettingElement {
       data-l10n-id=${ifDefined(action.l10nId ?? defaults.l10nId)}
       .iconSrc=${action.iconSrc ?? defaults.iconSrc ?? ""}
       ?disabled=${this.disabled || item.disabled}
-      @click=${this.onActionClick}
+      @click=${() => this.onAction(action, item)}
     ></moz-button>`;
   }
 
@@ -395,10 +394,10 @@ export class SettingList extends SettingElement {
     // A list's value is its rows, so anything else here is a setting that
     // isn't a list.
     let items = this.setting?.value;
-    if (!Array.isArray(items)) {
+    let { config } = this;
+    if (!config || !Array.isArray(items)) {
       throw new ListSettingNotDefinedError(this.setting?.id);
     }
-    let config = this.config ?? {};
     return html`${this.addTemplate(config)}
       <moz-box-group type="list">
         ${this.headerTemplate(config.headerL10nId)}

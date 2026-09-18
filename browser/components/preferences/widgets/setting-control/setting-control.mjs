@@ -21,6 +21,7 @@ import MozInputFolder from "chrome://global/content/elements/moz-input-folder.mj
 /** @import { LitElement, Ref, TemplateResult } from "chrome://global/content/vendor/lit.all.mjs" */
 /** @import { SettingElementConfig } from "chrome://browser/content/preferences/widgets/setting-element.mjs" */
 /** @import { Setting } from "chrome://global/content/preferences/Setting.mjs" */
+/** @import { SettingListConfig } from "chrome://browser/content/preferences/widgets/setting-list.mjs" */
 
 /**
  * @typedef {object} SettingNestedConfig
@@ -50,8 +51,16 @@ import MozInputFolder from "chrome://global/content/elements/moz-input-folder.mj
 
 /**
  * @typedef {SettingOptionConfigExtensions & SettingElementConfig & SettingNestedConfig} SettingOptionConfig
- * @typedef {SettingControlConfigExtensions & SettingElementConfig & SettingNestedConfig} SettingControlConfig
+ * @typedef {SettingControlConfigExtensions & SettingElementConfig & SettingNestedConfig} SettingControlConfigBase
  * @typedef {{ control: SettingControl } & HTMLElement} SettingControlChild
+ */
+
+/**
+ * What a config item can hold. Controls that render generated data declare the
+ * shape of that data in their own variant, so the keys a config item accepts
+ * depend on which control it names.
+ *
+ * @typedef {SettingControlConfigBase | SettingListConfig} SettingControlConfig
  */
 
 /**
