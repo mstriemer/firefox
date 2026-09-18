@@ -125,13 +125,8 @@ import { Preferences } from "chrome://global/content/preferences/Preferences.mjs
 
 /**
  * @callback SettingGetItemsCallback
- * @returns {SettingListItem[]} The rows to render for a list setting.
- */
-
-/**
- * @callback SettingGetListConfigCallback
- * @returns {SettingListConfig | undefined} The data a list control needs
- *   besides its rows, or undefined if this setting isn't a list.
+ * @returns {SettingListItem[] | undefined} The rows to render for a list
+ *   setting, or undefined if this setting isn't a list.
  */
 
 /**
@@ -182,7 +177,6 @@ import { Preferences } from "chrome://global/content/preferences/Preferences.mjs
  *    reorders items, such as updating preference values.
  * @property {SettingGetItemsCallback} [getItems] - See {@link SettingGetItemsCallback}. Provided by
  *    {@link ListSetting}, list rows are generated data rather than authored config.
- * @property {SettingGetListConfigCallback} [getListConfig] - See {@link SettingGetListConfigCallback}.
  * @property {SettingOnListActionCallback} [onListAction] - See {@link SettingOnListActionCallback}.
  */
 
@@ -407,22 +401,12 @@ export class Setting extends EventEmitter {
   }
 
   /**
-   * The rows of a list setting. Empty for anything that isn't a list.
+   * The rows of a list setting, undefined for anything that isn't a list.
    *
-   * @type {SettingListItem[]}
+   * @type {SettingListItem[] | undefined}
    */
   get items() {
-    return this.config.getItems?.() ?? [];
-  }
-
-  /**
-   * The data a list control needs besides its rows, or undefined if this
-   * setting isn't a list.
-   *
-   * @type {SettingListConfig | undefined}
-   */
-  get listConfig() {
-    return this.config.getListConfig?.();
+    return this.config.getItems?.();
   }
 
   /**

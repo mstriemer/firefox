@@ -277,6 +277,9 @@ export class SettingControl extends SettingElement {
   getControlPropertyMapping(config) {
     return {
       ...this.getCommonPropertyMapping(config),
+      // Controls that render generated data, eg. setting-list, need the config
+      // that declares how to present it.
+      ".config": config,
       ".parentDisabled": this.parentDisabled,
       "?disabled": this.disabled,
       // Hide moz-message-bar directly to maintain the role=alert functionality.

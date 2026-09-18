@@ -12,31 +12,56 @@ import { SettingElement } from "chrome://browser/content/preferences/widgets/set
 
 /**
  * @import { Setting } from "chrome://global/content/preferences/Setting.mjs"
- * @import { ListAction, SettingListConfig, SettingListItem } from "chrome://global/content/preferences/AsyncSetting.mjs"
+ * @import { ListSetting, SettingListItem } from "chrome://global/content/preferences/AsyncSetting.mjs"
+ * @import { SettingControlConfig } from "chrome://browser/content/preferences/widgets/setting-control.mjs"
  * @import { TemplateResult } from "chrome://global/content/vendor/lit.all.mjs"
  */
 
 /**
- * Icons used when a {@link ListAction} doesn't provide its own. There is no
- * default l10nId since the label of an edit button generally names the kind of
- * record being managed.
+ * An action button rendered at the end of a list row, or above the list in the
+ * case of "add". The name is passed back to the {@link ListSetting} with the
+ * row's key, see {@link ListSetting.onListAction}.
+ *
+ * @typedef {object} ListAction
+ * @property {string} name The action to perform, passed back with the row's key.
+ * @property {string} [l10nId] The button's label, generally an `.aria-label`.
+ *   Defaults to a shared label for the well known actions.
+ * @property {string} [iconSrc] Defaults to the standard icon for the well
+ *   known actions.
  */
-const ACTION_ICONS = {
-  add: "chrome://global/skin/icons/plus.svg",
-  edit: "chrome://global/skin/icons/edit.svg",
-  remove: "chrome://global/skin/icons/delete.svg",
-};
 
 /**
- * The remove action every removable list shares, so a list only has to opt in
- * with {@link ListSetting.removable} rather than declare it.
+ * The authored configuration of a `setting-list` control. Rows are generated
+ * data and come from the {@link ListSetting}, everything the list needs to
+ * present them is declared here alongside the rest of the config tree.
  *
- * @type {ListAction}
+ * @typedef {object} SettingListConfigExtensions
+ * @property {ListAction[]} [actions] The actions offered on every row, in
+ *   render order, unless a row overrides them.
+ * @property {string} [headerL10nId] An optional header row.
+ * @property {string} [emptyStateL10nId] Shown in place of the rows when there
+ *   are none.
+ * @property {string} [addActionL10nId] The add button's label. The button is
+ *   only rendered when this is set, and activating it sends the "add" action.
+ * @property {boolean} [addDisabled] Disable only the add button, generally
+ *   returned from {@link ListSetting.getControlConfig} rather than authored.
+ *
+ * @typedef {SettingControlConfig & SettingListConfigExtensions} SettingListConfig
  */
-const REMOVE_ACTION = {
-  name: "remove",
-  l10nId: "setting-list-remove-button",
-  iconSrc: ACTION_ICONS.remove,
+
+/**
+ * Presentation the component supplies for the actions it knows about, so a
+ * list can declare `{ name: "remove" }` and get the shared label and icon.
+ *
+ * @type {Record<string, Partial<ListAction>>}
+ */
+const ACTION_DEFAULTS = {
+  add: { iconSrc: "chrome://global/skin/icons/plus.svg" },
+  edit: { iconSrc: "chrome://global/skin/icons/edit.svg" },
+  remove: {
+    l10nId: "setting-list-remove-button",
+    iconSrc: "chrome://global/skin/icons/delete.svg",
+  },
 };
 
 export class ListSettingNotDefinedError extends Error {
@@ -61,6 +86,7 @@ export class SettingList extends SettingElement {
 
   static properties = {
     setting: { type: Object },
+    config: { type: Object },
     disabled: { type: Boolean },
   };
 
@@ -81,6 +107,9 @@ export class SettingList extends SettingElement {
 
     /** @type {Setting | undefined} */
     this.setting = undefined;
+
+    /** @type {SettingListConfig | undefined} */
+    this.config = undefined;
 
     /** @type {boolean} */
     this.disabled = false;
@@ -149,18 +178,18 @@ export class SettingList extends SettingElement {
   }
 
   /**
-   * @param {SettingListConfig} listConfig
+   * @param {SettingListConfig} config
    * @returns {TemplateResult | typeof nothing}
    */
-  addTemplate(listConfig) {
-    if (!listConfig.addActionL10nId) {
+  addTemplate(config) {
+    if (!config.addActionL10nId) {
       return nothing;
     }
     return html`<moz-button
       class="setting-list-add"
-      data-l10n-id=${listConfig.addActionL10nId}
-      .iconSrc=${ACTION_ICONS.add}
-      ?disabled=${this.disabled || listConfig.addDisabled}
+      data-l10n-id=${config.addActionL10nId}
+      .iconSrc=${ACTION_DEFAULTS.add.iconSrc}
+      ?disabled=${this.disabled || config.addDisabled}
       @click=${this.onAddClick}
     ></moz-button>`;
   }
@@ -200,14 +229,15 @@ export class SettingList extends SettingElement {
    * @returns {TemplateResult}
    */
   actionTemplate(item, action) {
+    let defaults = ACTION_DEFAULTS[action.name] ?? {};
     return html`<moz-button
       slot="actions"
       class="setting-list-action"
       type="icon"
       data-action=${action.name}
       data-key=${item.key}
-      data-l10n-id=${action.l10nId}
-      .iconSrc=${action.iconSrc ?? ACTION_ICONS[action.name] ?? ""}
+      data-l10n-id=${ifDefined(action.l10nId ?? defaults.l10nId)}
+      .iconSrc=${action.iconSrc ?? defaults.iconSrc ?? ""}
       ?disabled=${this.disabled || item.disabled}
       @click=${this.onActionClick}
     ></moz-button>`;
@@ -234,17 +264,15 @@ export class SettingList extends SettingElement {
   }
 
   /**
-   * A row's actions, with the shared remove action appended last. `removable`
-   * is a property of the list, so a row's own `actions` only replaces the
-   * declared actions, not the remove one.
+   * A row's actions, which default to the ones the config declares for the
+   * whole list.
    *
    * @param {SettingListItem} item
-   * @param {SettingListConfig} listConfig
+   * @param {SettingListConfig} config
    * @returns {ListAction[]}
    */
-  rowActions(item, listConfig) {
-    let actions = item.actions ?? listConfig.actions;
-    return listConfig.removable ? [...actions, REMOVE_ACTION] : actions;
+  rowActions(item, config) {
+    return item.actions ?? config.actions ?? [];
   }
 
   /**
@@ -270,21 +298,21 @@ export class SettingList extends SettingElement {
   }
 
   render() {
-    let listConfig = this.setting?.listConfig;
-    if (!listConfig) {
+    let items = this.setting?.items;
+    if (!items) {
       throw new ListSettingNotDefinedError(this.setting?.id);
     }
-    let items = this.setting.items;
-    return html`${this.addTemplate(listConfig)}
+    let config = this.config ?? {};
+    return html`${this.addTemplate(config)}
       <moz-box-group type="list">
-        ${this.headerTemplate(listConfig.headerL10nId)}
+        ${this.headerTemplate(config.headerL10nId)}
         ${items.length
           ? repeat(
               items,
               item => item.key,
-              item => this.itemTemplate(item, this.rowActions(item, listConfig))
+              item => this.itemTemplate(item, this.rowActions(item, config))
             )
-          : this.emptyStateTemplate(listConfig.emptyStateL10nId)}
+          : this.emptyStateTemplate(config.emptyStateL10nId)}
       </moz-box-group>`;
   }
 }

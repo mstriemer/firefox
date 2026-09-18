@@ -7,6 +7,7 @@ const { EventEmitter } = ChromeUtils.importESModule(
 );
 
 /** @import { SettingControlConfig } from "chrome://browser/content/preferences/widgets/setting-control.mjs" */
+/** @import { ListAction, SettingListConfig } from "chrome://browser/content/preferences/widgets/setting-list.mjs" */
 /** @import { SettingConfig, SettingValue } from "./Setting.mjs" */
 
 /**
@@ -151,18 +152,6 @@ export class AsyncSetting extends EventEmitter {
  */
 
 /**
- * An action button rendered at the end of a list row. The "edit" and "remove"
- * names are handled by {@link ListSetting.editItem} and
- * {@link ListSetting.removeItem}, any other name is forwarded to
- * {@link ListSetting.onListAction}.
- *
- * @typedef {object} ListAction
- * @property {string} name The action to perform, passed back with the row's key.
- * @property {string} l10nId The button's label, generally an `.aria-label`.
- * @property {string} [iconSrc] Defaults to the standard icon for "edit" and "remove".
- */
-
-/**
  * One row of a list. This is generated data rather than hand authored layout,
  * so unlike {@link SettingControlConfig} it lives outside the config tree and
  * rows are not Settings themselves.
@@ -174,27 +163,17 @@ export class AsyncSetting extends EventEmitter {
  * @property {string} [iconSrc]
  * @property {string} [l10nId] Localize the whole row from one message, for templated rows.
  * @property {Record<string, any>} [l10nArgs]
- * @property {ListAction[]} [actions] Defaults to the ListSetting's static actions.
+ * @property {ListAction[]} [actions] Defaults to the {@link SettingListConfig} actions.
  * @property {boolean} [disabled] Disable this row's actions. The setting-wide
  *   case stays on {@link AsyncSetting.disabled}.
- */
-
-/**
- * The data a list control needs beyond its rows.
- *
- * @typedef {object} SettingListConfig
- * @property {ListAction[]} actions
- * @property {boolean} removable
- * @property {string} [headerL10nId]
- * @property {string} [emptyStateL10nId]
- * @property {string} [addActionL10nId]
- * @property {boolean} [addDisabled]
  */
 
 // TODO: This class should go in its own ListSetting.mjs file.
 /**
  * A setting backed by a list of records that the user can manage, rendered by
- * the setting-list control.
+ * the setting-list control. This class only covers the list's behaviour, how
+ * the rows are presented is declared in the {@link SettingListConfig} that
+ * renders them.
  *
  * Rows come from getItems() rather than the value plumbing because a list is
  * asymmetric: a read is the whole array while a write is scoped to a single
@@ -202,50 +181,6 @@ export class AsyncSetting extends EventEmitter {
  * whenever the backing store changes so the rows are recomputed.
  */
 export class ListSetting extends AsyncSetting {
-  // TODO: The supported actions can be here, but the actions that are exposed
-  // should go in the SettingControlConfig (SettingListConfig?)
-  // TODO: Could we move actions into some mixin call like class extends
-  // ListSetting(["add", "setAllowed"]) {} which would then require the `onAdd`
-  // and `onSetAllowed` methods to be implemented? This could remove the need
-  // for `removable`
-  /**
-   * The actions offered on every row, unless a row overrides them. The remove
-   * action isn't listed here, see {@link ListSetting.removable}.
-   *
-   * @type {ListAction[]}
-   */
-  static actions = [];
-
-  /**
-   * Whether rows can be removed. The remove action is always rendered last and
-   * uses a shared label, so it doesn't need to be declared as an action.
-   */
-  static removable = false;
-
-  // TODO: The l10nIds are a concern for the SettingControlConfig (now
-  // SettingListConfig variant?), they shouldn't be here
-  /**
-   * Fluent id for an optional header row.
-   *
-   * @type {string | undefined}
-   */
-  static headerL10nId;
-
-  /**
-   * Fluent id for the message shown in place of the rows when there are none.
-   *
-   * @type {string | undefined}
-   */
-  static emptyStateL10nId;
-
-  /**
-   * Fluent id for the add button's label. The button is only rendered when this
-   * is set, and activating it calls {@link ListSetting.addItem}.
-   *
-   * @type {string | undefined}
-   */
-  static addActionL10nId;
-
   /**
    * The rows to render.
    *
@@ -254,17 +189,6 @@ export class ListSetting extends AsyncSetting {
    */
   async getItems() {
     return [];
-  }
-
-  /**
-   * Whether the add button should be disabled. The setting-wide
-   * {@link AsyncSetting.disabled} covers the rows, this covers only adding, so
-   * a list can stay editable while it refuses new records.
-   *
-   * @returns {Promise<boolean>}
-   */
-  async addDisabled() {
-    return false;
   }
 
   // TODO: should {add,edit,remove}Item be start{Add,Edit,Remove}Item? They
@@ -333,14 +257,6 @@ export class AsyncSettingHandler {
   /** @type {boolean} */
   #isList;
 
-  /**
-   * The parts of a list's config that come from the class rather than from an
-   * async callback. Only set for {@link ListSetting} subclasses.
-   *
-   * @type {SettingListConfig | undefined}
-   */
-  #listConfig;
-
   /** @type {string} */
   pref;
 
@@ -370,23 +286,10 @@ export class AsyncSettingHandler {
     this.cachedDisabled = this.asyncSetting.defaultDisabled;
     this.cachedVisible = this.asyncSetting.defaultVisible;
     this.cachedGetControlConfig = this.asyncSetting.defaultGetControlConfig;
-    /** @type {SettingListItem[]} */
-    this.cachedItems = [];
-    this.cachedAddDisabled = false;
+    /** @type {SettingListItem[] | undefined} */
+    this.cachedItems = undefined;
 
     this.#isList = isListSettingClass(AsyncSettingClass);
-    if (this.#isList) {
-      let ListSettingClass = /** @type {typeof ListSetting} */ (
-        AsyncSettingClass
-      );
-      this.#listConfig = {
-        actions: ListSettingClass.actions ?? [],
-        removable: ListSettingClass.removable ?? false,
-        headerL10nId: ListSettingClass.headerL10nId,
-        emptyStateL10nId: ListSettingClass.emptyStateL10nId,
-        addActionL10nId: ListSettingClass.addActionL10nId,
-      };
-    }
 
     // Listen for change events from the async setting
     this.asyncSetting.on("change", () => this.refresh());
@@ -417,14 +320,12 @@ export class AsyncSettingHandler {
       this.cachedVisible,
       this.cachedGetControlConfig,
       this.cachedItems,
-      this.cachedAddDisabled,
     ] = await Promise.all([
       this.asyncSetting.get(),
       this.asyncSetting.disabled(),
       this.asyncSetting.visible(),
       this.asyncSetting.getControlConfig(),
-      this.#isList ? listSetting.getItems() : [],
-      this.#isList ? listSetting.addDisabled() : false,
+      this.#isList ? listSetting.getItems() : undefined,
     ]);
     this.#emitChange();
   }
@@ -472,20 +373,10 @@ export class AsyncSettingHandler {
   // TODO: These are really only application to ListSetting, they shouldn't be
   // on a generic AsyncSettingHandler
   /**
-   * @returns {SettingListItem[]}
+   * @returns {SettingListItem[] | undefined}
    */
   getItems() {
     return this.cachedItems;
-  }
-
-  /**
-   * @returns {SettingListConfig | undefined}
-   */
-  getListConfig() {
-    if (!this.#isList) {
-      return undefined;
-    }
-    return { ...this.#listConfig, addDisabled: this.cachedAddDisabled };
   }
 
   /**

@@ -406,8 +406,6 @@ Preferences.addSetting({
  * editable so records can still be removed once autofill is turned off.
  */
 class AutofillListSetting extends Preferences.ListSetting {
-  static removable = true;
-
   /**
    * Id of the Setting that gates adding new records. AsyncSettings don't
    * support `deps`, so the list watches it directly.
@@ -423,8 +421,8 @@ class AutofillListSetting extends Preferences.ListSetting {
     );
   }
 
-  async addDisabled() {
-    return !this.enabledSetting?.value;
+  async getControlConfig() {
+    return { addDisabled: !this.enabledSetting?.value };
   }
 
   setup() {
@@ -463,12 +461,6 @@ Preferences.addSetting(
   class extends AutofillListSetting {
     static id = "payments-list";
     static enabledSettingId = "saveAndFillPayments";
-    static headerL10nId = "payments-list-header";
-    static emptyStateL10nId = "payments-no-payments-stored-message";
-    static addActionL10nId = "autofill-payment-methods-add-button";
-    static actions = [
-      { name: "edit", l10nId: "payments-edit-payment-button-label" },
-    ];
 
     async getItems() {
       await lazy.FormAutofillPreferences.prototype.initializePaymentsStorage();
@@ -532,12 +524,6 @@ Preferences.addSetting(
   class extends AutofillListSetting {
     static id = "addresses-list";
     static enabledSettingId = "saveAndFillAddresses";
-    static headerL10nId = "addresses-list-header";
-    static emptyStateL10nId = "addresses-no-addresses-stored-message";
-    static addActionL10nId = "autofill-addresses-add-button";
-    static actions = [
-      { name: "edit", l10nId: "addreses-edit-address-button-label" },
-    ];
 
     async getItems() {
       await lazy.FormAutofillPreferences.prototype.initializeAddressesStorage();
@@ -596,12 +582,6 @@ Preferences.addSetting(
   class extends AutofillListSetting {
     static id = "passports-list";
     static enabledSettingId = "saveAndFillPersonalInfo";
-    static headerL10nId = "passports-list-header";
-    static emptyStateL10nId = "passports-no-passports-stored-message";
-    static addActionL10nId = "autofill-passports-add-button";
-    static actions = [
-      { name: "edit", l10nId: "passports-edit-passport-button-label" },
-    ];
 
     async getItems() {
       if (
@@ -960,6 +940,13 @@ SettingGroupManager.registerGroups({
       {
         id: "payments-list",
         control: "setting-list",
+        headerL10nId: "payments-list-header",
+        emptyStateL10nId: "payments-no-payments-stored-message",
+        addActionL10nId: "autofill-payment-methods-add-button",
+        actions: [
+          { name: "edit", l10nId: "payments-edit-payment-button-label" },
+          { name: "remove" },
+        ],
       },
     ],
   },
@@ -968,6 +955,13 @@ SettingGroupManager.registerGroups({
       {
         id: "addresses-list",
         control: "setting-list",
+        headerL10nId: "addresses-list-header",
+        emptyStateL10nId: "addresses-no-addresses-stored-message",
+        addActionL10nId: "autofill-addresses-add-button",
+        actions: [
+          { name: "edit", l10nId: "addreses-edit-address-button-label" },
+          { name: "remove" },
+        ],
       },
     ],
   },
@@ -976,6 +970,13 @@ SettingGroupManager.registerGroups({
       {
         id: "passports-list",
         control: "setting-list",
+        headerL10nId: "passports-list-header",
+        emptyStateL10nId: "passports-no-passports-stored-message",
+        addActionL10nId: "autofill-passports-add-button",
+        actions: [
+          { name: "edit", l10nId: "passports-edit-passport-button-label" },
+          { name: "remove" },
+        ],
       },
     ],
   },

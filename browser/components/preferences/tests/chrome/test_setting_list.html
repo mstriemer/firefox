@@ -35,7 +35,7 @@
       const HEADER_L10N_ID = "setting-list-test-header";
       const EMPTY_L10N_ID = "setting-list-test-empty";
       const ADD_L10N_ID = "setting-list-test-add";
-      // The shared remove label the component supplies for `removable` lists.
+      // The shared remove label the component supplies for a "remove" action.
       const REMOVE_L10N_ID = "setting-list-remove-button";
 
       /**
@@ -52,8 +52,15 @@
         return setting;
       }
 
-      async function renderList(id) {
-        let config = { items: [{ id, control: "setting-list" }] };
+      /**
+       * @param {string} id The ListSetting's id.
+       * @param {object} [listConfig] The presentation the config tree declares
+       *   for this list, eg. its actions and its header.
+       */
+      async function renderList(id, listConfig = {}) {
+        let config = {
+          items: [{ id, control: "setting-list", ...listConfig }],
+        };
         let result = await testHelpers.renderTemplate(html`
           <setting-group
             .config=${config}
@@ -115,15 +122,18 @@
         await addListSetting(
           class extends Preferences.ListSetting {
             static id = "list-rows";
-            static headerL10nId = HEADER_L10N_ID;
-            static removable = true;
-            static actions = [{ name: "edit", l10nId: "setting-list-edit" }];
             async getItems() {
               return ITEMS;
             }
           }
         );
-        let list = await renderList("list-rows");
+        let list = await renderList("list-rows", {
+          headerL10nId: HEADER_L10N_ID,
+          actions: [
+            { name: "edit", l10nId: "setting-list-edit" },
+            { name: "remove" },
+          ],
+        });
 
         is(list.groupEl.localName, "moz-box-group", "Rows go in a box group");
         is(list.groupEl.type, "list", "The group is a list");
@@ -155,18 +165,22 @@
         );
 
         let actions = [...first.querySelectorAll(".setting-list-action")];
-        is(actions.length, 2, "The declared action plus remove");
+        is(actions.length, 2, "One button per declared action");
         is(
           actions[0].dataset.action,
           "edit",
           "The declared action comes first"
         );
-        is(actions[1].dataset.action, "remove", "Remove is always last");
+        is(
+          actions[1].dataset.action,
+          "remove",
+          "The actions render in the order the config declares"
+        );
         is(actions[1].dataset.key, "one", "The action carries the row's key");
         is(
           actions[1].dataset.l10nId,
           REMOVE_L10N_ID,
-          "Remove uses the shared label"
+          "remove falls back to the shared label"
         );
         is(
           actions[0].iconSrc,
@@ -193,14 +207,15 @@
         await addListSetting(
           class extends Preferences.ListSetting {
             static id = "list-empty";
-            static headerL10nId = HEADER_L10N_ID;
-            static emptyStateL10nId = EMPTY_L10N_ID;
             async getItems() {
               return [];
             }
           }
         );
-        let list = await renderList("list-empty");
+        let list = await renderList("list-empty", {
+          headerL10nId: HEADER_L10N_ID,
+          emptyStateL10nId: EMPTY_L10N_ID,
+        });
 
         is(list.itemEls.length, 0, "No rows");
         ok(list.headerEl, "The header still renders when empty");
@@ -219,16 +234,6 @@
         await addListSetting(
           class extends Preferences.ListSetting {
             static id = "list-actions";
-            static removable = true;
-            static addActionL10nId = ADD_L10N_ID;
-            static actions = [
-              { name: "edit", l10nId: "setting-list-edit" },
-              {
-                name: "duplicate",
-                l10nId: "setting-list-duplicate",
-                iconSrc: "chrome://global/skin/icons/edit-copy.svg",
-              },
-            ];
             async getItems() {
               return [{ key: "abc", label: "A row" }];
             }
@@ -246,7 +251,18 @@
             }
           }
         );
-        let list = await renderList("list-actions");
+        let list = await renderList("list-actions", {
+          addActionL10nId: ADD_L10N_ID,
+          actions: [
+            { name: "edit", l10nId: "setting-list-edit" },
+            {
+              name: "duplicate",
+              l10nId: "setting-list-duplicate",
+              iconSrc: "chrome://global/skin/icons/edit-copy.svg",
+            },
+            { name: "remove" },
+          ],
+        });
         let [edit, duplicate, remove] = list.actionEls;
 
         synthesizeMouseAtCenter(remove, {});
@@ -291,13 +307,14 @@
         let setting = await addListSetting(
           class extends Preferences.ListSetting {
             static id = "list-change";
-            static emptyStateL10nId = EMPTY_L10N_ID;
             async getItems() {
               return items;
             }
           }
         );
-        let list = await renderList("list-change");
+        let list = await renderList("list-change", {
+          emptyStateL10nId: EMPTY_L10N_ID,
+        });
         is(list.itemEls.length, 1, "One row initially");
 
         // This is what an out-of-band add, from a dialog or another window,
@@ -329,8 +346,6 @@
         await addListSetting(
           class extends Preferences.ListSetting {
             static id = "list-per-row";
-            static removable = true;
-            static actions = [{ name: "edit", l10nId: "setting-list-edit" }];
             async getItems() {
               return [
                 { key: "one", label: "Default actions" },
@@ -348,22 +363,23 @@
             }
           }
         );
-        let list = await renderList("list-per-row");
+        let list = await renderList("list-per-row", {
+          actions: [
+            { name: "edit", l10nId: "setting-list-edit" },
+            { name: "remove" },
+          ],
+        });
         let [first, second, third] = list.itemEls;
 
         is(
           first.querySelectorAll(".setting-list-action").length,
           2,
-          "The first row gets the declared actions plus remove"
+          "The first row gets the actions the config declares"
         );
-        let secondActions = [
-          ...second.querySelectorAll(".setting-list-action"),
-        ];
-        is(secondActions.length, 1, "A row can opt out of declared actions");
         is(
-          secondActions[0].dataset.action,
-          "remove",
-          "Opting out keeps remove, which is a property of the list"
+          second.querySelectorAll(".setting-list-action").length,
+          0,
+          "A row can replace the declared actions, including with none"
         );
         ok(
           third.querySelector(".setting-list-action").disabled,
@@ -433,8 +449,6 @@
         let setting = await addListSetting(
           class extends Preferences.ListSetting {
             static id = "list-disabled";
-            static removable = true;
-            static addActionL10nId = ADD_L10N_ID;
             async getItems() {
               return [{ key: "one", label: "A row" }];
             }
@@ -443,7 +457,10 @@
             }
           }
         );
-        let list = await renderList("list-disabled");
+        let list = await renderList("list-disabled", {
+          addActionL10nId: ADD_L10N_ID,
+          actions: [{ name: "remove" }],
+        });
         ok(list.disabled, "The list is disabled");
         ok(
           list.actionEls[0].disabled,
@@ -467,17 +484,20 @@
         let setting = await addListSetting(
           class extends Preferences.ListSetting {
             static id = "list-add-disabled";
-            static removable = true;
-            static addActionL10nId = ADD_L10N_ID;
             async getItems() {
               return [{ key: "one", label: "A row" }];
             }
-            async addDisabled() {
-              return addDisabled;
+            // A list's dynamic state reaches its config the same way any other
+            // AsyncSetting's does.
+            async getControlConfig() {
+              return { addDisabled };
             }
           }
         );
-        let list = await renderList("list-add-disabled");
+        let list = await renderList("list-add-disabled", {
+          addActionL10nId: ADD_L10N_ID,
+          actions: [{ name: "remove" }],
+        });
 
         ok(list.addEl.disabled, "The add button is disabled");
         ok(
