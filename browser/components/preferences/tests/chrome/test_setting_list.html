@@ -91,6 +91,9 @@
                 "setting-list-duplicate",
                 "setting-list-templated-row",
                 "setting-list-row-description",
+                "setting-list-set-handler",
+                "setting-list-handler-open",
+                "setting-list-handler-save",
               ]
                 .map(id => `${id} =\n .label = ${id}`)
                 .join("\n"),
@@ -347,6 +350,60 @@
           handled,
           [["edit", "abc"]],
           "A list can take over the dispatch for action names it generates"
+        );
+      });
+
+      add_task(async function testValueAction() {
+        let picked = [];
+        await addListSetting(
+          class extends Preferences.ListSetting {
+            static id = "list-value-action";
+            async getItems() {
+              return [
+                {
+                  key: "application/pdf",
+                  label: "PDF",
+                  // The choices differ per row, so this action comes from the
+                  // row rather than the config.
+                  actions: [
+                    {
+                      name: "setHandler",
+                      control: "moz-select",
+                      l10nId: "setting-list-set-handler",
+                      value: "save",
+                      options: [
+                        { value: "open", l10nId: "setting-list-handler-open" },
+                        { value: "save", l10nId: "setting-list-handler-save" },
+                      ],
+                    },
+                  ],
+                },
+              ];
+            }
+            onSetHandler(key, value) {
+              picked.push([key, value]);
+            }
+          }
+        );
+        let list = await renderList("list-value-action");
+        let [select] = list.actionEls;
+        await select.updateComplete;
+
+        is(select.localName, "moz-select", "The action rendered its control");
+        is(select.slot, "actions", "The control goes in the actions slot");
+        is(
+          select.querySelectorAll("moz-option").length,
+          2,
+          "The action's options are rendered"
+        );
+        is(select.value, "save", "The row's value is selected");
+
+        select.value = "open";
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+        isDeeply(
+          picked,
+          [["application/pdf", "open"]],
+          "onSetHandler got the row's key and the chosen value"
         );
       });
 

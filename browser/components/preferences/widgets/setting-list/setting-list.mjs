@@ -7,6 +7,8 @@ import {
   ifDefined,
   nothing,
   repeat,
+  staticHtml,
+  unsafeStatic,
 } from "chrome://global/content/vendor/lit.all.mjs";
 import { SettingElement } from "chrome://browser/content/preferences/widgets/setting-element.mjs";
 
@@ -18,16 +20,38 @@ import { SettingElement } from "chrome://browser/content/preferences/widgets/set
  */
 
 /**
- * An action button rendered at the end of a list row, or above the list in the
- * case of "add". The name is passed back to the {@link ListSetting} with the
- * row's key, see {@link ListSetting.onListAction}.
+ * One of the choices a value producing action offers, eg. the handlers a file
+ * type can be opened with.
+ *
+ * @typedef {object} ListActionOption
+ * @property {string} value Reported back to the {@link ListSetting} when picked.
+ * @property {string} [label] Raw, unlocalized label.
+ * @property {string} [l10nId] Use instead of `label` for a localized choice.
+ * @property {string} [iconSrc]
+ */
+
+/**
+ * An action rendered at the end of a list row, or above the list in the case of
+ * "add". The name is passed back to the {@link ListSetting} with the row's key,
+ * see {@link ListSetting.onListAction}.
+ *
+ * An action is a button unless it declares a `control`, which is how a row
+ * offers a choice rather than a command: the control's value is reported
+ * alongside the row's key, so `{ name: "setHandler", control: "moz-select" }`
+ * calls `onSetHandler(key, value)`. The choices generally differ per row, so
+ * a value producing action usually comes from the row's own `actions` rather
+ * than the ones the config declares for the whole list.
  *
  * @typedef {object} ListAction
  * @property {string} name The action to perform, passed back with the row's key.
- * @property {string} [l10nId] The button's label, generally an `.aria-label`.
+ * @property {string} [l10nId] The control's label, generally an `.aria-label`.
  *   Defaults to a shared label for the well known actions.
  * @property {string} [iconSrc] Defaults to the standard icon for the well
  *   known actions.
+ * @property {string} [control] The element to render, defaults to "moz-button".
+ * @property {any} [value] The current value, for a control that has one.
+ * @property {ListActionOption[]} [options] The choices, for a control that
+ *   takes them. Rendered as moz-option, so this is for "moz-select".
  */
 
 /**
@@ -190,6 +214,20 @@ export class SettingList extends SettingElement {
   }
 
   /**
+   * @param {Event} event
+   */
+  onActionChange(event) {
+    let control = /** @type {HTMLElement & { value: any }} */ (
+      event.currentTarget
+    );
+    this.setting.listAction(
+      control.dataset.action,
+      control.dataset.key,
+      control.value
+    );
+  }
+
+  /**
    * @param {SettingListConfig} config
    * @returns {TemplateResult | typeof nothing}
    */
@@ -236,11 +274,52 @@ export class SettingList extends SettingElement {
   }
 
   /**
+   * @param {ListActionOption} option
+   * @returns {TemplateResult}
+   */
+  optionTemplate(option) {
+    return html`<moz-option
+      value=${option.value}
+      label=${ifDefined(option.label)}
+      data-l10n-id=${ifDefined(option.l10nId)}
+      .iconSrc=${option.iconSrc ?? ""}
+    ></moz-option>`;
+  }
+
+  /**
+   * An action that reports a value rather than a command. It goes back through
+   * the same channel as a button, so the ListSetting only sees one kind of
+   * action.
+   *
+   * @param {SettingListItem} item
+   * @param {ListAction} action
+   * @returns {TemplateResult}
+   */
+  valueActionTemplate(item, action) {
+    let tag = unsafeStatic(action.control);
+    let options = action.options ?? [];
+    return staticHtml`<${tag}
+      slot="actions"
+      class="setting-list-action"
+      data-action=${action.name}
+      data-key=${item.key}
+      data-l10n-id=${ifDefined(action.l10nId)}
+      .value=${action.value ?? ""}
+      .iconSrc=${action.iconSrc ?? ""}
+      ?disabled=${this.disabled || item.disabled}
+      @change=${this.onActionChange}
+    >${options.map(option => this.optionTemplate(option))}</${tag}>`;
+  }
+
+  /**
    * @param {SettingListItem} item
    * @param {ListAction} action
    * @returns {TemplateResult}
    */
   actionTemplate(item, action) {
+    if (action.control && action.control != "moz-button") {
+      return this.valueActionTemplate(item, action);
+    }
     let defaults = ACTION_DEFAULTS[action.name] ?? {};
     return html`<moz-button
       slot="actions"

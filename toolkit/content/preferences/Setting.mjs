@@ -132,7 +132,9 @@ import { Preferences } from "chrome://global/content/preferences/Preferences.mjs
 /**
  * @callback SettingOnListActionCallback
  * @param {string} action - The name of the activated action, eg. "remove"
- * @param {string} key - The key of the row the action came from
+ * @param {string} [key] - The key of the row the action came from
+ * @param {any} [value] - The value of the action's control, for an action that
+ *    offers a choice rather than a command
  * @returns {void}
  */
 
@@ -411,10 +413,11 @@ export class Setting extends EventEmitter {
 
   /**
    * @param {string} action
-   * @param {string} key
+   * @param {string} [key]
+   * @param {any} [value]
    */
-  listAction(action, key) {
-    this.config.onListAction?.(action, key);
+  listAction(action, key, value) {
+    this.config.onListAction?.(action, key, value);
   }
 
   /**

@@ -198,21 +198,22 @@ export class ListSetting extends AsyncSetting {
     return [];
   }
 
-  // TODO: Downloads has a dropdown, how is that handled (input event vs click)
   /**
    * Handle the user activating one of the actions the config declared, or the
    * add button. The default implementation routes the action to its
    * `on<Action>` method, so an action named "setAllowed" calls
-   * `onSetAllowed(key)`. Override this when the action names aren't known
-   * ahead of time.
+   * `onSetAllowed(key, value)`. Override this when the action names aren't
+   * known ahead of time.
    *
    * There are no `onAdd`/`onEdit`/`onRemove` defaults on purpose: declaring an
    * action the list doesn't handle is a mistake worth hearing about.
    *
    * @param {string} action The name of the action.
    * @param {string} [key] The row's key, undefined for the add button.
+   * @param {any} [value] The action's value, for an action that offers a
+   *   choice rather than a command.
    */
-  onListAction(action, key) {
+  onListAction(action, key, value) {
     let method = `on${action[0].toUpperCase()}${action.slice(1)}`;
     if (typeof this[method] != "function") {
       console.error(
@@ -220,7 +221,7 @@ export class ListSetting extends AsyncSetting {
       );
       return;
     }
-    this[method](key);
+    this[method](key, value);
   }
 }
 
@@ -376,10 +377,11 @@ export class AsyncSettingHandler {
   /**
    * @param {string} action
    * @param {string} [key]
+   * @param {any} [value]
    */
-  onListAction(action, key) {
+  onListAction(action, key, value) {
     let listSetting = /** @type {ListSetting} */ (this.asyncSetting);
-    listSetting.onListAction(action, key);
+    listSetting.onListAction(action, key, value);
   }
 
   /**
