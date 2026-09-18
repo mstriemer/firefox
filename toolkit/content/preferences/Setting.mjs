@@ -10,7 +10,6 @@ import { Preferences } from "chrome://global/content/preferences/Preferences.mjs
 
 /**
  * @import { type Preference } from "chrome://global/content/preferences/Preference.mjs"
- * @import { SettingListConfig, SettingListItem } from "chrome://global/content/preferences/AsyncSetting.mjs"
  * @import { SettingControlConfig } from "chrome://browser/content/preferences/widgets/setting-control.mjs"
  * @import { ExtensionSettingsStore } from "resource://gre/modules/ExtensionSettingsStore.sys.mjs"
  * @import { AddonManager } from "resource://gre/modules/AddonManager.sys.mjs"
@@ -124,12 +123,6 @@ import { Preferences } from "chrome://global/content/preferences/Preferences.mjs
  */
 
 /**
- * @callback SettingGetItemsCallback
- * @returns {SettingListItem[] | undefined} The rows to render for a list
- *   setting, or undefined if this setting isn't a list.
- */
-
-/**
  * @callback SettingOnListActionCallback
  * @param {string} action - The name of the activated action, eg. "remove"
  * @param {string} [key] - The key of the row the action came from
@@ -177,8 +170,6 @@ import { Preferences } from "chrome://global/content/preferences/Preferences.mjs
  * @property {SettingOnUserReorderCallback} [onUserReorder] - A function that will be called when items in a
  *    reorderable list have been reordered. This should be used to update the underlying data when the user
  *    reorders items, such as updating preference values.
- * @property {SettingGetItemsCallback} [getItems] - See {@link SettingGetItemsCallback}. Provided by
- *    {@link ListSetting}, list rows are generated data rather than authored config.
  * @property {SettingOnListActionCallback} [onListAction] - See {@link SettingOnListActionCallback}.
  */
 
@@ -400,15 +391,6 @@ export class Setting extends EventEmitter {
     if (this.config.onUserReorder) {
       this.config.onUserReorder(event, this.deps, this);
     }
-  }
-
-  /**
-   * The rows of a list setting, undefined for anything that isn't a list.
-   *
-   * @type {SettingListItem[] | undefined}
-   */
-  get items() {
-    return this.config.getItems?.();
   }
 
   /**

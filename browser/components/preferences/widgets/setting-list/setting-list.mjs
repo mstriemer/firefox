@@ -392,8 +392,10 @@ export class SettingList extends SettingElement {
   }
 
   render() {
-    let items = this.setting?.items;
-    if (!items) {
+    // A list's value is its rows, so anything else here is a setting that
+    // isn't a list.
+    let items = this.setting?.value;
+    if (!Array.isArray(items)) {
       throw new ListSettingNotDefinedError(this.setting?.id);
     }
     let config = this.config ?? {};

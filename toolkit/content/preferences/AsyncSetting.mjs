@@ -175,10 +175,12 @@ export class AsyncSetting extends EventEmitter {
  * the rows are presented is declared in the {@link SettingListConfig} that
  * renders them.
  *
- * Rows come from getItems() rather than the value plumbing because a list is
- * asymmetric: a read is the whole array while a write is scoped to a single
- * row. Subclasses should call emitChange, generally from a setup() observer,
- * whenever the backing store changes so the rows are recomputed.
+ * The rows are the setting's value, so they reach the control through the same
+ * plumbing as any other AsyncSetting and a list can be another setting's dep.
+ * Writes are the asymmetric half, they are scoped to one row and arrive as
+ * actions instead of through set(). Subclasses should call emitChange,
+ * generally from a setup() observer, whenever the backing store changes so the
+ * rows are recomputed.
  *
  * Every action the config declares is routed to an `on<Action>` method, so a
  * list that offers `[{ name: "edit" }, { name: "remove" }]` implements
@@ -188,6 +190,9 @@ export class AsyncSetting extends EventEmitter {
  * the mutation they lead to.
  */
 export class ListSetting extends AsyncSetting {
+  /** @type {SettingListItem[]} */
+  defaultValue = [];
+
   /**
    * The rows to render.
    *
@@ -196,6 +201,15 @@ export class ListSetting extends AsyncSetting {
    */
   async getItems() {
     return [];
+  }
+
+  /**
+   * A list's value is its rows.
+   *
+   * @returns {Promise<SettingListItem[]>}
+   */
+  async get() {
+    return this.getItems();
   }
 
   /**
@@ -226,17 +240,6 @@ export class ListSetting extends AsyncSetting {
 }
 
 /**
- * @param {typeof AsyncSetting} AsyncSettingClass
- * @returns {boolean}
- */
-function isListSettingClass(AsyncSettingClass) {
-  return (
-    AsyncSettingClass == ListSetting ||
-    ListSetting.isPrototypeOf(AsyncSettingClass)
-  );
-}
-
-/**
  * Wraps an AsyncSetting and adds caching of values to provide a synchronous
  * API to the Setting class.
  *
@@ -248,9 +251,6 @@ export class AsyncSettingHandler {
 
   /** @type {Function} */
   #emitChange;
-
-  /** @type {boolean} */
-  #isList;
 
   /** @type {string} */
   pref;
@@ -281,10 +281,6 @@ export class AsyncSettingHandler {
     this.cachedDisabled = this.asyncSetting.defaultDisabled;
     this.cachedVisible = this.asyncSetting.defaultVisible;
     this.cachedGetControlConfig = this.asyncSetting.defaultGetControlConfig;
-    /** @type {SettingListItem[] | undefined} */
-    this.cachedItems = undefined;
-
-    this.#isList = isListSettingClass(AsyncSettingClass);
 
     // Listen for change events from the async setting
     this.asyncSetting.on("change", () => this.refresh());
@@ -308,19 +304,16 @@ export class AsyncSettingHandler {
    */
   async refresh() {
     this.asyncSetting.beforeRefresh();
-    let listSetting = /** @type {ListSetting} */ (this.asyncSetting);
     [
       this.cachedValue,
       this.cachedDisabled,
       this.cachedVisible,
       this.cachedGetControlConfig,
-      this.cachedItems,
     ] = await Promise.all([
       this.asyncSetting.get(),
       this.asyncSetting.disabled(),
       this.asyncSetting.visible(),
       this.asyncSetting.getControlConfig(),
-      this.#isList ? listSetting.getItems() : undefined,
     ]);
     this.#emitChange();
   }
@@ -363,15 +356,6 @@ export class AsyncSettingHandler {
       ...config,
       ...this.cachedGetControlConfig,
     };
-  }
-
-  // TODO: These are really only application to ListSetting, they shouldn't be
-  // on a generic AsyncSettingHandler
-  /**
-   * @returns {SettingListItem[] | undefined}
-   */
-  getItems() {
-    return this.cachedItems;
   }
 
   /**
