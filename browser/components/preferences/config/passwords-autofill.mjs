@@ -484,20 +484,20 @@ Preferences.addSetting(
         }));
     }
 
-    async addItem() {
+    async onAdd() {
       window.gSubDialog.open(
         "chrome://formautofill/content/editCreditCard.xhtml"
       );
     }
 
-    async editItem(guid) {
+    async onEdit(guid) {
       lazy.FormAutofillPreferences.prototype.openEditCreditCardDialog(
         guid,
         window
       );
     }
 
-    async removeItem(guid) {
+    async onRemove(guid) {
       lazy.FormAutofillPreferences.prototype.openRemovePaymentDialog(
         guid,
         ...(await removePromptArgs([
@@ -540,21 +540,21 @@ Preferences.addSetting(
         });
     }
 
-    async addItem() {
+    async onAdd() {
       lazy.FormAutofillPreferences.prototype.openEditAddressDialog(
         undefined,
         window
       );
     }
 
-    async editItem(guid) {
+    async onEdit(guid) {
       lazy.FormAutofillPreferences.prototype.openEditAddressDialog(
         guid,
         window
       );
     }
 
-    async removeItem(guid) {
+    async onRemove(guid) {
       lazy.FormAutofillPreferences.prototype.openRemoveAddressDialog(
         guid,
         ...(await removePromptArgs([
@@ -614,21 +614,21 @@ Preferences.addSetting(
       );
     }
 
-    async addItem() {
+    async onAdd() {
       lazy.FormAutofillPreferences.prototype.openEditPassportDialog(
         undefined,
         window
       );
     }
 
-    async editItem(guid) {
+    async onEdit(guid) {
       lazy.FormAutofillPreferences.prototype.openEditPassportDialog(
         guid,
         window
       );
     }
 
-    async removeItem(guid) {
+    async onRemove(guid) {
       lazy.FormAutofillPreferences.prototype.openRemovePassportDialog(
         guid,
         ...(await removePromptArgs([

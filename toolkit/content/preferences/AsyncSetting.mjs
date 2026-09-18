@@ -179,6 +179,13 @@ export class AsyncSetting extends EventEmitter {
  * asymmetric: a read is the whole array while a write is scoped to a single
  * row. Subclasses should call emitChange, generally from a setup() observer,
  * whenever the backing store changes so the rows are recomputed.
+ *
+ * Every action the config declares is routed to an `on<Action>` method, so a
+ * list that offers `[{ name: "edit" }, { name: "remove" }]` implements
+ * `onEdit(key)` and `onRemove(key)`, and one with an add button implements
+ * `onAdd()`. These are handlers for the user activating the action, the work
+ * itself generally happens in a dialog, which is why they aren't named after
+ * the mutation they lead to.
  */
 export class ListSetting extends AsyncSetting {
   /**
@@ -191,43 +198,30 @@ export class ListSetting extends AsyncSetting {
     return [];
   }
 
-  // TODO: should {add,edit,remove}Item be start{Add,Edit,Remove}Item? They
-  // don't do the actual work in this API.
-  /**
-   * Add a new record, generally by opening a dialog.
-   *
-   * @returns {Promise<void>}
-   */
-  async addItem() {}
-
-  /**
-   * Edit the record behind a row, generally by opening a dialog.
-   *
-   * @param {string} key
-   * @returns {Promise<void>}
-   */
-  // eslint-disable-next-line no-unused-vars
-  async editItem(key) {}
-
-  /**
-   * Remove the record behind a row. Writes apply immediately, there is no
-   * staging or commit step.
-   *
-   * @param {string} key
-   * @returns {Promise<void>}
-   */
-  // eslint-disable-next-line no-unused-vars
-  async removeItem(key) {}
-
   // TODO: Downloads has a dropdown, how is that handled (input event vs click)
   /**
-   * Handle an action other than "edit" or "remove".
+   * Handle the user activating one of the actions the config declared, or the
+   * add button. The default implementation routes the action to its
+   * `on<Action>` method, so an action named "setAllowed" calls
+   * `onSetAllowed(key)`. Override this when the action names aren't known
+   * ahead of time.
    *
-   * @param {string} action
-   * @param {string} key
+   * There are no `onAdd`/`onEdit`/`onRemove` defaults on purpose: declaring an
+   * action the list doesn't handle is a mistake worth hearing about.
+   *
+   * @param {string} action The name of the action.
+   * @param {string} [key] The row's key, undefined for the add button.
    */
-  // eslint-disable-next-line no-unused-vars
-  onListAction(action, key) {}
+  onListAction(action, key) {
+    let method = `on${action[0].toUpperCase()}${action.slice(1)}`;
+    if (typeof this[method] != "function") {
+      console.error(
+        `The "${action}" action on ${this.constructor.id} needs a ${method}() method`
+      );
+      return;
+    }
+    this[method](key);
+  }
 }
 
 /**
@@ -381,23 +375,11 @@ export class AsyncSettingHandler {
 
   /**
    * @param {string} action
-   * @param {string} key
+   * @param {string} [key]
    */
   onListAction(action, key) {
     let listSetting = /** @type {ListSetting} */ (this.asyncSetting);
-    switch (action) {
-      case "add":
-        listSetting.addItem();
-        break;
-      case "edit":
-        listSetting.editItem(key);
-        break;
-      case "remove":
-        listSetting.removeItem(key);
-        break;
-      default:
-        listSetting.onListAction(action, key);
-    }
+    listSetting.onListAction(action, key);
   }
 
   /**

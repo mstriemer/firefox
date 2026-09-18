@@ -260,17 +260,17 @@
             async getItems() {
               return [{ key: "abc", label: "A row" }];
             }
-            async addItem() {
+            async onAdd() {
               added.push("add");
             }
-            async removeItem(key) {
+            async onRemove(key) {
               removed.push(key);
             }
-            async editItem(key) {
+            async onEdit(key) {
               edited.push(key);
             }
-            onListAction(action, key) {
-              custom.push([action, key]);
+            async onDuplicate(key) {
+              custom.push(["duplicate", key]);
             }
           }
         );
@@ -289,16 +289,16 @@
         let [edit, duplicate, remove] = list.actionEls;
 
         synthesizeMouseAtCenter(remove, {});
-        isDeeply(removed, ["abc"], "removeItem got the row's key");
+        isDeeply(removed, ["abc"], "onRemove got the row's key");
 
         synthesizeMouseAtCenter(edit, {});
-        isDeeply(edited, ["abc"], "editItem got the row's key");
+        isDeeply(edited, ["abc"], "onEdit got the row's key");
 
         synthesizeMouseAtCenter(duplicate, {});
         isDeeply(
           custom,
           [["duplicate", "abc"]],
-          "An unknown action falls through to onListAction"
+          "A list's own action reaches its on<Action> method"
         );
         is(
           duplicate.iconSrc,
@@ -322,7 +322,32 @@
           "The add button sits above the list"
         );
         synthesizeMouseAtCenter(list.addEl, {});
-        isDeeply(added, ["add"], "addItem was called");
+        isDeeply(added, ["add"], "onAdd was called");
+      });
+
+      add_task(async function testOnListActionOverride() {
+        let handled = [];
+        await addListSetting(
+          class extends Preferences.ListSetting {
+            static id = "list-action-override";
+            async getItems() {
+              return [{ key: "abc", label: "A row" }];
+            }
+            onListAction(action, key) {
+              handled.push([action, key]);
+            }
+          }
+        );
+        let list = await renderList("list-action-override", {
+          actions: [{ name: "edit", l10nId: "setting-list-edit" }],
+        });
+
+        synthesizeMouseAtCenter(list.actionEls[0], {});
+        isDeeply(
+          handled,
+          [["edit", "abc"]],
+          "A list can take over the dispatch for action names it generates"
+        );
       });
 
       add_task(async function testRowsUpdateOnChange() {
