@@ -340,6 +340,9 @@
       "chrome://browser/content/preferences/widgets/setting-group.mjs": [
         "../../../browser/components/preferences/widgets/setting-group/setting-group.mjs"
       ],
+      "chrome://browser/content/preferences/widgets/setting-list.mjs": [
+        "../../../browser/components/preferences/widgets/setting-list/setting-list.mjs"
+      ],
       "chrome://browser/content/preferences/widgets/setting-pane.mjs": [
         "../../../browser/components/preferences/widgets/setting-pane/setting-pane.mjs"
       ],
@@ -753,6 +756,9 @@
       ],
       "chrome://global/content/preferences/AsyncSetting.mjs": [
         "../../../toolkit/content/preferences/AsyncSetting.mjs"
+      ],
+      "chrome://global/content/preferences/ListSetting.mjs": [
+        "../../../toolkit/content/preferences/ListSetting.mjs"
       ],
       "chrome://global/content/preferences/Preference.mjs": [
         "../../../toolkit/content/preferences/Preference.mjs"
@@ -1563,9 +1569,6 @@
       ],
       "resource:///modules/FirefoxProfileMigrator.sys.mjs": [
         "../../../browser/components/migration/FirefoxProfileMigrator.sys.mjs"
-      ],
-      "resource:///modules/GenAI.sys.mjs": [
-        "../../../browser/components/genai/GenAI.sys.mjs"
       ],
       "resource:///modules/HistoryController.sys.mjs": [
         "../../../browser/components/firefoxview/HistoryController.sys.mjs"
