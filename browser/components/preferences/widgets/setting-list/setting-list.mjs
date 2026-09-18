@@ -31,6 +31,17 @@ import { SettingElement } from "chrome://browser/content/preferences/widgets/set
  */
 
 /**
+ * The presentation every row shares. A row's own {@link SettingListItem} only
+ * carries data, anything that is the same for every row is declared here.
+ *
+ * @typedef {object} SettingListItemConfig
+ * @property {string} [l10nId] Localize the whole row from one message, with
+ *   the row's `l10nArgs` filling it in. For templated rows, eg. a masked card
+ *   number that has to be formatted inside a localized string.
+ * @property {string} [iconSrc] The icon for every row, unless it overrides it.
+ */
+
+/**
  * The authored configuration of a `setting-list` control. Rows are generated
  * data and come from the {@link ListSetting}, everything the list needs to
  * present them is declared here alongside the rest of the config tree.
@@ -38,6 +49,7 @@ import { SettingElement } from "chrome://browser/content/preferences/widgets/set
  * @typedef {object} SettingListConfigExtensions
  * @property {ListAction[]} [actions] The actions offered on every row, in
  *   render order, unless a row overrides them.
+ * @property {SettingListItemConfig} [item] The presentation every row shares.
  * @property {string} [headerL10nId] An optional header row.
  * @property {string} [emptyStateL10nId] Shown in place of the rows when there
  *   are none.
@@ -277,10 +289,11 @@ export class SettingList extends SettingElement {
 
   /**
    * @param {SettingListItem} item
-   * @param {ListAction[]} actions
+   * @param {SettingListConfig} config
    * @returns {TemplateResult}
    */
-  itemTemplate(item, actions) {
+  itemTemplate(item, config) {
+    let itemConfig = config.item ?? {};
     return html`<moz-box-item
       class="setting-list-item"
       data-key=${item.key}
@@ -288,12 +301,14 @@ export class SettingList extends SettingElement {
       description=${ifDefined(
         typeof item.description == "string" ? item.description : undefined
       )}
-      data-l10n-id=${ifDefined(item.l10nId)}
+      data-l10n-id=${ifDefined(item.l10nId ?? itemConfig.l10nId)}
       data-l10n-args=${ifDefined(this.#l10nArgs(item.l10nArgs))}
-      .iconSrc=${item.iconSrc ?? ""}
+      .iconSrc=${item.iconSrc ?? itemConfig.iconSrc ?? ""}
     >
       ${this.descriptionTemplate(item)}
-      ${actions.map(action => this.actionTemplate(item, action))}
+      ${this.rowActions(item, config).map(action =>
+        this.actionTemplate(item, action)
+      )}
     </moz-box-item>`;
   }
 
@@ -310,7 +325,7 @@ export class SettingList extends SettingElement {
           ? repeat(
               items,
               item => item.key,
-              item => this.itemTemplate(item, this.rowActions(item, config))
+              item => this.itemTemplate(item, config)
             )
           : this.emptyStateTemplate(config.emptyStateL10nId)}
       </moz-box-group>`;

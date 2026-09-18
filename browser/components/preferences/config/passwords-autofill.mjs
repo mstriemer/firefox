@@ -465,33 +465,23 @@ Preferences.addSetting(
     async getItems() {
       await lazy.FormAutofillPreferences.prototype.initializePaymentsStorage();
       let records = await lazy.formAutofillStorage.creditCards.getAll();
-      return (
-        records
-          .sort((a, b) =>
-            (a.timeLastUsed || a.timeLastModified) <
-            (b.timeLastUsed || b.timeLastModified)
-              ? 1
-              : -1
-          )
-          // TODO: It's unfortunate this has the l10nId and iconSrc stuff, but it
-          // isn't uncommon as it replaces getControlConfig. Is there some other
-          // pattern that could allow this ListSetting to return raw data and format
-          // it for the setting-list control later?
-          .map(record => ({
-            key: record.guid,
-            // The masked number has to be formatted inside a localized string,
-            // so this row is templated rather than carrying a raw label.
-            l10nId: "payment-moz-box-item",
-            l10nArgs: {
-              cardNumber: record["cc-number"].replace(/^(\*+)(\d+)$/, "$1 $2"),
-              expDate: (record["cc-exp"] ?? "").replace(
-                /^(\d{4})-(\d{2})$/,
-                "$2/$1"
-              ),
-            },
-            iconSrc: "chrome://browser/skin/payment-methods-16.svg",
-          }))
-      );
+      return records
+        .sort((a, b) =>
+          (a.timeLastUsed || a.timeLastModified) <
+          (b.timeLastUsed || b.timeLastModified)
+            ? 1
+            : -1
+        )
+        .map(record => ({
+          key: record.guid,
+          l10nArgs: {
+            cardNumber: record["cc-number"].replace(/^(\*+)(\d+)$/, "$1 $2"),
+            expDate: (record["cc-exp"] ?? "").replace(
+              /^(\d{4})-(\d{2})$/,
+              "$2/$1"
+            ),
+          },
+        }));
     }
 
     async addItem() {
@@ -546,7 +536,6 @@ Preferences.addSetting(
             key: record.guid,
             label: label || addressFormatted,
             description: label ? addressFormatted : undefined,
-            iconSrc: "chrome://browser/skin/notification-icons/geo.svg",
           };
         });
     }
@@ -612,7 +601,6 @@ Preferences.addSetting(
             key: record.guid,
             label: record["passport-name"] || maskedNumber,
             description: [maskedNumber, expiry].filter(Boolean).join(", "),
-            iconSrc: "chrome://browser/skin/personal-info-16.svg",
           };
         });
     }
@@ -940,6 +928,12 @@ SettingGroupManager.registerGroups({
       {
         id: "payments-list",
         control: "setting-list",
+        // A card's masked number has to be formatted inside a localized
+        // string, so every row is templated rather than carrying a raw label.
+        item: {
+          l10nId: "payment-moz-box-item",
+          iconSrc: "chrome://browser/skin/payment-methods-16.svg",
+        },
         headerL10nId: "payments-list-header",
         emptyStateL10nId: "payments-no-payments-stored-message",
         addActionL10nId: "autofill-payment-methods-add-button",
@@ -955,6 +949,7 @@ SettingGroupManager.registerGroups({
       {
         id: "addresses-list",
         control: "setting-list",
+        item: { iconSrc: "chrome://browser/skin/notification-icons/geo.svg" },
         headerL10nId: "addresses-list-header",
         emptyStateL10nId: "addresses-no-addresses-stored-message",
         addActionL10nId: "autofill-addresses-add-button",
@@ -970,6 +965,7 @@ SettingGroupManager.registerGroups({
       {
         id: "passports-list",
         control: "setting-list",
+        item: { iconSrc: "chrome://browser/skin/personal-info-16.svg" },
         headerL10nId: "passports-list-header",
         emptyStateL10nId: "passports-no-passports-stored-message",
         addActionL10nId: "autofill-passports-add-button",

@@ -203,6 +203,29 @@
         is(second.slot, "1", "The group assigned the second row a list slot");
       });
 
+      add_task(async function testSharedRowPresentation() {
+        const SHARED_ICON = "chrome://global/skin/icons/info.svg";
+        const ROW_ICON = "chrome://global/skin/icons/edit.svg";
+        await addListSetting(
+          class extends Preferences.ListSetting {
+            static id = "list-shared-presentation";
+            async getItems() {
+              return [
+                { key: "one", label: "Shared icon" },
+                { key: "two", label: "Own icon", iconSrc: ROW_ICON },
+              ];
+            }
+          }
+        );
+        let list = await renderList("list-shared-presentation", {
+          item: { iconSrc: SHARED_ICON },
+        });
+        let [shared, own] = list.itemEls;
+
+        is(shared.iconSrc, SHARED_ICON, "The config supplies the row's icon");
+        is(own.iconSrc, ROW_ICON, "A row can still bring its own icon");
+      });
+
       add_task(async function testEmptyState() {
         await addListSetting(
           class extends Preferences.ListSetting {
@@ -399,7 +422,6 @@
               return [
                 {
                   key: "one",
-                  l10nId: "setting-list-templated-row",
                   l10nArgs: { number: "**** 1234" },
                 },
                 {
@@ -414,7 +436,9 @@
             }
           }
         );
-        let list = await renderList("list-templated");
+        let list = await renderList("list-templated", {
+          item: { l10nId: "setting-list-templated-row" },
+        });
         let [templated, partial] = list.itemEls;
 
         is(
@@ -429,7 +453,11 @@
         );
         ok(!templated.hasAttribute("label"), "No raw label on a templated row");
 
-        ok(!partial.dataset.l10nId, "A raw label isn't routed through Fluent");
+        is(
+          partial.dataset.l10nId,
+          "setting-list-templated-row",
+          "The shared l10nId applies to every row"
+        );
         is(partial.getAttribute("label"), "Raw label", "The raw label is set");
         let description = partial.querySelector("[slot='description']");
         is(
