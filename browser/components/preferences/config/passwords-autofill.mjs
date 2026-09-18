@@ -473,27 +473,33 @@ Preferences.addSetting(
     async getItems() {
       await lazy.FormAutofillPreferences.prototype.initializePaymentsStorage();
       let records = await lazy.formAutofillStorage.creditCards.getAll();
-      return records
-        .sort((a, b) =>
-          (a.timeLastUsed || a.timeLastModified) <
-          (b.timeLastUsed || b.timeLastModified)
-            ? 1
-            : -1
-        )
-        .map(record => ({
-          key: record.guid,
-          // The masked number has to be formatted inside a localized string,
-          // so this row is templated rather than carrying a raw label.
-          l10nId: "payment-moz-box-item",
-          l10nArgs: {
-            cardNumber: record["cc-number"].replace(/^(\*+)(\d+)$/, "$1 $2"),
-            expDate: (record["cc-exp"] ?? "").replace(
-              /^(\d{4})-(\d{2})$/,
-              "$2/$1"
-            ),
-          },
-          iconSrc: "chrome://browser/skin/payment-methods-16.svg",
-        }));
+      return (
+        records
+          .sort((a, b) =>
+            (a.timeLastUsed || a.timeLastModified) <
+            (b.timeLastUsed || b.timeLastModified)
+              ? 1
+              : -1
+          )
+          // TODO: It's unfortunate this has the l10nId and iconSrc stuff, but it
+          // isn't uncommon as it replaces getControlConfig. Is there some other
+          // pattern that could allow this ListSetting to return raw data and format
+          // it for the setting-list control later?
+          .map(record => ({
+            key: record.guid,
+            // The masked number has to be formatted inside a localized string,
+            // so this row is templated rather than carrying a raw label.
+            l10nId: "payment-moz-box-item",
+            l10nArgs: {
+              cardNumber: record["cc-number"].replace(/^(\*+)(\d+)$/, "$1 $2"),
+              expDate: (record["cc-exp"] ?? "").replace(
+                /^(\d{4})-(\d{2})$/,
+                "$2/$1"
+              ),
+            },
+            iconSrc: "chrome://browser/skin/payment-methods-16.svg",
+          }))
+      );
     }
 
     async addItem() {

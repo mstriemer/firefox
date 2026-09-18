@@ -191,6 +191,7 @@ export class AsyncSetting extends EventEmitter {
  * @property {boolean} [addDisabled]
  */
 
+// TODO: This class should go in its own ListSetting.mjs file.
 /**
  * A setting backed by a list of records that the user can manage, rendered by
  * the setting-list control.
@@ -201,6 +202,12 @@ export class AsyncSetting extends EventEmitter {
  * whenever the backing store changes so the rows are recomputed.
  */
 export class ListSetting extends AsyncSetting {
+  // TODO: The supported actions can be here, but the actions that are exposed
+  // should go in the SettingControlConfig (SettingListConfig?)
+  // TODO: Could we move actions into some mixin call like class extends
+  // ListSetting(["add", "setAllowed"]) {} which would then require the `onAdd`
+  // and `onSetAllowed` methods to be implemented? This could remove the need
+  // for `removable`
   /**
    * The actions offered on every row, unless a row overrides them. The remove
    * action isn't listed here, see {@link ListSetting.removable}.
@@ -215,6 +222,8 @@ export class ListSetting extends AsyncSetting {
    */
   static removable = false;
 
+  // TODO: The l10nIds are a concern for the SettingControlConfig (now
+  // SettingListConfig variant?), they shouldn't be here
   /**
    * Fluent id for an optional header row.
    *
@@ -258,6 +267,8 @@ export class ListSetting extends AsyncSetting {
     return false;
   }
 
+  // TODO: should {add,edit,remove}Item be start{Add,Edit,Remove}Item? They
+  // don't do the actual work in this API.
   /**
    * Add a new record, generally by opening a dialog.
    *
@@ -284,6 +295,7 @@ export class ListSetting extends AsyncSetting {
   // eslint-disable-next-line no-unused-vars
   async removeItem(key) {}
 
+  // TODO: Downloads has a dropdown, how is that handled (input event vs click)
   /**
    * Handle an action other than "edit" or "remove".
    *
@@ -457,6 +469,8 @@ export class AsyncSettingHandler {
     };
   }
 
+  // TODO: These are really only application to ListSetting, they shouldn't be
+  // on a generic AsyncSettingHandler
   /**
    * @returns {SettingListItem[]}
    */
