@@ -400,6 +400,116 @@ Preferences.addSetting({
 });
 
 /**
+ * A payment method as a row. The masked number has to be formatted inside a
+ * localized string, so the whole row is templated rather than carrying a raw
+ * label.
+ */
+class PaymentRow extends Preferences.SettingListRow {
+  get key() {
+    return this.record.guid;
+  }
+
+  get l10nId() {
+    return "payment-moz-box-item";
+  }
+
+  get l10nArgs() {
+    return {
+      cardNumber: this.record["cc-number"].replace(/^(\*+)(\d+)$/, "$1 $2"),
+      expDate: (this.record["cc-exp"] ?? "").replace(
+        /^(\d{4})-(\d{2})$/,
+        "$2/$1"
+      ),
+    };
+  }
+
+  get iconSrc() {
+    return "chrome://browser/skin/payment-methods-16.svg";
+  }
+}
+
+/**
+ * An address as a row. Whoever the address belongs to is the label when we
+ * know, which leaves the address itself as the description.
+ */
+class AddressRow extends Preferences.SettingListRow {
+  get key() {
+    return this.record.guid;
+  }
+
+  get label() {
+    return this.#name || this.#address;
+  }
+
+  get description() {
+    return this.#name ? this.#address : undefined;
+  }
+
+  get iconSrc() {
+    return "chrome://browser/skin/notification-icons/geo.svg";
+  }
+
+  get #name() {
+    let { record } = this;
+    return record.name || record.organization || record.email;
+  }
+
+  get #address() {
+    let { record } = this;
+    return [
+      record["street-address"],
+      record["address-level2"],
+      record["address-level1"],
+      record.country,
+      record["postal-code"],
+    ]
+      .filter(Boolean)
+      .join(", ");
+  }
+}
+
+/**
+ * A passport as a row, identified by its holder's name when it has one and by
+ * its masked number when it doesn't.
+ */
+class PassportRow extends Preferences.SettingListRow {
+  get key() {
+    return this.record.guid;
+  }
+
+  get label() {
+    return this.record["passport-name"] || this.#maskedNumber;
+  }
+
+  get description() {
+    return [this.#maskedNumber, this.#expiry].filter(Boolean).join(", ");
+  }
+
+  get iconSrc() {
+    return "chrome://browser/skin/personal-info-16.svg";
+  }
+
+  get #maskedNumber() {
+    let number = this.record["passport-number"];
+    return number ? "****" + number.slice(-4) : "";
+  }
+
+  get #expiry() {
+    let { record } = this;
+    let pad = (/** @type {number} */ value) => String(value).padStart(2, "0");
+    return [
+      record["passport-expiry-date-month"] &&
+        pad(record["passport-expiry-date-month"]),
+      record["passport-expiry-date-day"] &&
+        pad(record["passport-expiry-date-day"]),
+      record["passport-expiry-date-year"],
+    ]
+      .filter(Boolean)
+      .join("/");
+  }
+}
+
+/**
  * The autofill lists all mirror formAutofillStorage, so they share the observer
  * that keeps their rendered rows in sync with it. They also all gate adding new
  * records on the matching "save and fill" checkbox, while leaving existing rows
@@ -519,16 +629,7 @@ Preferences.addSetting(
             ? 1
             : -1
         )
-        .map(record => ({
-          key: record.guid,
-          l10nArgs: {
-            cardNumber: record["cc-number"].replace(/^(\*+)(\d+)$/, "$1 $2"),
-            expDate: (record["cc-exp"] ?? "").replace(
-              /^(\d{4})-(\d{2})$/,
-              "$2/$1"
-            ),
-          },
-        }));
+        .map(record => new PaymentRow(record));
     }
 
     openAddDialog() {
@@ -568,23 +669,7 @@ Preferences.addSetting(
       return addresses
         .slice()
         .reverse()
-        .map(record => {
-          let addressFormatted = [
-            record["street-address"],
-            record["address-level2"],
-            record["address-level1"],
-            record.country,
-            record["postal-code"],
-          ]
-            .filter(Boolean)
-            .join(", ");
-          let label = record.name || record.organization || record.email;
-          return {
-            key: record.guid,
-            label: label || addressFormatted,
-            description: label ? addressFormatted : undefined,
-          };
-        });
+        .map(record => new AddressRow(record));
     }
 
     openAddDialog() {
@@ -627,26 +712,7 @@ Preferences.addSetting(
       return passports
         .slice()
         .reverse()
-        .map(record => {
-          let maskedNumber = record["passport-number"]
-            ? "****" + record["passport-number"].slice(-4)
-            : "";
-          let pad = value => String(value).padStart(2, "0");
-          let expiry = [
-            record["passport-expiry-date-month"] &&
-              pad(record["passport-expiry-date-month"]),
-            record["passport-expiry-date-day"] &&
-              pad(record["passport-expiry-date-day"]),
-            record["passport-expiry-date-year"],
-          ]
-            .filter(Boolean)
-            .join("/");
-          return {
-            key: record.guid,
-            label: record["passport-name"] || maskedNumber,
-            description: [maskedNumber, expiry].filter(Boolean).join(", "),
-          };
-        });
+        .map(record => new PassportRow(record));
     }
 
     // Show the passport list (its header and, when empty, its empty state)
@@ -969,12 +1035,6 @@ SettingGroupManager.registerGroups({
       {
         id: "payments-list",
         control: "setting-list",
-        // A card's masked number has to be formatted inside a localized
-        // string, so every row is templated rather than carrying a raw label.
-        item: {
-          l10nId: "payment-moz-box-item",
-          iconSrc: "chrome://browser/skin/payment-methods-16.svg",
-        },
         headerL10nId: "payments-list-header",
         emptyStateL10nId: "payments-no-payments-stored-message",
         addActionL10nId: "autofill-payment-methods-add-button",
@@ -990,7 +1050,6 @@ SettingGroupManager.registerGroups({
       {
         id: "addresses-list",
         control: "setting-list",
-        item: { iconSrc: "chrome://browser/skin/notification-icons/geo.svg" },
         headerL10nId: "addresses-list-header",
         emptyStateL10nId: "addresses-no-addresses-stored-message",
         addActionL10nId: "autofill-addresses-add-button",
@@ -1006,7 +1065,6 @@ SettingGroupManager.registerGroups({
       {
         id: "passports-list",
         control: "setting-list",
-        item: { iconSrc: "chrome://browser/skin/personal-info-16.svg" },
         headerL10nId: "passports-list-header",
         emptyStateL10nId: "passports-no-passports-stored-message",
         addActionL10nId: "autofill-passports-add-button",

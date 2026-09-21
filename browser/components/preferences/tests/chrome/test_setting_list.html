@@ -206,27 +206,56 @@
         is(second.slot, "1", "The group assigned the second row a list slot");
       });
 
-      add_task(async function testSharedRowPresentation() {
-        const SHARED_ICON = "chrome://global/skin/icons/info.svg";
-        const ROW_ICON = "chrome://global/skin/icons/edit.svg";
+      add_task(async function testRowClass() {
+        const ICON = "chrome://global/skin/icons/info.svg";
+        class MockRow extends Preferences.SettingListRow {
+          get key() {
+            return this.record.id;
+          }
+          get label() {
+            return this.record.name;
+          }
+          get description() {
+            return this.record.detail;
+          }
+          get iconSrc() {
+            return ICON;
+          }
+        }
         await addListSetting(
           class extends Preferences.ListSetting {
-            static id = "list-shared-presentation";
+            static id = "list-row-class";
             async getItems() {
               return [
-                { key: "one", label: "Shared icon" },
-                { key: "two", label: "Own icon", iconSrc: ROW_ICON },
-              ];
+                { id: "one", name: "First record", detail: "A detail" },
+                { id: "two", name: "Second record" },
+              ].map(record => new MockRow(record));
             }
           }
         );
-        let list = await renderList("list-shared-presentation", {
-          item: { iconSrc: SHARED_ICON },
-        });
-        let [shared, own] = list.itemEls;
+        let list = await renderList("list-row-class");
+        let [first, second] = list.itemEls;
 
-        is(shared.iconSrc, SHARED_ICON, "The config supplies the row's icon");
-        is(own.iconSrc, ROW_ICON, "A row can still bring its own icon");
+        is(first.dataset.key, "one", "The row class supplies the key");
+        is(
+          first.getAttribute("label"),
+          "First record",
+          "The row class supplies the label"
+        );
+        is(
+          first.getAttribute("description"),
+          "A detail",
+          "The row class supplies the description"
+        );
+        is(first.iconSrc, ICON, "The row class supplies the icon");
+        ok(
+          !second.hasAttribute("description"),
+          "A getter that returns nothing leaves the attribute off"
+        );
+        ok(
+          !first.querySelector(".setting-list-action"),
+          "The inherited actions getter leaves the row's actions to the config"
+        );
       });
 
       add_task(async function testEmptyState() {
@@ -471,6 +500,7 @@
               return [
                 {
                   key: "one",
+                  l10nId: "setting-list-templated-row",
                   l10nArgs: { number: "**** 1234" },
                 },
                 {
@@ -485,9 +515,7 @@
             }
           }
         );
-        let list = await renderList("list-templated", {
-          item: { l10nId: "setting-list-templated-row" },
-        });
+        let list = await renderList("list-templated");
         let [templated, partial] = list.itemEls;
 
         is(
@@ -502,11 +530,7 @@
         );
         ok(!templated.hasAttribute("label"), "No raw label on a templated row");
 
-        is(
-          partial.dataset.l10nId,
-          "setting-list-templated-row",
-          "The shared l10nId applies to every row"
-        );
+        ok(!partial.dataset.l10nId, "A raw label isn't routed through Fluent");
         is(partial.getAttribute("label"), "Raw label", "The raw label is set");
         let description = partial.querySelector("[slot='description']");
         is(

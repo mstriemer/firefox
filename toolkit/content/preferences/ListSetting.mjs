@@ -31,6 +31,86 @@ import { AsyncSetting } from "chrome://global/content/preferences/AsyncSetting.m
  */
 
 /**
+ * How one record is presented as a row. Subclasses read `this.record` and
+ * override the getters they need, so the mapping from a record to what the
+ * user sees lives in one place instead of being spread between getItems and
+ * the config.
+ *
+ * A row class is the presentation of a record somewhere in particular. A
+ * record shown in two places gets two of these rather than one that branches
+ * on where it is being rendered.
+ *
+ * @implements {SettingListItem}
+ */
+export class SettingListRow {
+  /**
+   * @param {any} record The record this row presents.
+   */
+  constructor(record) {
+    this.record = record;
+  }
+
+  /**
+   * Stable row identity, passed back to {@link ListSetting.onListAction}.
+   *
+   * @abstract
+   * @type {string}
+   */
+  get key() {
+    throw new Error(`${this.constructor.name} needs to implement key`);
+  }
+
+  /**
+   * Raw, unlocalized label, such as a domain or a nickname.
+   *
+   * @type {string | undefined}
+   */
+  get label() {
+    return undefined;
+  }
+
+  /** @type {string | FluentString | undefined} */
+  get description() {
+    return undefined;
+  }
+
+  /** @type {string | undefined} */
+  get iconSrc() {
+    return undefined;
+  }
+
+  /**
+   * Localize the whole row from one message, for a row whose text has to be
+   * formatted inside a localized string.
+   *
+   * @type {string | undefined}
+   */
+  get l10nId() {
+    return undefined;
+  }
+
+  /** @type {Record<string, any> | undefined} */
+  get l10nArgs() {
+    return undefined;
+  }
+
+  /**
+   * The actions for this row, which default to the ones the config declares
+   * for the whole list.
+   *
+   * @type {ListAction[] | undefined}
+   */
+  get actions() {
+    return undefined;
+  }
+
+  /** @type {boolean} */
+  get disabled() {
+    return false;
+  }
+}
+
+/**
  * A setting backed by a list of records that the user can manage, rendered by
  * the setting-list control. This class only covers the list's behaviour, how
  * the rows are presented is declared in the {@link SettingListConfig} that

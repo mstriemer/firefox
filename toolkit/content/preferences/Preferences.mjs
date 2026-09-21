@@ -3,7 +3,10 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { AsyncSetting } from "chrome://global/content/preferences/AsyncSetting.mjs";
-import { ListSetting } from "chrome://global/content/preferences/ListSetting.mjs";
+import {
+  ListSetting,
+  SettingListRow,
+} from "chrome://global/content/preferences/ListSetting.mjs";
 import { Preference } from "chrome://global/content/preferences/Preference.mjs";
 import { Setting } from "chrome://global/content/preferences/Setting.mjs";
 
@@ -437,6 +440,7 @@ export const Preferences = {
   ListSetting,
   Preference,
   Setting,
+  SettingListRow,
 };
 
 Services.prefs.addObserver("", /** @type {nsIObserver} */ (Preferences));
