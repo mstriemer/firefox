@@ -58,5 +58,7 @@ if CONFIG["MOZ_UPDATE_AGENT"]:
 
 JAR_MANIFESTS += ["jar.mn"]
 
+SPHINX_TREES["docs"] = "docs"
+
 with Files("**"):
     BUG_COMPONENT = ("Firefox", "Settings UI")
