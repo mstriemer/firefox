@@ -33,12 +33,13 @@ import { AsyncSetting } from "chrome://global/content/preferences/AsyncSetting.m
 /**
  * How one record is presented as a row. Subclasses read `this.record` and
  * override the getters they need, so the mapping from a record to what the
- * user sees lives in one place instead of being spread between getItems and
- * the config.
+ * user sees lives in one place instead of being spread between the setting
+ * and the config.
  *
- * A row class is the presentation of a record somewhere in particular. A
- * record shown in two places gets two of these rather than one that branches
- * on where it is being rendered.
+ * The config names the class, the {@link ListSetting} only supplies records,
+ * so this is the presentation of a record in one particular place. A record
+ * shown somewhere else as well is a second row class in that place's config
+ * rather than a branch in this one.
  *
  * @implements {SettingListItem}
  */
@@ -116,35 +117,37 @@ export class SettingListRow {
  * the rows are presented is declared in the {@link SettingListConfig} that
  * renders them.
  *
- * The rows are the setting's value, so they reach the control through the same
- * plumbing as any other AsyncSetting and a list can be another setting's dep.
- * Writes are the asymmetric half, they are scoped to one row and arrive as
- * actions instead of through set(). Subclasses should call emitChange,
- * generally from a setup() observer, whenever the backing store changes so the
- * rows are recomputed.
+ * The records are the setting's value, so they reach the control through the
+ * same plumbing as any other AsyncSetting and a list can be another setting's
+ * dep. Writes are the asymmetric half, they are scoped to one record and
+ * arrive as actions instead of through set(). Subclasses should call
+ * emitChange, generally from a setup() observer, whenever the backing store
+ * changes so the records are read again.
 
  */
 export class ListSetting extends AsyncSetting {
-  /** @type {SettingListItem[]} */
+  /** @type {any[]} */
   defaultValue = [];
 
   /**
-   * The rows to render.
+   * The records to list, in the order they should appear. How each one is
+   * presented is the config's {@link SettingListConfig.row}, so these are the
+   * records themselves rather than anything the control can render.
    *
    * @abstract
-   * @returns {Promise<SettingListItem[]>}
+   * @returns {Promise<any[]>}
    */
-  async getItems() {
+  async getRecords() {
     return [];
   }
 
   /**
-   * A list's value is its rows.
+   * A list's value is its records.
    *
-   * @returns {Promise<SettingListItem[]>}
+   * @returns {Promise<any[]>}
    */
   async get() {
-    return this.getItems();
+    return this.getRecords();
   }
 
   /**

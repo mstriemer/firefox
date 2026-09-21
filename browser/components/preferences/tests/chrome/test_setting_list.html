@@ -125,7 +125,7 @@
         await addListSetting(
           class extends Preferences.ListSetting {
             static id = "list-rows";
-            async getItems() {
+            async getRecords() {
               return ITEMS;
             }
           }
@@ -225,15 +225,15 @@
         await addListSetting(
           class extends Preferences.ListSetting {
             static id = "list-row-class";
-            async getItems() {
+            async getRecords() {
               return [
                 { id: "one", name: "First record", detail: "A detail" },
                 { id: "two", name: "Second record" },
-              ].map(record => new MockRow(record));
+              ];
             }
           }
         );
-        let list = await renderList("list-row-class");
+        let list = await renderList("list-row-class", { row: MockRow });
         let [first, second] = list.itemEls;
 
         is(first.dataset.key, "one", "The row class supplies the key");
@@ -258,11 +258,38 @@
         );
       });
 
+      add_task(async function testRowClassIsPerConfig() {
+        // The same records, presented by a different class in another place.
+        class TerseRow extends Preferences.SettingListRow {
+          get key() {
+            return this.record.id;
+          }
+          get label() {
+            return this.record.id;
+          }
+        }
+        await addListSetting(
+          class extends Preferences.ListSetting {
+            static id = "list-row-per-config";
+            async getRecords() {
+              return [{ id: "one", name: "First record" }];
+            }
+          }
+        );
+        let list = await renderList("list-row-per-config", { row: TerseRow });
+
+        is(
+          list.itemEls[0].getAttribute("label"),
+          "one",
+          "The config picks how the setting's records are presented"
+        );
+      });
+
       add_task(async function testEmptyState() {
         await addListSetting(
           class extends Preferences.ListSetting {
             static id = "list-empty";
-            async getItems() {
+            async getRecords() {
               return [];
             }
           }
@@ -286,7 +313,7 @@
         await addListSetting(
           class extends Preferences.ListSetting {
             static id = "list-actions";
-            async getItems() {
+            async getRecords() {
               return [{ key: "abc", label: "A row" }];
             }
             onListAction(action, key) {
@@ -354,7 +381,7 @@
         await addListSetting(
           class extends Preferences.ListSetting {
             static id = "list-value-action";
-            async getItems() {
+            async getRecords() {
               return [
                 {
                   key: "application/pdf",
@@ -408,7 +435,7 @@
         let setting = await addListSetting(
           class extends Preferences.ListSetting {
             static id = "list-change";
-            async getItems() {
+            async getRecords() {
               return items;
             }
           }
@@ -447,7 +474,7 @@
         await addListSetting(
           class extends Preferences.ListSetting {
             static id = "list-per-row";
-            async getItems() {
+            async getRecords() {
               return [
                 { key: "one", label: "Default actions" },
                 {
@@ -496,7 +523,7 @@
         await addListSetting(
           class extends Preferences.ListSetting {
             static id = "list-templated";
-            async getItems() {
+            async getRecords() {
               return [
                 {
                   key: "one",
@@ -550,7 +577,7 @@
         let setting = await addListSetting(
           class extends Preferences.ListSetting {
             static id = "list-disabled";
-            async getItems() {
+            async getRecords() {
               return [{ key: "one", label: "A row" }];
             }
             async disabled() {
@@ -585,7 +612,7 @@
         let setting = await addListSetting(
           class extends Preferences.ListSetting {
             static id = "list-add-disabled";
-            async getItems() {
+            async getRecords() {
               return [{ key: "one", label: "A row" }];
             }
             // A list's dynamic state reaches its config the same way any other

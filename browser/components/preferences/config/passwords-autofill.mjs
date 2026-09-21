@@ -619,17 +619,15 @@ Preferences.addSetting(
     static id = "payments-list";
     static enabledSettingId = "saveAndFillPayments";
 
-    async getItems() {
+    async getRecords() {
       await lazy.FormAutofillPreferences.prototype.initializePaymentsStorage();
       let records = await lazy.formAutofillStorage.creditCards.getAll();
-      return records
-        .sort((a, b) =>
-          (a.timeLastUsed || a.timeLastModified) <
-          (b.timeLastUsed || b.timeLastModified)
-            ? 1
-            : -1
-        )
-        .map(record => new PaymentRow(record));
+      return records.sort((a, b) =>
+        (a.timeLastUsed || a.timeLastModified) <
+        (b.timeLastUsed || b.timeLastModified)
+          ? 1
+          : -1
+      );
     }
 
     openAddDialog() {
@@ -663,13 +661,10 @@ Preferences.addSetting(
     static id = "addresses-list";
     static enabledSettingId = "saveAndFillAddresses";
 
-    async getItems() {
+    async getRecords() {
       await lazy.FormAutofillPreferences.prototype.initializeAddressesStorage();
       let addresses = await lazy.formAutofillStorage.addresses.getAll();
-      return addresses
-        .slice()
-        .reverse()
-        .map(record => new AddressRow(record));
+      return addresses.slice().reverse();
     }
 
     openAddDialog() {
@@ -701,7 +696,7 @@ Preferences.addSetting(
     static id = "passports-list";
     static enabledSettingId = "saveAndFillPersonalInfo";
 
-    async getItems() {
+    async getRecords() {
       if (
         !FormAutofill.isAutofillTypeAvailable(lazy.AutofillDataTypes.PASSPORT)
       ) {
@@ -709,10 +704,7 @@ Preferences.addSetting(
       }
       await lazy.FormAutofillPreferences.prototype.initializePassportsStorage();
       let passports = await lazy.formAutofillStorage.passports.getAll();
-      return passports
-        .slice()
-        .reverse()
-        .map(record => new PassportRow(record));
+      return passports.slice().reverse();
     }
 
     // Show the passport list (its header and, when empty, its empty state)
@@ -1035,6 +1027,7 @@ SettingGroupManager.registerGroups({
       {
         id: "payments-list",
         control: "setting-list",
+        row: PaymentRow,
         headerL10nId: "payments-list-header",
         emptyStateL10nId: "payments-no-payments-stored-message",
         addActionL10nId: "autofill-payment-methods-add-button",
@@ -1050,6 +1043,7 @@ SettingGroupManager.registerGroups({
       {
         id: "addresses-list",
         control: "setting-list",
+        row: AddressRow,
         headerL10nId: "addresses-list-header",
         emptyStateL10nId: "addresses-no-addresses-stored-message",
         addActionL10nId: "autofill-addresses-add-button",
@@ -1065,6 +1059,7 @@ SettingGroupManager.registerGroups({
       {
         id: "passports-list",
         control: "setting-list",
+        row: PassportRow,
         headerL10nId: "passports-list-header",
         emptyStateL10nId: "passports-no-passports-stored-message",
         addActionL10nId: "autofill-passports-add-button",

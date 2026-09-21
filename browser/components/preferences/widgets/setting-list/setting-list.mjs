@@ -14,7 +14,7 @@ import { SettingElement } from "chrome://browser/content/preferences/widgets/set
 
 /**
  * @import { Setting } from "chrome://global/content/preferences/Setting.mjs"
- * @import { ListSetting, SettingListItem } from "chrome://global/content/preferences/ListSetting.mjs"
+ * @import { ListSetting, SettingListItem, SettingListRow } from "chrome://global/content/preferences/ListSetting.mjs"
  * @import { SettingControlConfigBase } from "chrome://browser/content/preferences/widgets/setting-control.mjs"
  * @import { TemplateResult } from "chrome://global/content/vendor/lit.all.mjs"
  */
@@ -62,6 +62,10 @@ import { SettingElement } from "chrome://browser/content/preferences/widgets/set
  * @typedef {object} SettingListConfigExtensions
  * @property {ListAction[]} [actions] The actions offered on every row, in
  *   render order, unless a row overrides them.
+ * @property {typeof SettingListRow} [row] The class that presents each of the
+ *   setting's records as a row. Naming it here rather than in the ListSetting
+ *   is what lets the same records be presented differently somewhere else.
+ *   Omit it when the records are already row shaped.
  * @property {string} [headerL10nId] An optional header row.
  * @property {string} [emptyStateL10nId] Shown in place of the rows when there
  *   are none.
@@ -354,6 +358,19 @@ export class SettingList extends SettingElement {
   }
 
   /**
+   * The rows to render, which are the setting's records as presented by the
+   * config's row class.
+   *
+   * @param {any[]} records
+   * @param {SettingListConfig} config
+   * @returns {SettingListItem[]}
+   */
+  items(records, config) {
+    let Row = config.row;
+    return Row ? records.map(record => new Row(record)) : records;
+  }
+
+  /**
    * @param {SettingListItem} item
    * @param {SettingListConfig} config
    * @returns {TemplateResult}
@@ -378,13 +395,14 @@ export class SettingList extends SettingElement {
   }
 
   render() {
-    // A list's value is its rows, so anything else here is a setting that
+    // A list's value is its records, so anything else here is a setting that
     // isn't a list.
-    let items = this.setting?.value;
+    let records = this.setting?.value;
     let { config } = this;
-    if (!config || !Array.isArray(items)) {
+    if (!config || !Array.isArray(records)) {
       throw new ListSettingNotDefinedError(this.setting?.id);
     }
+    let items = this.items(records, config);
     return html`${this.addTemplate(config)}
       <moz-box-group type="list">
         ${this.headerTemplate(config.headerL10nId)}
