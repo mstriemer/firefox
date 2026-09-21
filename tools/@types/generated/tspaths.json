@@ -304,6 +304,9 @@
       "chrome://browser/content/preferences/config/SettingPaneManager.mjs": [
         "../../../browser/components/preferences/config/SettingPaneManager.mjs"
       ],
+      "chrome://browser/content/preferences/config/SitePermissionTypes.mjs": [
+        "../../../browser/components/preferences/config/SitePermissionTypes.mjs"
+      ],
       "chrome://browser/content/preferences/config/account-sync.mjs": [
         "../../../browser/components/preferences/config/account-sync.mjs"
       ],

@@ -254,3 +254,71 @@ permissions-doh-remove =
 permissions-doh-remove-all =
     .label = Remove All
     .accesskey = e
+
+## Site Permissions sub-panes. Each of these lists the websites that have
+## asked for one permission, at about:preferences#permissionsLocation and so
+## on. The headings name the permission and double as the pane's breadcrumb.
+
+permissions-pane-location =
+    .heading = Location
+permissions-pane-camera =
+    .heading = Camera
+permissions-pane-microphone =
+    .heading = Microphone
+permissions-pane-speaker =
+    .heading = Speaker
+permissions-pane-notifications =
+    .heading = Notifications
+permissions-pane-autoplay =
+    .heading = Autoplay
+permissions-pane-xr =
+    .heading = Virtual reality
+permissions-pane-localhost =
+    .heading = Device apps and services
+permissions-pane-local-network =
+    .heading = Local network devices
+
+## The checkbox on each sub-pane that stops websites that aren't listed from
+## asking for the permission at all. The list is above the checkbox, which is
+## what the descriptions refer to.
+
+permissions-pane-location-block-new =
+    .label = Block new requests asking to access your location
+    .description = This will prevent any websites not listed above from requesting permission to access your location. Blocking access to your location may break some website features.
+permissions-pane-camera-block-new =
+    .label = Block new requests asking to access your camera
+    .description = This will prevent any websites not listed above from requesting permission to access your camera. Blocking access to your camera may break some website features.
+permissions-pane-microphone-block-new =
+    .label = Block new requests asking to access your microphone
+    .description = This will prevent any websites not listed above from requesting permission to access your microphone. Blocking access to your microphone may break some website features.
+permissions-pane-notifications-block-new =
+    .label = Block new requests asking to allow notifications
+    .description = This will prevent any websites not listed above from requesting permission to send notifications. Blocking notifications may break some website features.
+permissions-pane-xr-block-new =
+    .label = Block new requests asking to access your virtual reality devices
+    .description = This will prevent any websites not listed above from requesting permission to access your virtual reality devices. Blocking access to your virtual reality devices may break some website features.
+permissions-pane-localhost-block-new =
+    .label = Block new requests to access to apps and services on this device
+    .description = This will stop any website not listed above from requesting access to apps and services on this device. Doing this may break some website features.
+permissions-pane-local-network-block-new =
+    .label = Block new requests to access apps and services on devices connected to your Wi-Fi or local network.
+    .description = This will stop any website not listed above from requesting access to apps and services on devices connected to your Wi-Fi or local network devices. Doing this may break some website features.
+
+# The autoplay capability every website gets unless it is listed with one of
+# its own.
+permissions-pane-autoplay-default =
+    .label = Default for all websites
+
+# Shown in place of the list when no website holds the permission.
+permissions-pane-empty = No websites have asked for this permission.
+
+# Shown in place of the dropdown when a permission has only one capability to
+# offer, eg. a website can only be blocked from choosing an audio output
+# device, never allowed to from here.
+permissions-pane-capability-allow = Allow
+permissions-pane-capability-block = Block
+
+# The label of each row's dropdown, which sets what that website is allowed
+# to do. Websites are listed by origin, which is what the dropdown refers to.
+permissions-pane-capability-label =
+    .aria-label = Permission for this website

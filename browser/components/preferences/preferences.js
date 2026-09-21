@@ -198,6 +198,13 @@ var SettingGroupManager = ChromeUtils.importESModule(
   }
 ).SettingGroupManager;
 
+var { SITE_PERMISSION_TYPES } = ChromeUtils.importESModule(
+  "chrome://browser/content/preferences/config/SitePermissionTypes.mjs",
+  {
+    global: "current",
+  }
+);
+
 let resolveLegacyCategory = ChromeUtils.importESModule(
   "chrome://browser/content/preferences/config/LegacyPaneMappings.mjs",
   {
@@ -600,6 +607,20 @@ function init_all() {
     }
 
     SettingPaneManager.registerPane(id, config);
+  }
+
+  // Each site permission lists the sites that asked for it in its own
+  // sub-pane, eg. about:preferences#permissionsLocation. They only differ in
+  // which permission they are about, so they are registered from one table.
+  for (let type of Object.values(SITE_PERMISSION_TYPES)) {
+    SettingPaneManager.registerPane(type.paneId, {
+      parent: "permissionsData",
+      l10nId: type.l10nId,
+      iconSrc: type.iconSrc,
+      groupIds: [type.paneId],
+      module:
+        "chrome://browser/content/preferences/config/site-permissions.mjs",
+    });
   }
 
   SettingPaneManager.registerPane("customHomepage", {

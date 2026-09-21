@@ -3,6 +3,7 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { SettingGroupManager } from "chrome://browser/content/preferences/config/SettingGroupManager.mjs";
+import { SITE_PERMISSION_TYPES } from "chrome://browser/content/preferences/config/SitePermissionTypes.mjs";
 import { Preferences } from "chrome://global/content/preferences/Preferences.mjs";
 
 const XPCOMUtils = ChromeUtils.importESModule(
@@ -66,7 +67,8 @@ Preferences.addAll([
 ]);
 
 /**
- * Displays a dialog for managing permission exceptions for a specific permission type.
+ * Shows the sites that hold a permission, in the sub-pane that lists them
+ * when there is one and in the dialog it replaces otherwise.
  *
  * @param {object} options
  * @param {string} options.permissionType - The type of permission to manage.
@@ -76,6 +78,14 @@ export function showPermissionExceptions({
   permissionType,
   dialogType = "site",
 }) {
+  let { paneId } = SITE_PERMISSION_TYPES[permissionType] ?? {};
+  if (
+    paneId &&
+    Services.prefs.getBoolPref("browser.settings-redesign.enabled", false)
+  ) {
+    window.gotoPref(paneId);
+    return;
+  }
   if (dialogType === "site") {
     window.gSubDialog.open(
       "chrome://browser/content/preferences/dialogs/sitePermissions.xhtml",
@@ -131,9 +141,7 @@ Preferences.addSetting({
 Preferences.addSetting({
   id: "loopbackNetworkSettingsButton",
   onUserClick: () =>
-    showPermissionExceptions({
-      permissionType: "loopback-network",
-    }),
+    showPermissionExceptions({ permissionType: "loopback-network" }),
   deps: ["enabledLNA"],
   visible: deps => {
     return deps.enabledLNA.value;
@@ -179,9 +187,7 @@ Preferences.addSetting({
 Preferences.addSetting({
   id: "notificationSettingsButton",
   onUserClick: () =>
-    showPermissionExceptions({
-      permissionType: "desktop-notification",
-    }),
+    showPermissionExceptions({ permissionType: "desktop-notification" }),
 });
 Preferences.addSetting({
   id: "autoplaySettingsButton",
@@ -514,6 +520,7 @@ SettingGroupManager.registerGroups({
         items: [
           {
             id: "locationSettingsButton",
+            loadPane: "permissionsLocation",
             control: "moz-box-button",
             l10nId: "permissions-location2",
             controlAttrs: {
@@ -524,6 +531,7 @@ SettingGroupManager.registerGroups({
           },
           {
             id: "cameraSettingsButton",
+            loadPane: "permissionsCamera",
             control: "moz-box-button",
             l10nId: "permissions-camera2",
             controlAttrs: {
@@ -534,6 +542,7 @@ SettingGroupManager.registerGroups({
           },
           {
             id: "loopbackNetworkSettingsButton",
+            loadPane: "permissionsLocalhost",
             control: "moz-box-button",
             l10nId: "permissions-localhost2",
             controlAttrs: {
@@ -544,6 +553,7 @@ SettingGroupManager.registerGroups({
           },
           {
             id: "localNetworkSettingsButton",
+            loadPane: "permissionsLocalNetwork",
             control: "moz-box-button",
             l10nId: "permissions-local-network2",
             controlAttrs: {
@@ -555,6 +565,7 @@ SettingGroupManager.registerGroups({
           },
           {
             id: "microphoneSettingsButton",
+            loadPane: "permissionsMicrophone",
             control: "moz-box-button",
             l10nId: "permissions-microphone2",
             controlAttrs: {
@@ -566,6 +577,7 @@ SettingGroupManager.registerGroups({
           },
           {
             id: "speakerSettingsButton",
+            loadPane: "permissionsSpeaker",
             control: "moz-box-button",
             l10nId: "permissions-speaker2",
             controlAttrs: {
@@ -577,6 +589,7 @@ SettingGroupManager.registerGroups({
           },
           {
             id: "notificationSettingsButton",
+            loadPane: "permissionsNotifications",
             control: "moz-box-button",
             l10nId: "permissions-notification2",
             controlAttrs: {
@@ -588,6 +601,7 @@ SettingGroupManager.registerGroups({
           },
           {
             id: "autoplaySettingsButton",
+            loadPane: "permissionsAutoplay",
             control: "moz-box-button",
             l10nId: "permissions-autoplay2",
             controlAttrs: {
@@ -599,6 +613,7 @@ SettingGroupManager.registerGroups({
           },
           {
             id: "xrSettingsButton",
+            loadPane: "permissionsVirtualReality",
             control: "moz-box-button",
             l10nId: "permissions-xr2",
             controlAttrs: {

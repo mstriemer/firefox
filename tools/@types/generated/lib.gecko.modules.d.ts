@@ -29,6 +29,7 @@ export interface Modules {
   "chrome://browser/content/preferences/config/LegacyPaneMappings.mjs": typeof import("chrome://browser/content/preferences/config/LegacyPaneMappings.mjs"),
   "chrome://browser/content/preferences/config/SettingGroupManager.mjs": typeof import("chrome://browser/content/preferences/config/SettingGroupManager.mjs"),
   "chrome://browser/content/preferences/config/SettingPaneManager.mjs": typeof import("chrome://browser/content/preferences/config/SettingPaneManager.mjs"),
+  "chrome://browser/content/preferences/config/SitePermissionTypes.mjs": typeof import("chrome://browser/content/preferences/config/SitePermissionTypes.mjs"),
   "chrome://browser/content/preferences/config/account-sync.mjs": typeof import("chrome://browser/content/preferences/config/account-sync.mjs"),
   "chrome://browser/content/preferences/config/downloads.mjs": typeof import("chrome://browser/content/preferences/config/downloads.mjs"),
   "chrome://browser/content/preferences/config/passwords-autofill.mjs": typeof import("chrome://browser/content/preferences/config/passwords-autofill.mjs"),

@@ -18,8 +18,6 @@ tags = "os_integration"
 
 ["browser_permissions_checkPermissionsWereAdded.js"]
 
-["browser_permissions_dialog.js"]
-
 ["browser_permissions_dialog_default_perm.js"]
 
 ["browser_permissions_urlFieldHidden.js"]

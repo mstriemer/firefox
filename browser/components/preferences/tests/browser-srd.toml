@@ -69,6 +69,8 @@ skip-if = [
 
 ["browser_setting_pane_sub_pane_search.js"]
 
+["browser_sitePermissionsSubpane.js"]
+
 ["browser_spotlight.js"]
 
 ["browser_srd_telemetry_bucket_migration.js"]
