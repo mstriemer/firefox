@@ -241,6 +241,61 @@ Split Button is an action button combined with an adjacent menu button offering 
 </div>
 ```
 
+#### Popover and command buttons
+
+`moz-button` supports the `popovertarget`, `popovertargetaction`, `command` and `commandfor` attributes, which work like they do on a regular `button`. Use `popovertarget` to show or hide a [popover](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/popover), or `command` and `commandfor` to invoke a [command](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/button#command) such as `show-modal` on a `dialog`.
+
+**Note:** The `popovertarget` and `commandfor` ids are resolved in the same root node (e.g. shadow DOM or document) as the button. If the target is elsewhere, or you already have a reference to it, set the `popoverTargetElement` or `commandForElement` property instead. These take precedence over the ids.
+
+Don't combine these with `menuId`, which manages the popover itself.
+
+```html
+<moz-button label="Toggle popover"
+            popovertarget="example-popover">
+</moz-button>
+<div id="example-popover" popover>I'm a popover</div>
+```
+
+```html story
+<moz-button label="Toggle popover"
+            popovertarget="example-popover">
+</moz-button>
+<div id="example-popover" popover>I'm a popover</div>
+```
+
+```html
+<moz-button label="Open dialog"
+            commandfor="example-dialog"
+            command="show-modal">
+</moz-button>
+<dialog id="example-dialog">
+  <p>I'm a dialog</p>
+  <moz-button label="Close"
+              commandfor="example-dialog"
+              command="close">
+  </moz-button>
+</dialog>
+```
+
+```html story
+<moz-button label="Open dialog"
+            commandfor="example-dialog"
+            command="show-modal">
+</moz-button>
+<dialog id="example-dialog">
+  <p>I'm a dialog</p>
+  <moz-button label="Close"
+              commandfor="example-dialog"
+              command="close">
+  </moz-button>
+</dialog>
+```
+
+```js
+let button = document.createElement("moz-button");
+button.popoverTargetElement = somePopoverElement;
+```
+
 #### Toggle button
 
 Adding `aria-pressed` to the `moz-button` turns it into a toggle button. The `aria-pressed` attribute represents the button's current "pressed" state.

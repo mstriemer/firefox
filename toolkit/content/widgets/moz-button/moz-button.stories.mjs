@@ -56,6 +56,12 @@ moz-button-titled =
   .title = View logins
 moz-button-aria-labelled =
   .aria-label = View logins
+moz-button-popover-target =
+  .label = Toggle popover
+moz-button-command-show =
+  .label = Open dialog
+moz-button-command-close =
+  .label = Close
 `,
   },
 };
@@ -218,3 +224,37 @@ SplitButton.args = {
   type: "split",
   menuId: "panel-list",
 };
+
+export const PopoverTarget = ({ popoverTargetAction }) => html`
+  <moz-button
+    data-l10n-id="moz-button-popover-target"
+    popovertarget="example-popover"
+    popovertargetaction=${ifDefined(popoverTargetAction)}
+  ></moz-button>
+  <div id="example-popover" popover>I'm a popover</div>
+`;
+PopoverTarget.args = {
+  popoverTargetAction: "toggle",
+};
+PopoverTarget.argTypes = {
+  popoverTargetAction: {
+    options: ["toggle", "show", "hide"],
+    control: { type: "radio" },
+  },
+};
+
+export const CommandFor = () => html`
+  <moz-button
+    data-l10n-id="moz-button-command-show"
+    commandfor="example-dialog"
+    command="show-modal"
+  ></moz-button>
+  <dialog id="example-dialog">
+    <p>I'm a dialog</p>
+    <moz-button
+      data-l10n-id="moz-button-command-close"
+      commandfor="example-dialog"
+      command="close"
+    ></moz-button>
+  </dialog>
+`;

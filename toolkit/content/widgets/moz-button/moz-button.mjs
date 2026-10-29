@@ -235,6 +235,13 @@ class MenuController {
  * @property {string} iconPosition - The icon's position relative to the button label.
  *   Options: start, end.
  * @property {string} menuId - A CSS selector string that identifies the associated menu element controlled by the button.
+ * @property {string} popoverTarget - The id of a popover element in the same root node that the button controls.
+ * @property {Element} popoverTargetElement - The popover element the button controls, takes precedence over popoverTarget.
+ * @property {string} popoverTargetAction - The action to perform on the popover target.
+ *   Options: toggle, show, hide.
+ * @property {string} command - The command to invoke on the commandFor element.
+ * @property {string} commandFor - The id of an element in the same root node that the command is invoked on.
+ * @property {Element} commandForElement - The element the command is invoked on, takes precedence over commandFor.
  * @property {HTMLButtonElement} buttonEl - The internal button element in the shadow DOM.
  * @property {HTMLButtonElement} slotEl - The internal slot element in the shadow DOM.
  * @cssproperty [--button-outer-padding-inline] - Used to set the outer inline padding of toolbar style buttons
@@ -272,6 +279,12 @@ export class MozButton extends MozLitElement {
     attention: { type: Boolean },
     iconPosition: { type: String, reflect: true },
     menuId: { type: String, reflect: true },
+    popoverTarget: { type: String },
+    popoverTargetElement: { attribute: false },
+    popoverTargetAction: { type: String },
+    command: { type: String },
+    commandFor: { type: String },
+    commandForElement: { attribute: false },
     parentDisabled: { type: Boolean },
   };
 
@@ -294,6 +307,18 @@ export class MozButton extends MozLitElement {
     this.iconSrc = undefined;
     this.menuId = "";
     this.parentDisabled = undefined;
+    /** @type {string | undefined} */
+    this.popoverTarget = undefined;
+    /** @type {Element | null} */
+    this.popoverTargetElement = null;
+    /** @type {string | undefined} */
+    this.popoverTargetAction = undefined;
+    /** @type {string | undefined} */
+    this.command = undefined;
+    /** @type {string | undefined} */
+    this.commandFor = undefined;
+    /** @type {Element | null} */
+    this.commandForElement = null;
   }
 
   updated(changedProperties) {
@@ -306,6 +331,30 @@ export class MozButton extends MozLitElement {
       if (!this.menuId && this._menuController) {
         this._menuController = null;
       }
+    }
+  }
+
+  getElementFromRoot(id) {
+    return id ? (this.getRootNode().getElementById?.(id) ?? null) : null;
+  }
+
+  get resolvedPopoverTarget() {
+    return (
+      this.popoverTargetElement ?? this.getElementFromRoot(this.popoverTarget)
+    );
+  }
+
+  get resolvedCommandFor() {
+    return this.commandForElement ?? this.getElementFromRoot(this.commandFor);
+  }
+
+  handleClick() {
+    // Re-resolve ids in case the targets were added or replaced after render.
+    if (this.popoverTarget && !this.popoverTargetElement) {
+      this.buttonEl.popoverTargetElement = this.resolvedPopoverTarget;
+    }
+    if (this.commandFor && !this.commandForElement) {
+      this.buttonEl.commandForElement = this.resolvedCommandFor;
     }
   }
 
@@ -392,6 +441,11 @@ export class MozButton extends MozLitElement {
         aria-checked=${ifDefined(this.ariaChecked)}
         aria-selected=${ifDefined(this.ariaSelected)}
         accesskey=${ifDefined(this.accessKey)}
+        .popoverTargetElement=${this.resolvedPopoverTarget}
+        popovertargetaction=${ifDefined(this.popoverTargetAction)}
+        .commandForElement=${this.resolvedCommandFor}
+        command=${ifDefined(this.command)}
+        @click=${this.handleClick}
       >
         <span
           class=${classMap({

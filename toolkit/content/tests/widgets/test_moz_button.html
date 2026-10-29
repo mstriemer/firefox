@@ -773,6 +773,159 @@
           "Button label updates to new value without corruption when accesskey is set."
         );
       });
+
+      add_task(async function testPopoverTarget() {
+        let target = document.getElementById("target");
+        let popover = document.createElement("div");
+        popover.id = "test-popover";
+        popover.popover = "manual";
+        target.append(popover);
+
+        let button = document.createElement("moz-button");
+        button.label = "Popover";
+        button.setAttribute("popovertarget", "test-popover");
+        target.append(button);
+        await button.updateComplete;
+
+        is(
+          button.buttonEl.popoverTargetElement,
+          popover,
+          "popoverTargetElement is resolved from the root node"
+        );
+
+        button.click();
+        ok(popover.matches(":popover-open"), "Popover opens on click");
+        button.click();
+        ok(!popover.matches(":popover-open"), "Popover toggles closed");
+
+        button.setAttribute("popovertargetaction", "show");
+        await button.updateComplete;
+        button.click();
+        button.click();
+        ok(
+          popover.matches(":popover-open"),
+          "popovertargetaction=show keeps the popover open"
+        );
+        popover.hidePopover();
+
+        let lateButton = document.createElement("moz-button");
+        lateButton.setAttribute("popovertarget", "late-popover");
+        target.append(lateButton);
+        await lateButton.updateComplete;
+        is(
+          lateButton.buttonEl.popoverTargetElement,
+          null,
+          "popoverTargetElement is null when the target doesn't exist"
+        );
+        let latePopover = document.createElement("div");
+        latePopover.id = "late-popover";
+        latePopover.popover = "manual";
+        target.append(latePopover);
+        lateButton.click();
+        ok(
+          latePopover.matches(":popover-open"),
+          "Popover added after render opens on click"
+        );
+        latePopover.hidePopover();
+
+        let otherPopover = document.createElement("div");
+        otherPopover.popover = "manual";
+        target.append(otherPopover);
+        button.popoverTargetElement = otherPopover;
+        await button.updateComplete;
+        is(
+          button.buttonEl.popoverTargetElement,
+          otherPopover,
+          "popoverTargetElement takes precedence over popovertarget"
+        );
+        button.click();
+        ok(otherPopover.matches(":popover-open"), "Element target opens");
+        ok(!popover.matches(":popover-open"), "Id target is not opened");
+        otherPopover.hidePopover();
+
+        button.popoverTargetElement = null;
+        await button.updateComplete;
+        is(
+          button.buttonEl.popoverTargetElement,
+          popover,
+          "Falls back to popovertarget when popoverTargetElement is cleared"
+        );
+
+        button.removeAttribute("popovertarget");
+        await button.updateComplete;
+        is(
+          button.buttonEl.popoverTargetElement,
+          null,
+          "popoverTargetElement is cleared when popovertarget is removed"
+        );
+
+        target.replaceChildren();
+      });
+
+      add_task(async function testCommandFor() {
+        let target = document.getElementById("target");
+        let host = document.createElement("div");
+        target.append(host);
+        let shadowRoot = host.attachShadow({ mode: "open" });
+
+        let popover = document.createElement("div");
+        popover.id = "command-popover";
+        popover.popover = "manual";
+        let button = document.createElement("moz-button");
+        button.label = "Command";
+        button.setAttribute("commandfor", "command-popover");
+        button.setAttribute("command", "show-popover");
+        shadowRoot.append(popover, button);
+        await button.updateComplete;
+
+        is(
+          button.buttonEl.commandForElement,
+          popover,
+          "commandForElement is resolved from the shadow root"
+        );
+        is(
+          button.buttonEl.command,
+          "show-popover",
+          "command is set on the inner button"
+        );
+
+        button.click();
+        ok(popover.matches(":popover-open"), "show-popover command runs");
+        popover.hidePopover();
+
+        let detachedPopover = document.createElement("div");
+        detachedPopover.popover = "manual";
+        target.append(detachedPopover);
+        button.commandForElement = detachedPopover;
+        await button.updateComplete;
+        button.click();
+        ok(
+          detachedPopover.matches(":popover-open"),
+          "commandForElement can target an element outside the shadow root"
+        );
+        detachedPopover.hidePopover();
+        button.commandForElement = null;
+        await button.updateComplete;
+
+        let source;
+        let commandEvent = BrowserTestUtils.waitForEvent(
+          popover,
+          "command",
+          false,
+          e => {
+            source = e.source;
+            return true;
+          }
+        );
+        button.command = "--custom";
+        await button.updateComplete;
+        button.click();
+        let event = await commandEvent;
+        is(event.command, "--custom", "Custom command is dispatched");
+        is(source, button, "Command source is retargeted to the host");
+
+        target.replaceChildren();
+      });
     </script>
   </head>
   <body>
